@@ -1,7 +1,7 @@
 # Aligned with MG4Control / MG4Tasker: the three share signing and this shared library,
 # so there is no reason for the toolchains to diverge.
 [versions]
-agp = "8.5.2"
+agp = "9.1.1"
 kotlin = "2.0.21"
 coreKtx = "1.13.1"
 annotation = "1.8.0"

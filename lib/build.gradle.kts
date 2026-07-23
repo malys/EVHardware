@@ -1,15 +1,14 @@
+// AGP 9 provides built-in Kotlin compilation, so no separate Kotlin plugin is applied.
 // Plugin ids and dependency coordinates are hardcoded rather than pulled from a version
-// catalog: this module is included as a subproject by three different app repos, each with
-// its own `libs` catalog, and it must not depend on any of them defining the same aliases.
-// The AGP/Kotlin plugins resolve from whichever root puts them on the classpath.
+// catalog: this module is included as a subproject by multiple app repos, and must not
+// depend on any of them defining the same catalog aliases.
 plugins {
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
 }
 
 android {
     namespace = "com.mg4.hardware"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 28
@@ -18,8 +17,7 @@ android {
 
     buildFeatures {
         // The catalogue's string labels (cond_*/act_*) resolve against this library's own R,
-        // which is exactly why MG4Hardware is a real Android library and not a shared source
-        // set: shared source cannot reference a fixed R.
+        // which is why MG4Hardware is a real Android library and not a shared source set.
         resValues = true
     }
 
@@ -28,15 +26,17 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
