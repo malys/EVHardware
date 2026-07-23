@@ -59,7 +59,7 @@ object MG4Hardware {
     private const val PROP_MIX_INTELLIGENT_DRIVE = 0x32
 
     // ELK — Assistant de sortie de voie (SWI133)
-    // Accès via IVehicleSettingService binder (sVehicleBinder) — smali IVehicleSettingService$Stub$Proxy
+    // Access via IVehicleSettingService binder (sVehicleBinder) — smali IVehicleSettingService$Stub$Proxy
     // getLaneKeepingAsstMode()   → TX 0x53 (synchrone, reply: readException + readInt)
     // setLaneKeepingAsstMode(I)  → TX 0x54 (ONEWAY, data: writeInt(value))
     // getLaneKeepingAsstSen()    → TX 0x55 (synchrone)
@@ -101,7 +101,7 @@ object MG4Hardware {
     private const val PROP_AEB_SWITCH    = 0x2140a108  // AAD_FRONT_COLLISION_ASST_SYS (CPM)
     // PROP_AEB_SYS_MODE  : VPM, ID_AAD_FRONT_COLLISION_ASST_SYS, 1=Alert / 2=Alert+Freinage
     // PROP_AEB_MODE      : VPM, ID_AAD_AUTO_EME_BREAK,            1=Alert / 2=Alert+Freinage
-    // Le smali vehiclesettings écrit toujours les deux simultanément via setIntPropertyRecovery
+    // The vehiclesettings smali always writes both at once via setIntPropertyRecovery
     private const val PROP_AEB_SYS_MODE    = 0x302000a  // ID_AAD_FRONT_COLLISION_ASST_SYS (VPM)
     private const val PROP_AEB_MODE        = 0x302000b  // ID_AAD_AUTO_EME_BREAK (VPM)
     // PROP_AEB_SENSITIVITY : VPM, ForwardCollisionAsstSentItem, 1=Low / 2=Standard / 3=High
@@ -121,17 +121,17 @@ object MG4Hardware {
 
     // Brightness screen — ancien SDK (SWI133/68/165) : GeneralManager.setBrightness(Int)/getBrightness().
     // Plage native 0..255 (constantes DARKEST_VALUE=0x0 / BRIGHTEST_VALUE=0xff confirmed dans le smali).
-    // A9 (SWI132/131/69) = phase 2 (setScreenBrightness(III), params non décodables sans SystemUI).
+    // A9 (SWI132/131/69) = phase 2 (setScreenBrightness(III), params not decodable without SystemUI).
     private const val GENERAL_MANAGER_CLASS = "com.saicmotor.sdk.systemsettings.GeneralManager"
     private const val BRIGHTNESS_NATIVE_MAX = 255
 
     // Media volume — ancien SDK (SWI133/68/165) : SmartSoundManager.getVolume/setVolume/getMaxVolume(type).
-    // Même SDK systemsettings/BaseManager que GeneralManager (singleton sInstance + init(Context, listener)).
+    // Same systemsettings/BaseManager SDK as GeneralManager (singleton sInstance + init(Context, listener)).
     private const val SMART_SOUND_MANAGER_CLASS = "com.saicmotor.sdk.systemsettings.SmartSoundManager"
     private const val BRIGHTNESS_MIN_PERCENT = 5   // floor de safety : ne jamais turn off l'screen
 
-    // SWI69/SWI131 : accès via CarAdapterClient → queryClient(0x8) → CarVehicleSettingClient
-    // Architecture real : CarAdapterClient se connecte à com.saicmotor.caradapter.CarAdapterService,
+    // SWI69/SWI131 : access via CarAdapterClient → queryClient(0x8) → CarVehicleSettingClient
+    // Actual architecture : CarAdapterClient connects to com.saicmotor.caradapter.CarAdapterService,
     // puis queryClient(code) returns l'IBinder pour chaque service.
     // Code 0x8 = CarVehicleSettingClient (verified dans VehicleSettingService.onResult() smali)
     private const val LAUNCHER69_PKG      = "com.saicmotor.launcher"
@@ -152,7 +152,7 @@ object MG4Hardware {
     private const val PROP_IGNITION_STATE = 0x11400409
 
     // Standard AAOS — VehicleProperty.PERF_VEHICLE_SPEED (float, m/s). Base du lock
-    // d'write à 0 km/h (voir VehicleWriteGate).
+    // of writes at 0 km/h (see VehicleWriteGate).
     private const val PROP_VEHICLE_SPEED = 0x11600207
 
     // Standard AAOS — VehicleProperty.ENV_OUTSIDE_TEMPERATURE (float, °C).
@@ -166,26 +166,26 @@ object MG4Hardware {
         const val LOCK      = 1
         const val OFF       = 2
         const val ACC       = 3
-        const val ON        = 4   // Key detectede + frein appuyé = state READY
+        const val ON        = 4   // Key detected + brake pressed = READY state
         const val START     = 5
     }
 
     /**
-     * Values retournées par IVehicleConditionService.getVehicleIgnition() (Katman5).
+     * Values returned by IVehicleConditionService.getVehicleIgnition() (Katman5).
      * Source : VehicleConditionConst.smali + CarIgnitionItem.smali (SWI133 launcher).
      */
     object CarIgnitionItem {
         const val OFF       = 0x0   // Car offe
         const val ACCESSORY = 0x1   // Accessoires only
         const val RUN       = 0x2   // Key ON / state READY
-        const val CRANK     = 0x3   // Démarrage
+        const val CRANK     = 0x3   // Cranking
     }
 
     /**
-     * Speed limiter (Speed Assist System / SAS) — setting INDÉPENDANT du mode ACC/TJA.
-     * Sur SWI132 il est piloté par setSasMode (et NON par setAccTjaState/SHWA, qui ne l'active pas).
+     * Speed limiter (Speed Assist System / SAS) — setting INDEPENDENT of the ACC/TJA mode.
+     * On SWI132 it is driven by setSasMode (NOT setAccTjaState/SHWA, which does not enable it).
      * Values confirmed dans le smali SWI132 (SasModel / sas_modes) :
-     *   0 = Disabled, 2 = Manual, 3 = Intelligent  (1 = avert. speed, modèles TW only)
+     *   0 = Disabled, 2 = Manual, 3 = Intelligent  (1 = speed warning, TW models only)
      */
     object SasMode {
         const val OFF         = 0
@@ -243,19 +243,19 @@ object MG4Hardware {
     @Volatile private var sVcm: Any? = null
     @Volatile private var sVcmListener: Any? = null
     @Volatile private var sVcmCallbackRegistered = false
-    @Volatile private var sLastVcmIgnitionState = -1   // filtre les faux RUN répétés
+    @Volatile private var sLastVcmIgnitionState = -1   // filters repeated false RUN events
     private val vehicleConditionCallbacks = java.util.concurrent.CopyOnWriteArrayList<(Int) -> Unit>()
     private val katman5ReadyListeners     = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
-    /** Listeners notifiés as soon as Katman1 (CPM + HVAC) est opérationnel. */
+    /** Listeners notified as soon as Katman1 (CPM + HVAC) is operational. */
     private val katman1ReadyListeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
-    /** Listeners notifiés as soon as Katman4 (mIVehiclePropertyService) est opérationnel. */
+    /** Listeners notified as soon as Katman4 (mIVehiclePropertyService) is operational. */
     private val katman4ReadyListeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
     /**
-     * Exécute [action] as soon as CarPropertyManager et CarHvacManager sont disponibles.
-     * Si already ready, execution immediate. Sinon, mis en file et déclenché à la connection.
+     * Runs [action] as soon as CarPropertyManager et CarHvacManager are available.
+     * If already ready, runs immediately. Otherwise queued and triggered on connection.
      */
     fun whenKatman1Ready(action: () -> Unit) {
         if (sCarPropertyManager != null && sCarHvacManager != null) {
@@ -266,7 +266,7 @@ object MG4Hardware {
     }
 
     /**
-     * Exécute [action] as soon as le service ADAS (Katman4) est disponible.
+     * Runs [action] as soon as the ADAS service (Katman4) is available.
      * SWI133 → mIVehiclePropertyService ; SWI68/SWI69/SWI131 → mVehicleSettingService
      */
     fun whenKatman4Ready(action: () -> Unit) {
@@ -274,12 +274,12 @@ object MG4Hardware {
         if (ready) action() else katman4ReadyListeners.add(action)
     }
 
-    /** Exécute [action] as soon as Katman5 (IVehicleConditionService) est opérationnel. */
+    /** Runs [action] as soon as Katman5 (IVehicleConditionService) is operational. */
     fun whenKatman5Ready(action: () -> Unit) {
         if (sVcmCallbackRegistered) action() else katman5ReadyListeners.add(action)
     }
 
-    /** Enregistre un callback invoqué à chaque changement d'state d'ignition (CarIgnitionItem). */
+    /** Registers a callback invoked on every ignition state change (CarIgnitionItem). */
     fun registerVehicleConditionListener(callback: (Int) -> Unit) {
         vehicleConditionCallbacks.add(callback)
     }
@@ -298,7 +298,7 @@ object MG4Hardware {
         ignitionCallbacks.remove(callback)
     }
 
-    /** Désregisters le proxy CarPropertyManager (appeler depuis Service.onDestroy). */
+    /** Unregisters the CarPropertyManager proxy (call from Service.onDestroy). */
     fun unregisterIgnitionPropertyCallback() {
         val cpm = sCarPropertyManager ?: return
         val proxy = sIgnitionCallbackProxy ?: return
@@ -326,14 +326,14 @@ object MG4Hardware {
     }
 
     /**
-     * Speed vehicle en km/h, ou null si elle ne peut pas être lue (CPM non ready,
+     * Vehicle speed in km/h, or null if it cannot be read (CPM not ready,
      * property non supportsde, exception). [VehicleWriteGate] traite null comme un refus.
      */
     fun getVehicleSpeedKmh(): Float? {
         val mps = getFloatPropertyCPM(PROP_VEHICLE_SPEED, AREA_GLOBAL)
             ?: getFloatPropertyCPM(PROP_VEHICLE_SPEED, 0)
             ?: return null
-        // PERF_VEHICLE_SPEED est signée (négative en marche arrière) : c'est la speed
+        // PERF_VEHICLE_SPEED is signed (negative in reverse): it is the speed
         // absolue qui compte pour savoir si le vehicle bouge.
         return kotlin.math.abs(mps) * 3.6f
     }
@@ -343,7 +343,7 @@ object MG4Hardware {
      * supportsde par le firmware, exception).
      *
      * Le null est significatif : il veut dire « on ne sait pas », pas « il fait 0 °C ».
-     * Une règle météo qui reçoit null ne doit PAS se déclencher.
+     * A weather rule that receives null must NOT fire.
      */
     fun getOutsideTempCelsius(): Float? =
         getFloatPropertyCPM(PROP_OUTSIDE_TEMP, AREA_GLOBAL)
@@ -455,9 +455,9 @@ object MG4Hardware {
         else
             AppLogger.w(TAG, "  ✗ Katman2: vehiclesetting null (SELinux — expected)")
 
-        // Démarrage auto du watcher door au boot si la feature est enabled (tous firmwares).
+        // Cranking auto du watcher door au boot si la feature est enabled (tous firmwares).
         startDoorWatcherIfEnabled()
-        // Connexion Car établie same si la feature est OFF → la sonde Diagnostic peut lire les doors.
+        // Car connection established even if the feature is OFF → the Diagnostic probe can read the doors.
         if (hasDoorVolumeFeature()) connectCarProperty()
 
         AppLogger.i(TAG, "========================================")
@@ -546,7 +546,7 @@ object MG4Hardware {
         // Try sync managers immediately
         tryGetManagersFromCar(carClass)
 
-        // Schedule retries — délais étendus pour couvrir le boot lent du Car service SAIC
+        // Schedule retries — extended delays to cover the slow boot of the SAIC Car service
         val h = Handler(Looper.getMainLooper())
         h.postDelayed({ tryGetManagersFromCar(carClass) }, 2_000)
         h.postDelayed({ tryGetManagersFromCar(carClass) }, 5_000)
@@ -592,7 +592,7 @@ object MG4Hardware {
                 }
             }
 
-            // Notifier les abonnés whenKatman1Ready as soon as les deux managers sont readys
+            // Notify whenKatman1Ready subscribers as soon as both managers are ready
             if (sCarPropertyManager != null && sCarHvacManager != null && katman1ReadyListeners.isNotEmpty()) {
                 val toNotify = katman1ReadyListeners.toList()
                 katman1ReadyListeners.clear()
@@ -646,7 +646,7 @@ object MG4Hardware {
 
         var vpm: Any? = null
 
-        // ---- Constructeurs (priorité) ----
+        // ---- Constructors (priority) ----
         // 1) ctor(launcherCtx) — most likely for a class bundled in the launcher APK
         if (vpm == null) vpm = tryInvoke("ctor(launcherCtx)") {
             vpmClass.getConstructor(Context::class.java).newInstance(launcherCtx)
@@ -660,7 +660,7 @@ object MG4Hardware {
             @Suppress("DEPRECATION") vpmClass.newInstance()
         }
 
-        // ---- Méthodes statiques de factory ----
+        // ---- Static factory methods ----
         if (vpm == null) vpm = tryInvoke("getInstance(launcherCtx)") {
             vpmClass.getMethod("getInstance", Context::class.java).invoke(null, launcherCtx)
         }
@@ -672,7 +672,7 @@ object MG4Hardware {
         }
 
         if (vpm == null) {
-            AppLogger.w(TAG, "  Katman4: toutes les tentatives ont échoué — will retry")
+            AppLogger.w(TAG, "  Katman4: all attempts failed — will retry")
             Handler(Looper.getMainLooper()).postDelayed({ initKatman4(context.applicationContext) }, 10_000)
             return
         }
@@ -682,7 +682,7 @@ object MG4Hardware {
         // 1) bindService() — connecte au service vehicle (async)
         tryInvoke("vpm.bindService()") { vpm!!.javaClass.getMethod("bindService").invoke(vpm) }
 
-        // 2) init(Context, IVehicleServiceListener) via dynamic proxy — reçoit onServiceConnected
+        // 2) init(Context, IVehicleServiceListener) via dynamic proxy — receives onServiceConnected
         initWithServiceListener(vpm!!, context, launcherCtx)
 
         // 3) VehicleSettingManager pour SWI133 (ELK) — same singleton que SWI68
@@ -694,7 +694,7 @@ object MG4Hardware {
         // 3c) SmartSoundManager pour SWI133 (loudness audio)
         tryInitSmartSoundManager(launcherCtx, context)
 
-        // 4) Retries pour récupérer mIVehiclePropertyService et VSM133 une fois le service connected
+        // 4) Retries to obtain mIVehiclePropertyService and VSM133 once the service is connected
         val h = Handler(Looper.getMainLooper())
         listOf(2_000L, 5_000L, 10_000L, 15_000L, 20_000L, 30_000L, 45_000L, 60_000L).forEach { delay ->
             h.postDelayed({
@@ -727,7 +727,7 @@ object MG4Hardware {
 
         if (initMethod2 != null) {
             val listenerType = initMethod2.parameterTypes[1]
-            AppLogger.i(TAG, "  Katman4: init() trouvé, listener type = ${listenerType.name}")
+            AppLogger.i(TAG, "  Katman4: init() found, listener type = ${listenerType.name}")
 
             // Try dynamic proxy with the actual listener interface type
             if (listenerType.isInterface) {
@@ -789,7 +789,7 @@ object MG4Hardware {
         AppLogger.w(TAG, "  Katman4: aucun init() fonctionnel — mIVehiclePropertyService restera null")
     }
 
-    /** Exécute [block], returns le résultat ou null, log le résultat/erreur. */
+    /** Runs [block], returns the result or null, logs the result/error. */
     private fun tryInvoke(label: String, block: () -> Any?): Any? = try {
         val r = block()
         AppLogger.i(TAG, "  Katman4: $label → ${if (r != null) "OK ($r)" else "null"}")
@@ -822,7 +822,7 @@ object MG4Hardware {
     // -------------------------------------------------------------------------
     // -------------------------------------------------------------------------
     // SWI133 — VehicleSettingManager (ELK : getLaneKeepingAsstMode / setLaneKeepingAsstMode)
-    // Même singleton que SWI68 mais initialisesd dans le chemin SWI133.
+    // Same singleton as SWI68 but initialised in the SWI133 path.
     // -------------------------------------------------------------------------
 
     private fun tryInitVsm133(launcherCtx: Context, appCtx: Context) {
@@ -845,7 +845,7 @@ object MG4Hardware {
                 m.name == "init" && m.parameterCount == 2 &&
                 Context::class.java.isAssignableFrom(m.parameterTypes[0])
             } ?: run {
-                AppLogger.w(TAG, "  SWI133: VSM init() non trouvé, singleton sera null")
+                AppLogger.w(TAG, "  SWI133: VSM init() not found, singleton will be null")
                 return
             }
             val listenerType = initMethod.parameterTypes[1]
@@ -873,7 +873,7 @@ object MG4Hardware {
     // -------------------------------------------------------------------------
     // Brightness screen — GeneralManager (ancien SDK SWI133/68/165)
     // GeneralManager.init(Context, ISettingsServiceListener) — singleton sInstance.
-    // Même pattern que tryInitVsm133 ; chargé depuis le launcher com.saicmotor.hmi.launcher.
+    // Same pattern as tryInitVsm133; loaded from the launcher com.saicmotor.hmi.launcher.
     // -------------------------------------------------------------------------
 
     private fun tryInitGeneralManager(launcherCtx: Context, appCtx: Context) {
@@ -895,7 +895,7 @@ object MG4Hardware {
                 m.name == "init" && m.parameterCount == 2 &&
                 Context::class.java.isAssignableFrom(m.parameterTypes[0])
             } ?: run {
-                AppLogger.w(TAG, "  GeneralManager init() non trouvé")
+                AppLogger.w(TAG, "  GeneralManager init() not found")
                 return
             }
             val listenerType = initMethod.parameterTypes[1]
@@ -911,7 +911,7 @@ object MG4Hardware {
                 }
             } else null
             initMethod.invoke(null, appCtx, listener)
-            // init() crée sInstance immediatement (service connected de façon asynchrone ensuite)
+            // init() creates sInstance immediately (service connects asynchronously afterwards)
             f.get(null)?.let { sGeneral = it }
             AppLogger.i(TAG, "  GeneralManager.init() called — sGeneral=${if (sGeneral != null) "OK ✓" else "null"}")
         } catch (e: Exception) {
@@ -921,7 +921,7 @@ object MG4Hardware {
 
     // -------------------------------------------------------------------------
     // Loudness — SmartSoundManager (ancien SDK SWI133/68/165)
-    // Même SDK/pattern que GeneralManager : singleton sInstance + init(Context, ISettingsServiceListener).
+    // Same SDK/pattern as GeneralManager : singleton sInstance + init(Context, ISettingsServiceListener).
     // -------------------------------------------------------------------------
 
     private fun tryInitSmartSoundManager(launcherCtx: Context, appCtx: Context) {
@@ -943,7 +943,7 @@ object MG4Hardware {
                 m.name == "init" && m.parameterCount == 2 &&
                 Context::class.java.isAssignableFrom(m.parameterTypes[0])
             } ?: run {
-                AppLogger.w(TAG, "  SmartSoundManager init() non trouvé")
+                AppLogger.w(TAG, "  SmartSoundManager init() not found")
                 return
             }
             val listenerType = initMethod.parameterTypes[1]
@@ -978,7 +978,7 @@ object MG4Hardware {
         if (isA9Brightness()) getBrightnessA9() else getBrightnessOldSdk()
 
     /**
-     * Règle la brightness screen en % (0–100). Plancher de safety à BRIGHTNESS_MIN_PERCENT
+     * Sets screen brightness in % (0–100). Safety floor at BRIGHTNESS_MIN_PERCENT
      * pour ne jamais turn off l'screen.
      */
     fun setScreenBrightnessPercent(pct: Int): Boolean {
@@ -1020,7 +1020,7 @@ object MG4Hardware {
     // Settings.System.putInt("screen_brightness", 0..255) + passage en mode manuel.
     // CarGeneralClient.setScreenBrightness(mode,day,night) ne stocke que le jour/nuit
     // et n'a AUCUN effet sur la dalle (confirmed par les logs SWI132 : value lue=0,
-    // aucun changement visuel). L'app étant uid.system, elle peut écrire Settings.System.
+    // no visual change). Being uid.system, the app can write Settings.System.
     private const val A9_BRIGHTNESS_NATIVE_MAX = 255
 
     private fun getBrightnessA9(): Int {
@@ -1038,7 +1038,7 @@ object MG4Hardware {
         val resolver = sAppContext?.contentResolver ?: return false
         val native = (clampedPct.coerceIn(0, 100) * A9_BRIGHTNESS_NATIVE_MAX / 100).coerceIn(1, A9_BRIGHTNESS_NATIVE_MAX)
         return try {
-            // Mode manuel, sinon l'auto-brightness écrase aussitôt la value
+            // Manual mode, otherwise auto-brightness overwrites the value at once
             android.provider.Settings.System.putInt(resolver,
                 android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE,
                 android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
@@ -1116,10 +1116,10 @@ object MG4Hardware {
                 AppLogger.w(TAG, "  SWI68: init() error: ${e.message}")
             }
         } else {
-            AppLogger.w(TAG, "  SWI68: init(Context, listener) non trouvé")
+            AppLogger.w(TAG, "  SWI68: init(Context, listener) not found")
         }
 
-        // Récupère le singleton depuis le champ statique sVehicleSettingManager
+        // Fetches the singleton from the static field sVehicleSettingManager
         try {
             val f = vsmClass.getDeclaredField("sVehicleSettingManager")
             f.isAccessible = true
@@ -1137,7 +1137,7 @@ object MG4Hardware {
         // SmartSoundManager pour SWI68/SWI165 (loudness audio) — same launcher context
         tryInitSmartSoundManager(launcherCtx, context)
 
-        // Retries pour récupérer mVehicleSettingService et le singleton si pas encore ready
+        // Retries to obtain mVehicleSettingService and the singleton if not ready yet
         val h = Handler(Looper.getMainLooper())
         listOf(1_000L, 3_000L, 5_000L, 10_000L, 15_000L, 20_000L, 30_000L).forEach { delay ->
             h.postDelayed({
@@ -1146,7 +1146,7 @@ object MG4Hardware {
                         val f = vsmClass.getDeclaredField("sVehicleSettingManager")
                         f.isAccessible = true
                         sVsm = f.get(null)
-                        if (sVsm != null) AppLogger.i(TAG, "  SWI68: singleton récupéré @${delay}ms")
+                        if (sVsm != null) AppLogger.i(TAG, "  SWI68: singleton obtained @${delay}ms")
                     } catch (_: Exception) {}
                 }
                 sVsm?.let { if (sVsmService == null) tryGetVsmService(it, vsmClass) }
@@ -1179,7 +1179,7 @@ object MG4Hardware {
     // -------------------------------------------------------------------------
     // Katman4 SWI69/SWI131 — CarVehicleSettingClient via CarAdapterClient
     //
-    // Architecture real (verified dans smali) :
+    // Actual architecture (verified dans smali) :
     //   CarAdapterClient.getInstance(ctx).start()
     //   → bindService(com.saicmotor.caradapter / CarAdapterService)
     //   → onResult(0=OK) : queryClient(0x8) → IBinder (ICarVehicleSettingService)
@@ -1244,15 +1244,15 @@ object MG4Hardware {
             }
         }
 
-        // Démarrer la connection à CarAdapterService
+        // Start the connection to CarAdapterService
         tryInvoke("SWI69 adapter.start()") {
             adapterClass.getMethod("start").invoke(adapter)
         }
 
-        // Tentative immediate si CarAdapterService était already connected
+        // Immediate attempt if CarAdapterService was already connected
         tryInitClientFromAdapter(adapter, adapterClass, clientClass)
 
-        // Retries échelonnés
+        // Staggered retries
         val h = Handler(Looper.getMainLooper())
         listOf(1_000L, 3_000L, 5_000L, 10_000L, 15_000L, 20_000L, 30_000L, 60_000L).forEach { delay ->
             h.postDelayed({
@@ -1263,7 +1263,7 @@ object MG4Hardware {
 
     /**
      * Tente d'obtenir un CarVehicleSettingClient via queryClient(0x8).
-     * Appelée à la connection (onResult=0) et lors des retries.
+     * Called on connection (onResult=0) and on retries.
      */
     private fun tryInitClientFromAdapter(adapter: Any, adapterClass: Class<*>, clientClass: Class<*>) {
         if (sVsm != null) return
@@ -1306,18 +1306,18 @@ object MG4Hardware {
 
     /**
      * Appelle une method void sur sVsm par reflection.
-     * Contrairement à callVsm(), returns true si la method existe et s'runs sans exception,
+     * Unlike callVsm(), returns true if the method exists and runs without exception,
      * same si invoke() returns null (behaviour normal pour les methods void).
-     * Returns false si sVsm est null ou si une exception est levée (method introuvable, etc.).
+     * Returns false if sVsm is null or an exception is thrown (method not found, etc.).
      */
     private fun callVsmVoid(methodName: String, vararg args: Any?): Boolean {
-        // [T-904] Write vehicle : autorisée only when stopped, refus si speed illisible.
+        // [T-904] Vehicle write: allowed only when stopped, refused if speed unreadable.
         if (!VehicleWriteGate.allow("VSM $methodName")) return false
         val vsm = sVsm ?: return false
         return try {
             val types = args.map { if (it is Int) Int::class.javaPrimitiveType!! else it!!.javaClass }.toTypedArray()
             vsm.javaClass.getMethod(methodName, *types).invoke(vsm, *args)
-            true   // method trouvée et called sans exception → succès
+            true   // method found and called without exception → success
         } catch (e: Exception) {
             AppLogger.w(TAG, "  VSM: $methodName() exc: ${e.message}")
             false
@@ -1333,7 +1333,7 @@ object MG4Hardware {
     }
 
     private fun setIntPropertyVpm(propId: Int, value: Int): Boolean {
-        // [T-904] Write vehicle : autorisée only when stopped, refus si speed illisible.
+        // [T-904] Vehicle write: allowed only when stopped, refused if speed unreadable.
         if (!VehicleWriteGate.allow("VPM 0x${Integer.toHexString(propId)}")) return false
         val vpm = sVpm ?: return false
         return try {
@@ -1343,9 +1343,9 @@ object MG4Hardware {
         } catch (_: Exception) { false }
     }
 
-    /** Variante avec recovery — utilisée par vehiclesettings pour les properties FCW/AEB. */
+    /** Variant with recovery — used by vehiclesettings for the FCW/AEB properties. */
     private fun setIntPropertyVpmRecovery(propId: Int, value: Int): Boolean {
-        // [T-904] Write vehicle : autorisée only when stopped, refus si speed illisible.
+        // [T-904] Vehicle write: allowed only when stopped, refused if speed unreadable.
         if (!VehicleWriteGate.allow("VPM-recovery 0x${Integer.toHexString(propId)}")) return false
         val vpm = sVpm ?: return false
         return try {
@@ -1362,7 +1362,7 @@ object MG4Hardware {
 
     // ── Alimentation vehicle (mise hors tension, infodivertissement maintenu) ─
     // Reproduit le bouton "Vehicle Power → Off" du launcher MG (onglet Safety).
-    // Value 2 sur les 6 firmwares ; seul le chemin d'accès diffère :
+    // Value 2 on all 6 firmwares; only the access path differs :
     //   • SWI133        : VehiclePropertyManager.setIntPropertyRecovery(0x6030021, 2)
     //   • SWI68/SWI165  : VehicleSettingManager.setPowerModeSwitch(2)
     //   • A9 (132/131/69): CarAdapterClient.queryClient(0xf) → CarComfortabletClient.setPowerModeSwitch(2)
@@ -1374,7 +1374,7 @@ object MG4Hardware {
     private const val COMFORTABLET_SERVICE_CODE = 0xf
 
     /**
-     * Disponible sur les 6 firmwares : chacun a un check « position P » implémenté (garde de
+     * Available on all 6 firmwares: each implements a "P position" check (guard for
      * safety — le firmware ne garde PAS la commande, donc sans check P une extinction en roulant
      * serait possible). Value P = 1 partout (cf. isVehicleInPark) :
      *   • SWI133 : gear VPM 0x5030043 ✓
@@ -1386,9 +1386,9 @@ object MG4Hardware {
 
     /** Coupe l'alimentation du vehicle tout en gardant l'screen/infodivertissement actif. */
     fun vehiclePowerOff(): Boolean {
-        // Garde de safety : jamais d'extinction hors position P (re-verified à l'envoi).
+        // Safety guard: never power off outside P (re-verified on send).
         if (isVehicleInPark() != true) {
-            AppLogger.w(TAG, "vehiclePowerOff REFUSÉ — levier pas confirmed en P")
+            AppLogger.w(TAG, "vehiclePowerOff REFUSED — gear not confirmed in P")
             return false
         }
         val gen = FirmwareInfo.getGeneration()
@@ -1434,13 +1434,13 @@ object MG4Hardware {
     //   • SWI133        : VPM getIntProperty(0x5030043) ; PARK = 1 (CAR_GEAR_PARK_RANGE)
     //   • SWI68/SWI165  : VehicleConditionBean.getCarGear() (signal condition vehicle)
     //   • A9 (132/131/69): CarStateClient.getGearState()
-    // Seul SWI133 est implémenté ET vérifiable ici ; ailleurs on returns null → power-off bloqué.
+    // Only SWI133 is implemented AND checkable here; elsewhere returns null → power-off blocked.
     private const val PROP_GEAR_STS   = 0x5030043   // SENSOR_TYPE_GEAR_STS (VPM, SWI133)
     private const val GEAR_PARK_VALUE = 1
 
     /**
-     * Levier en P ? true/false si déterminable, null si on ne sait pas (→ bloquer le power-off).
-     * Value P = 1 sur tous les firmwares étudiés (SWI133 0x5030043, A9 getGearState confirmed,
+     * Gear in P? true/false if determinable, null if unknown (→ block power-off).
+     * Value P = 1 on all studied firmwares (SWI133 0x5030043, A9 getGearState confirmed,
      * SWI68/165 getCarGear = CarGearValue.PARK).
      */
     fun isVehicleInPark(): Boolean? {
@@ -1494,7 +1494,7 @@ object MG4Hardware {
     private fun getMixIntProperty(propId: Int): Int {
         val vpm = sVpm ?: return -1
         return try {
-            // Méthode real sur VPM : getMixProperty(Class, int)
+            // Actual method on VPM: getMixProperty(Class, int)
             val result = vpm.javaClass
                 .getMethod("getMixProperty", Class::class.java, Int::class.java)
                 .invoke(vpm, Int::class.javaObjectType, propId)
@@ -1513,7 +1513,7 @@ object MG4Hardware {
     private fun setMixIntProperty(propId: Int, value: Int): Boolean {
         val vpm = sVpm ?: return false
         return try {
-            // Méthode real sur VPM : setMixProperty(Class, int, Object)
+            // Actual method on VPM: setMixProperty(Class, int, Object)
             vpm.javaClass
                 .getMethod("setMixProperty", Class::class.java, Int::class.java, Any::class.java)
                 .invoke(vpm, Int::class.javaObjectType, propId, value)
@@ -1541,7 +1541,7 @@ object MG4Hardware {
         }
     }
 
-    /** Read float via CarPropertyManager. null = illisible (à distinguer de 0). */
+    /** Read float via CarPropertyManager. null = unreadable (distinct from 0). */
     private fun getFloatPropertyCPM(propId: Int, areaId: Int): Float? {
         val cpm = sCarPropertyManager ?: return null
         return try {
@@ -1555,7 +1555,7 @@ object MG4Hardware {
     }
 
     private fun setIntPropertyCPM(propId: Int, areaId: Int, value: Int): Boolean {
-        // [T-904] Write vehicle : autorisée only when stopped, refus si speed illisible.
+        // [T-904] Vehicle write: allowed only when stopped, refused if speed unreadable.
         if (!VehicleWriteGate.allow("CPM 0x${Integer.toHexString(propId)}")) return false
         val cpm = sCarPropertyManager ?: run {
             AppLogger.w(TAG, "  CPM setInt 0x${Integer.toHexString(propId)} — CPM not ready")
@@ -1596,7 +1596,7 @@ object MG4Hardware {
      * Parcel layout from smali: [interfaceToken, AREA_GLOBAL, 1, value, float[], byte[]]
      */
     private fun binderTransact(binder: IBinder?, descriptor: String, txCode: Int, value: Int): Boolean {
-        // [T-904] Write vehicle : autorisée only when stopped, refus si speed illisible.
+        // [T-904] Vehicle write: allowed only when stopped, refused if speed unreadable.
         if (!VehicleWriteGate.allow("binder tx=0x${Integer.toHexString(txCode)}")) return false
         if (binder == null) {
             AppLogger.w(TAG, "  Binder TX=$txCode — binder null")
@@ -1746,7 +1746,7 @@ object MG4Hardware {
 
     fun isOverspeedAlarmOn(): Boolean {
         if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132) {
-            // Priorité VSM (CarVehicleSettingClient) — confirmed dans smali SWI132
+            // VSM priority (CarVehicleSettingClient) — confirmed in SWI132 smali
             // getOverSpeedSoundMode() : 0=OFF, 1/2/3=ON
             val vsm = callVsm("getOverSpeedSoundMode") as? Int
             if (vsm != null) {
@@ -1763,15 +1763,15 @@ object MG4Hardware {
         if (logEnabled) AppLogger.i(TAG, "setOverspeedAlarm → $on")
         if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132) {
             // Essai 1 : CarVehicleSettingClient — setOverSpeedSoundMode(I)V est une method void ;
-            // callVsmVoid() detects le succès same quand invoke() returns null (behaviour normal).
+            // callVsmVoid() detects success even when invoke() returns null (normal behaviour).
             if (callVsmVoid("setOverSpeedSoundMode", if (on) 1 else 0)) {
                 AppLogger.i(TAG, "  SWI132 overspeed → VSM OK")
                 return true
             }
             AppLogger.w(TAG, "  SWI132 overspeed: VSM failed — essai binder")
-            // Essai 2 : binder direct (TX 0x128, bloqué SELinux sur certains builds)
+            // Attempt 2: direct binder (TX 0x128, SELinux-blocked on some builds)
             if (swi132BinderSet(VSM132_TX_OVERSPEED_SOUND, if (on) 1 else 0)) return true
-            AppLogger.w(TAG, "  SWI132 overspeed: tous les paths ont échoué")
+            AppLogger.w(TAG, "  SWI132 overspeed: all paths failed")
             return false
         }
         return setIntPropertyVpm(PROP_OVERSPEED_ALARM, if (on) 1 else 0)
@@ -1802,7 +1802,7 @@ object MG4Hardware {
             AppLogger.w(TAG, "  SWI132 speedLimit: VSM failed — essai binder")
             // Essai 2 : binder direct (TX 0x12a)
             if (swi132BinderSet(VSM132_TX_SPEED_LIMIT, if (on) 1 else 0)) return true
-            AppLogger.w(TAG, "  SWI132 speedLimit: tous les paths ont échoué")
+            AppLogger.w(TAG, "  SWI132 speedLimit: all paths failed")
             return false
         }
         return setIntPropertyVpm(PROP_SPEED_LIMIT_TONE, if (on) 1 else 0)
@@ -1818,7 +1818,7 @@ object MG4Hardware {
         return setIntPropertyVpm(PROP_MIX_INTELLIGENT_DRIVE, value)
     }
 
-    // ── SWI68 / SWI69 ADAS API — VehicleSettingManager (noms de methods différents) ──
+    // ── SWI68 / SWI69 ADAS API — VehicleSettingManager (different method names) ──
 
     /**
      * Returns le mode ACC/TJA actuel (0x4=Off, 0x1=ACC, 0x2=TJA), ou -1 si pas ready.
@@ -1837,14 +1837,14 @@ object MG4Hardware {
         val useNewApi = FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132
         val method = if (useNewApi) "setAccTjaState" else "setAccTjaMode"
         if (logEnabled) AppLogger.i(TAG, "$method → 0x${mode.toString(16)}")
-        return callVsmVoid(method, mode)   // void method — callVsmVoid évite le faux-négatif
+        return callVsmVoid(method, mode)   // void method — callVsmVoid avoids the false negative
     }
 
     /**
-     * Speed limiter — API unifiée pour tous les firmwares VSM.
-     * Le limiteur est un setting INDÉPENDANT du mode ACC/TJA, avec les same values partout
+     * Speed limiter — unified API for all VSM firmwares.
+     * Le limiteur est un setting INDEPENDENT of the ACC/TJA mode, avec les same values partout
      * (0=Disabled, 2=Manual, 3=Intelligent — verified dans le smali de chaque firmware),
-     * seul le nom de method binder diffère :
+     * only the binder method name differs :
      *   SWI132/SWI131/SWI69 : getSasMode/setSasMode        (CarVehicleSettingClient)
      *   SWI68/SWI165        : getSpeedAsstMode/setSpeedAsstMode (VehicleSettingManager)
      */
@@ -1889,11 +1889,11 @@ object MG4Hardware {
     // ── AEB — Front collision avoidance system ──────────────────────────────────
 
     /**
-     * Returns true si le système anti-collision avant est enabled.
+     * Returns true if the front collision avoidance system is enabled.
      * SWI133          : lit PROP_AEB_SWITCH (2=ON, 1=OFF) via CarPropertyManager.
      * SWI68 / SWI165  : getFcwAlarmMode() == 2  (FCW_ALARM_ON=2, FCW_ALARM_OFF=1)
-     *                   Vérifié dans SafeSettingsRepository SWI165 — same API que SWI68.
-     * SWI69 / SWI131  : getFcwState() — 1=DÉSACTIVÉ, 2=ACTIVÉ
+     *                   Verified in SafeSettingsRepository SWI165 — same API as SWI68.
+     * SWI69 / SWI131  : getFcwState() — 1=DISABLED, 2=ENABLED
      */
     fun isAebEnabled(): Boolean {
         return when {
@@ -1911,11 +1911,11 @@ object MG4Hardware {
         return when {
             // SWI69 / SWI131 / SWI132 — CarVehicleSettingClient (same API)
             // setFcwState(I)V et setFcwAutoBrakeMode(I)V sont des methods VOID →
-            // callVsmVoid() est utilisé pour éviter le faux-négatif de callVsm() != null.
+            // callVsmVoid() is used to avoid the false negative of callVsm() != null.
             FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 -> {
                 // OFF : setFcwState(1) + setFcwAutoBrakeMode(1) + setFcwSensitivity(0)
                 // ON  : setFcwState(2) + setFcwAutoBrakeMode(curMode)
-                // Le launcher conditionne son affichage à fcwState==1 AND autoBreakState==1
+                // The launcher gates its display on fcwState==1 AND autoBreakState==1
                 // → sans setFcwAutoBrakeMode, son switch reste ON same quand l'AEB est disabled
                 if (on) {
                     val sOk = callVsmVoid("setFcwState", 2)
@@ -1931,8 +1931,8 @@ object MG4Hardware {
             FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI68 ||
             FirmwareInfo.isSWI165() -> {
                 // SWI68 / SWI165 : setFcwAlarmMode(2=ON / 1=OFF) + setFcwAutoBrakeMode(1) si OFF
-                // Vérifié dans SafeSettingsRepository SWI165 — same API que SWI68,
-                // setAutoEmergencyBraking() n'est jamais utilisé par l'app officielle.
+                // Verified in SafeSettingsRepository SWI165 — same API as SWI68,
+                // setAutoEmergencyBraking() is never used by the official app.
                 // setFcwAlarmMode(I)V et setFcwAutoBrakeMode(I)V sont void → callVsmVoid()
                 if (on) callVsmVoid("setFcwAlarmMode", 2)
                 else { callVsmVoid("setFcwAlarmMode", 1) or callVsmVoid("setFcwAutoBrakeMode", 1) }
@@ -2004,14 +2004,14 @@ object MG4Hardware {
     }
 
     /**
-     * Définit la sensitivity AEB (1=Low, 2=Standard, 3=High).
+     * Sets the AEB sensitivity (1=Low, 2=Standard, 3=High).
      * SWI133         : PROP_AEB_SENSITIVITY (0x302000e, VPM)
      * SWI68/SWI165   : VehicleSettingManager.setFcwSensitivity(I)
      * SWI69/SWI131   : CarVehicleSettingClient.setFcwSensitivity(I)
      */
     @RequiresStandstill
     fun setAebSensitivity(level: Int): Boolean {
-        // setFcwSensitivity(I)V est void → callVsmVoid() pour éviter le faux-négatif
+        // setFcwSensitivity(I)V is void → callVsmVoid() to avoid the false negative
         return if (FirmwareInfo.isVsmBased()) {
             AppLogger.i(TAG, "  AEB SET sensitivity=$level via VSM")
             callVsmVoid("setFcwSensitivity", level)
@@ -2056,8 +2056,8 @@ object MG4Hardware {
     }
 
     /**
-     * Définit le mode ELK.
-     * Routage identique à getElkMode().
+     * Sets the ELK mode.
+     * Routing identical to getElkMode().
      */
     @RequiresStandstill
     fun setElkMode(mode: Int): Boolean = when {
@@ -2088,7 +2088,7 @@ object MG4Hardware {
 
     /**
      * Returns la sensitivity ELK courante (1=Low, 2=Standard, 3=High).
-     * Routage par firmware — identique à getElkMode().
+     * Routing per firmware — identical to getElkMode().
      */
     fun getElkSensitivity(): Int = when {
         !FirmwareInfo.isVsmBased() -> {
@@ -2113,8 +2113,8 @@ object MG4Hardware {
     }
 
     /**
-     * Définit la sensitivity ELK.
-     * Routage identique à getElkMode().
+     * Sets the ELK sensitivity.
+     * Routing identical to getElkMode().
      */
     @RequiresStandstill
     fun setElkSensitivity(level: Int): Boolean = when {
@@ -2245,7 +2245,7 @@ object MG4Hardware {
 
     /**
      * GET via IVehicleSettingService SWI132 (DESCRIPTOR_VSM132, two-way flag=0x0).
-     * Returns la value entière lue, ou -1 en cas d'erreur.
+     * Returns the integer value read, or -1 on error.
      */
     private fun swi132BinderGet(txCode: Int): Int {
         val binder = sVehicleBinder ?: run {
@@ -2276,7 +2276,7 @@ object MG4Hardware {
 
     /**
      * SET via IVehicleSettingService SWI132 (DESCRIPTOR_VSM132, two-way flag=0x0).
-     * Différent de elkBinderSet : utilise le bon DESCRIPTOR et flag two-way.
+     * Different from elkBinderSet: uses the right DESCRIPTOR and a two-way flag.
      */
     private fun swi132BinderSet(txCode: Int, value: Int): Boolean {
         val binder = sVehicleBinder ?: run {
@@ -2307,7 +2307,7 @@ object MG4Hardware {
 
     fun isTsrOn(): Boolean = when {
         FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 ->
-            // Priorité CarVehicleSettingClient (binder vehiclesetting bloqué SELinux)
+            // CarVehicleSettingClient priority (vehiclesetting binder SELinux-blocked)
             // Convention identique SWI69/SWI131 : 0=ON, 1=OFF
             (callVsm("getSLIFWarningState") as? Int)?.let { raw ->
                 AppLogger.d(TAG, "  SWI132 TSR GET via VSM → $raw")
@@ -2327,19 +2327,19 @@ object MG4Hardware {
         AppLogger.i(TAG, "setTsrMode → $enabled")
         return when {
             FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 -> {
-                // Priorité CarVehicleSettingClient — setSLIFWarningState(I)V confirmed dans smali SWI132
+                // CarVehicleSettingClient priority — setSLIFWarningState(I)V confirmed in SWI132 smali
                 // Convention identique SWI69/SWI131 : 0=enable, 1=disablesr
                 if (callVsmVoid("setSLIFWarningState", if (enabled) 0 else 1)) {
                     AppLogger.i(TAG, "  SWI132 TSR → VSM OK")
                     true
                 } else {
-                    // Fallback binder direct (bloqué SELinux sur la plupart des builds SWI132)
+                    // Direct binder fallback (SELinux-blocked on most SWI132 builds)
                     AppLogger.w(TAG, "  SWI132 TSR: VSM failed — essai binder TX 0x057")
                     swi132BinderSet(VSM132_TX_SLIF_WARNING, if (enabled) 1 else 0)
                 }
             }
             FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133 -> {
-                // SWI133 : le firmware remet OVERSPEED et SPEED_TONE à ON quand le SLIF est réenabled
+                // SWI133: the firmware resets OVERSPEED and SPEED_TONE to ON when SLIF is re-enabled
                 // → on sauvegarde avant et on restaure after.
                 val prefs = sAppContext?.getSharedPreferences("mg4_settings", 0)
                 if (!enabled) {
@@ -2367,7 +2367,7 @@ object MG4Hardware {
                 callVsmVoid("setSLIFWarningState", if (enabled) 0 else 1)
             }
             FirmwareInfo.isVsmBased() -> {    // SWI68 + SWI165
-                // L'warning sound pourrait être remis à ON lors de la réenabling du TSR
+                // The warning sound may be reset to ON when re-enabling TSR
                 // → on sauvegarde avant et on restaure after.
                 val prefs = sAppContext?.getSharedPreferences("mg4_settings", 0)
                 if (!enabled) {
@@ -2390,8 +2390,8 @@ object MG4Hardware {
     }
 
     /**
-     * SWI133 : returns (overspeed, speedTone) tels que sauvegardés lors du dernier TSR OFF.
-     * Utilisé par l'UI pour mettre à jour les switches after la réenabling du TSR, sans
+     * SWI133: returns (overspeed, speedTone) as saved at the last TSR OFF.
+     * Used by the UI to update the switches after re-enabling TSR, without
      * relire le hardware (le VPM a une latence de propagation qui renverrait encore ON
      * pendant ~500–1000ms after les writes internes de setTsrMode).
      */
@@ -2448,9 +2448,9 @@ object MG4Hardware {
 
     /**
      * Enregistre un CarPropertyEventCallback sur PROP_IGNITION_STATE via reflection.
-     * Protégé par [sIgnitionCallbackRegistered] — ne s'runs qu'une seule fois.
+     * Guarded by [sIgnitionCallbackRegistered] — runs only once.
      * Lit l'state courant immediatement after l'registersment : CPM ne notifie que sur changement,
-     * donc si la car est already READY au moment du bind, aucun event ne serait reçu sans cette read.
+     * so if the car is already READY at bind time, no event would arrive without this read.
      */
     private fun registerIgnitionPropertyCallback() {
         if (sIgnitionCallbackRegistered) return
@@ -2489,7 +2489,7 @@ object MG4Hardware {
                             AppLogger.i(TAG, "IGNITION_STATE event → $value (${ignitionStateName(value)})")
                             dispatchIgnitionState(value)
                         } else {
-                            AppLogger.w(TAG, "  IGNITION: onChangeEvent getValue() retourné null")
+                            AppLogger.w(TAG, "  IGNITION: onChangeEvent getValue() returned null")
                         }
                     } catch (e: Exception) {
                         AppLogger.w(TAG, "  IGNITION: onChangeEvent parse error: ${e.message}")
@@ -2500,7 +2500,7 @@ object MG4Hardware {
                 null
             }
 
-            sIgnitionCallbackProxy = proxy   // référence forte pour éviter le GC
+            sIgnitionCallbackProxy = proxy   // strong reference to avoid GC
             registerMethod.invoke(cpm, proxy, PROP_IGNITION_STATE, 0f)
             sIgnitionCallbackRegistered = true
             AppLogger.i(TAG, "  IGNITION_STATE callback registered ✓ (propId=0x${PROP_IGNITION_STATE.toString(16)})")
@@ -2571,7 +2571,7 @@ object MG4Hardware {
             return
         }
         val (_, adapterClass, generalClientClass) = classes
-        AppLogger.i(TAG, "  Katman5 SWI69: classes chargées ✓")
+        AppLogger.i(TAG, "  Katman5 SWI69: classes loaded ✓")
 
         fun trySetupGeneralClient(): Boolean {
             if (sVcmCallbackRegistered) return true
@@ -2595,12 +2595,12 @@ object MG4Hardware {
                 AppLogger.w(TAG, "  Katman5 SWI69: CarGeneralClient ctor error: ${e.message}")
                 return false
             }
-            sCarGeneral = client   // conservé pour la brightness screen A9 (setScreenBrightness)
+            sCarGeneral = client   // kept for A9 screen brightness (setScreenBrightness)
 
             val registMethod = generalClientClass.methods.firstOrNull {
                 it.name == "registListener" && it.parameterCount == 1
             } ?: run {
-                AppLogger.w(TAG, "  Katman5 SWI69: registListener non trouvé")
+                AppLogger.w(TAG, "  Katman5 SWI69: registListener not found")
                 return false
             }
 
@@ -2614,7 +2614,7 @@ object MG4Hardware {
             // ICarGeneralService est dans un processus distant (com.saicmotor.caradapter) :
             // registListener() appelle writeStrongBinder(callback.asBinder()) — un proxy qui
             // returns null pour asBinder() transmettrait un binder null au service, qui ne
-            // pourrait jamais rappeler. On crée donc un Binder concret qui implémente onTransact
+            // would ever call back. So we create a concrete Binder implementing onTransact
             // pour le code 0x7 (TRANSACTION_onIgnitionStateChange, identique sur SWI69 et SWI131).
             val callbackBinder = object : android.os.Binder() {
                 override fun onTransact(
@@ -2659,7 +2659,7 @@ object MG4Hardware {
 
             return try {
                 registMethod.invoke(client, proxy)
-                sVcmListener = callbackBinder  // référence forte sur le Binder pour éviter le GC
+                sVcmListener = callbackBinder  // strong reference to the Binder to avoid GC
                 sVcmCallbackRegistered = true
                 AppLogger.i(TAG, "  Katman5 SWI69: ICarGeneralCallback registered ✓")
 
@@ -2717,7 +2717,7 @@ object MG4Hardware {
         val vcmClass = try {
             launcherCtx.classLoader.loadClass(VCM_CLASS)
         } catch (e: Exception) {
-            AppLogger.w(TAG, "  Katman5: classe VCM non trouvée: ${e.message} — retry in 10s")
+            AppLogger.w(TAG, "  Katman5: VCM class not found: ${e.message} — retry in 10s")
             Handler(Looper.getMainLooper()).postDelayed({ initKatman5(context.applicationContext) }, 10_000)
             return
         }
@@ -2785,7 +2785,7 @@ object MG4Hardware {
                 AppLogger.w(TAG, "  Katman5: init() error: ${e.message}")
             }
         } else {
-            AppLogger.w(TAG, "  Katman5: init(Context, listener) non trouvé")
+            AppLogger.w(TAG, "  Katman5: init(Context, listener) not found")
         }
 
         // Retries — singleton disponible after connection asynchrone
@@ -2799,7 +2799,7 @@ object MG4Hardware {
                         f.get(null)
                     } catch (_: Exception) { null }
                     if (mgr != null && sVcm == null) {
-                        AppLogger.i(TAG, "  Katman5: singleton récupéré @${delay}ms")
+                        AppLogger.i(TAG, "  Katman5: singleton obtained @${delay}ms")
                         sVcm = mgr
                         setupVcmCallback(mgr, launcherCtx)
                     } else if (sVcm != null && !sVcmCallbackRegistered) {
@@ -2820,7 +2820,7 @@ object MG4Hardware {
             m.parameterTypes[0].isInterface &&
             m.parameterTypes[0].methods.any { it.name.contains("ConditionChange", ignoreCase = true) }
         } ?: run {
-            AppLogger.w(TAG, "  Katman5: registerVehicleConditionCallback non trouvé — methods: ${
+            AppLogger.w(TAG, "  Katman5: registerVehicleConditionCallback not found — methods: ${
                 vcm.javaClass.methods.filter { it.name.startsWith("register") }.joinToString { it.name }
             }")
             return
@@ -2862,7 +2862,7 @@ object MG4Hardware {
             katman5ReadyListeners.clear()
             Handler(Looper.getMainLooper()).post { toNotify.forEach { it() } }
 
-            // Read immediate (le callback ne se déclenche que sur CHANGEMENT)
+            // Immediate read (the callback only fires on CHANGE)
             Handler(Looper.getMainLooper()).postDelayed({
                 val ignition = try {
                     vcm.javaClass.getMethod("getVehicleIgnition").invoke(vcm) as? Int
@@ -2879,8 +2879,8 @@ object MG4Hardware {
     }
 
     private fun dispatchVehicleConditionIgnition(state: Int) {
-        // Ne dispatcher que si l'state change realment — évite les faux RUN répétés
-        // que VehicleConditionManager envoie à chaque changement de condition vehicle
+        // Only dispatch if the state really changes — avoids repeated false RUN events
+        // that VehicleConditionManager sends on every vehicle condition change
         // (changement de rapport D/N/R, etc.) alors que la car est already en RUN.
         if (state == sLastVcmIgnitionState) return
         sLastVcmIgnitionState = state
@@ -2912,9 +2912,9 @@ object MG4Hardware {
     fun isVehicleBinderAvailable(): Boolean = sVehicleBinder != null
 
     /**
-     * Génère un rapport de diagnostic complet :
+     * Generates a full diagnostic report :
      * state des services, tests binder SWI132 en temps real, dump AppLogger.
-     * À appeler sur Dispatchers.IO (les TX binder sont bloquants).
+     * Call on Dispatchers.IO (binder TX are blocking).
      */
     fun buildDiagnosticReport(appVersion: String): String {
         val sb  = StringBuilder()
@@ -2931,7 +2931,7 @@ object MG4Hardware {
         sb.appendLine("── Services ──")
         sb.appendLine("Katman1 CPM  : ${if (sCarPropertyManager != null) "✓" else "✗"}")
         sb.appendLine("Katman1 HVAC : ${if (sCarHvacManager    != null) "✓" else "✗"}")
-        sb.appendLine("Katman4 créé : ${if (isKatman4VpmCreated())      "✓" else "✗"}")
+        sb.appendLine("Katman4 created : ${if (isKatman4VpmCreated())      "✓" else "✗"}")
         sb.appendLine("Katman4 ready : ${if (isKatman4Ready())           "✓" else "✗"}")
         sb.appendLine("Binder vsett : ${if (sVehicleBinder    != null) "✓ OK" else "✗ null"}")
         val katman5Path = if (FirmwareInfo.isNewGenVsm() || gen == FirmwareInfo.Gen.SWI132)
@@ -2945,7 +2945,7 @@ object MG4Hardware {
             // ── Binder IVehicleSettingService ─────────────────────────────
             sb.appendLine("── SWI132 Binder (IVehicleSettingService) ──")
             val binderOk = sVehicleBinder != null
-            sb.appendLine("Binder présent   : ${if (binderOk) "✓" else "✗ null → toutes alerts KO"}")
+            sb.appendLine("Binder present   : ${if (binderOk) "✓" else "✗ null → all alerts KO"}")
             if (binderOk) {
                 val alive = try { sVehicleBinder!!.pingBinder() } catch (_: Exception) { false }
                 sb.appendLine("pingBinder       : ${if (alive) "✓ vivant" else "✗ mort"}")
@@ -2974,14 +2974,14 @@ object MG4Hardware {
             sb.appendLine("getSpeedLimitSoundMode (0x12b) : ${fmtRaw(rawSpeedLimit)}")
             sb.appendLine()
 
-            // ── Alerts — test SET aller-retour (écrit la value courante) ─
-            // Si la value brute est lisible (≥ 0), on réécrit la same value pour tester
+            // ── Alerts — SET round-trip test (writes the current value) ─
+            // If the raw value is readable (≥ 0), rewrite the same value to test
             // que le SET passe (sans modifier l'state real de la car).
             sb.appendLine("── SWI132 Alerts (SET round-trip) ──")
             if (rawOverspeed >= 0) {
                 val setOk = swi132BinderSet(VSM132_TX_OVERSPEED_SOUND, rawOverspeed)
                 val verify = swi132BinderGet(VSM132_TX_GET_OVERSPEED)
-                sb.appendLine("setOverSpeedSoundMode  (0x128) : ${if (setOk) "✓ écrit" else "✗ failure"}" +
+                sb.appendLine("setOverSpeedSoundMode  (0x128) : ${if (setOk) "✓ written" else "✗ failure"}" +
                     " → reread : ${fmtRaw(verify)}")
             } else {
                 sb.appendLine("setOverSpeedSoundMode  (0x128) : skip (GET KO)")
@@ -2989,7 +2989,7 @@ object MG4Hardware {
             if (rawSpeedLimit >= 0) {
                 val setOk = swi132BinderSet(VSM132_TX_SPEED_LIMIT, rawSpeedLimit)
                 val verify = swi132BinderGet(VSM132_TX_GET_SPEED_LIMIT)
-                sb.appendLine("setSpeedLimitSoundMode (0x12a) : ${if (setOk) "✓ écrit" else "✗ failure"}" +
+                sb.appendLine("setSpeedLimitSoundMode (0x12a) : ${if (setOk) "✓ written" else "✗ failure"}" +
                     " → reread : ${fmtRaw(verify)}")
             } else {
                 sb.appendLine("setSpeedLimitSoundMode (0x12a) : skip (GET KO)")
@@ -2997,7 +2997,7 @@ object MG4Hardware {
             if (rawSlif >= 0) {
                 val setOk = swi132BinderSet(VSM132_TX_SLIF_WARNING, rawSlif)
                 val verify = swi132BinderGet(VSM132_TX_GET_SLIF)
-                sb.appendLine("setSLIFWarningState    (0x057) : ${if (setOk) "✓ écrit" else "✗ failure"}" +
+                sb.appendLine("setSLIFWarningState    (0x057) : ${if (setOk) "✓ written" else "✗ failure"}" +
                     " → reread : ${fmtRaw(verify)}")
             } else {
                 sb.appendLine("setSLIFWarningState    (0x057) : skip (GET KO)")
@@ -3076,14 +3076,14 @@ object MG4Hardware {
                 else -> "$vsmLasSound → ?"
             }}")
 
-            // Test SET round-trip via VSM (sans modifier l'state real : on réécrit la value courante)
+            // SET round-trip test via VSM (without changing real state: rewrites the current value)
             sb.appendLine()
             sb.appendLine("── SWI132 SET round-trip via VSM ──")
             if (vsmOverspeed >= 0) {
                 val setOk = callVsmVoid("setOverSpeedSoundMode", vsmOverspeed)
                 val verify = vsmGet("getOverSpeedSoundMode")
                 sb.appendLine("setOverSpeedSoundMode  : ${if (setOk) "✓" else "✗"} → reread : $verify${
-                    if (setOk && verify == vsmOverspeed) " ✓ cohérent" else if (setOk) " ← value changée !" else ""}")
+                    if (setOk && verify == vsmOverspeed) " ✓ consistent" else if (setOk) " ← value changed !" else ""}")
             } else {
                 sb.appendLine("setOverSpeedSoundMode  : skip (GET KO)")
             }
@@ -3091,7 +3091,7 @@ object MG4Hardware {
                 val setOk = callVsmVoid("setSpeedLimitSoundMode", vsmSpeedLimit)
                 val verify = vsmGet("getSpeedLimitSoundMode")
                 sb.appendLine("setSpeedLimitSoundMode : ${if (setOk) "✓" else "✗"} → reread : $verify${
-                    if (setOk && verify == vsmSpeedLimit) " ✓ cohérent" else if (setOk) " ← value changée !" else ""}")
+                    if (setOk && verify == vsmSpeedLimit) " ✓ consistent" else if (setOk) " ← value changed !" else ""}")
             } else {
                 sb.appendLine("setSpeedLimitSoundMode : skip (GET KO)")
             }
@@ -3099,21 +3099,21 @@ object MG4Hardware {
                 val setOk = callVsmVoid("setSLIFWarningState", vsmSlif)
                 val verify = vsmGet("getSLIFWarningState")
                 sb.appendLine("setSLIFWarningState    : ${if (setOk) "✓" else "✗"} → reread : $verify${
-                    if (setOk && verify == vsmSlif) " ✓ cohérent" else if (setOk) " ← value changée !" else ""}")
+                    if (setOk && verify == vsmSlif) " ✓ consistent" else if (setOk) " ← value changed !" else ""}")
             } else {
                 sb.appendLine("setSLIFWarningState    : skip (GET KO)")
             }
 
-            // Éco
+            // Energy saving
             val enduranceRaw = vsmGet("getEnduranceMode")
             sb.appendLine()
             sb.appendLine("getEnduranceMode : ${when (enduranceRaw) {
-                1 -> "1 → Éco ON" ; 0 -> "0 → Éco OFF" ; -1 -> "-1 ← ERREUR" ; else -> "$enduranceRaw → ?"
+                1 -> "1 → Eco ON" ; 0 -> "0 → Eco OFF" ; -1 -> "-1 ← ERREUR" ; else -> "$enduranceRaw → ?"
             }}")
             sb.appendLine()
         }
 
-        sb.appendLine("── AppLogger (${AppLogger.entries.size} entrées) ──")
+        sb.appendLine("── AppLogger (${AppLogger.entries.size} entries) ──")
         AppLogger.entries.forEach { e ->
             sb.appendLine("[${e.time}] ${e.tag}: ${e.msg}")
         }
@@ -3138,7 +3138,7 @@ object MG4Hardware {
         return gen == FirmwareInfo.Gen.SWI133 || gen == FirmwareInfo.Gen.SWI68 || gen == FirmwareInfo.Gen.SWI165
     }
 
-    /** Onglet Audio (baisse volume à l'openure de door) : only là où c'est fonctionnel. */
+    /** Audio tab (volume drop on door opening): only where functional. */
     fun hasAudioControl(): Boolean = hasDoorVolumeFeature()
 
     private const val DESCRIPTOR_CARADAPTER = "com.saicmotor.carapi.ICarAdapterService"
@@ -3168,7 +3168,7 @@ object MG4Hardware {
 
     fun initAudio(context: Context) {
         // Le bind caradapter ne concerne que l'A9. Sur old-SDK, le loudness passe par
-        // SmartSoundManager (initialisesd dans le flux Katman4), donc rien à binder ici.
+        // SmartSoundManager (initialised in the Katman4 flow), so nothing to bind here.
         if (!isA9Sound()) return
         if (sAudioHelper?.isBinderAlive == true) return
         if (sAudioServiceConn != null) return
@@ -3338,11 +3338,11 @@ object MG4Hardware {
         AppLogger.i(VOL_TAG, "A9 diag: parType0[max=$maxT vol=$volT]  groupForUsage(MEDIA)=$grp  parGroup[max=$maxG vol=$volG]")
     }
 
-    // ── Baisse du volume à l'openure d'une door avant (v1 : SWI133) ──────────
-    // Détection via l'API Car AOSP **CarPropertyManager** (service "property") + permission
-    // CAR_VENDOR_EXTENSION (already déclarée). IDs doors AVANT confirmeds par un utilisateur :
+    // ── Volume drop when a front door opens (v1: SWI133) ──────────
+    // Detection via the AOSP Car API **CarPropertyManager** (service "property") + permission
+    // CAR_VENDOR_EXTENSION (already declared). FRONT door IDs confirmed by a user :
     // FL/FR "ratio" (taux d'openure, >0 = opene) + "mode". Le SDK SAIC (getIntProperty)
-    // ne les lisait pas. Poll ~700ms, change-only (log MG4_DOOR), baisse à l'openure.
+    // did not read them. Poll ~700ms, change-only (log MG4_DOOR), drop on opening.
     // Pas de restauration. Connexion Car async (createCar + ServiceConnection).
 
     private const val DOORWATCH_TAG = "MG4_DOOR"
@@ -3351,18 +3351,18 @@ object MG4Hardware {
     private const val DOOR_OPEN_PROP = 0x2640c623
     private val DOOR_FRONT_AREAS = intArrayOf(0x1, 0x4)
     private val sDoorReadLast = HashMap<Int, Int>()
-    @Volatile private var sDoorSubProperty = false   // voie A : property.registerListener attachée
-    @Volatile private var sDoorSubDoorlock = false   // voie B : doorlock.registerCallback attachée
+    @Volatile private var sDoorSubProperty = false   // path A: property.registerListener attached
+    @Volatile private var sDoorSubDoorlock = false   // path B: doorlock.registerCallback attached
     @Volatile private var sDoorWatcherOn = false
     @Volatile private var sCarInstance: Any? = null
     @Volatile private var sCarPropMgr: Any? = null   // CarPropertyManager (service "property")
     @Volatile private var sCarDoorMgr: Any? = null   // CarDoorLockManager (service "doorlock")
     @Volatile private var sDoorConnecting = false
     @Volatile private var sAnyFrontOpenPrev = false
-    @Volatile private var sVolumeBeforeDrop = -1     // volume mémorisé à l'openure (pour restauration)
+    @Volatile private var sVolumeBeforeDrop = -1     // volume saved at opening (for restore)
 
-    /** Baisse du volume à l'openure de door : detection DLOCK_DOOR_OPEN_STS via CarPropertyManager.
-     *  Lisible/fonctionnel only sur SWI132 et SWI133 ; ailleurs le prop n'est pas exposé à l'app. */
+    /** Volume drop on door opening: DLOCK_DOOR_OPEN_STS detection via CarPropertyManager.
+     *  Readable/functional only on SWI132 and SWI133; elsewhere the prop is not exposed to the app. */
     fun hasDoorVolumeFeature(): Boolean {
         val gen = FirmwareInfo.getGeneration()
         return gen == FirmwareInfo.Gen.SWI132 || gen == FirmwareInfo.Gen.SWI133
@@ -3386,7 +3386,7 @@ object MG4Hardware {
         return list.toIntArray()
     }
 
-    /** Démarrage auto au boot (called par init) : ne lance le watcher que si la feature est enabled. */
+    /** Cranking auto au boot (called par init) : ne lance le watcher que si la feature est enabled. */
     fun startDoorWatcherIfEnabled() {
         if (hasDoorVolumeFeature() && doorVolumeEnabled()) startDoorVolumeWatcher()
     }
@@ -3398,17 +3398,17 @@ object MG4Hardware {
     }
 
     fun stopDoorVolumeWatcher() {
-        sDoorWatcherOn = false           // poll conservé ; on ne déclenche plus la baisse
-        AppLogger.i(TAG, "  DoorVolumeWatcher: déclenchement disabled")
+        sDoorWatcherOn = false           // poll kept; the drop is no longer triggered
+        AppLogger.i(TAG, "  DoorVolumeWatcher: trigger disabled")
     }
 
-    /** Sonde du bouton Diagnostic : logge le volume + l'state des doors à l'instant du clic. */
+    /** Diagnostic button probe: logs the volume + door states at click time. */
     fun runDoorVolumeDiag() {
         AppLogger.i(VOL_TAG, "── DIAG (bouton Diagnostic) ──")
         getMediaVolumeMax()
         getMediaVolume()
         connectCarProperty()   // idempotent ; normalement already connected depuis l'init
-        registerDoorCallback() // re-tente la souscription si pas encore posée
+        registerDoorCallback() // retries the subscription if not attached yet
         probeDoorSnapshot()
     }
 
@@ -3423,12 +3423,12 @@ object MG4Hardware {
             AppLogger.i(DOORWATCH_TAG, "DIAG area=0x${area.toString(16)} = ${v ?: "illisible"}")
         }
         AppLogger.i(DOORWATCH_TAG, "DIAG souscription: property=$sDoorSubProperty doorlock=$sDoorSubDoorlock state=" +
-            if (sDoorReadLast.isEmpty()) "(aucun event reçu)"
+            if (sDoorReadLast.isEmpty()) "(no event received)"
             else sDoorReadLast.entries.joinToString { "0x${it.key.toString(16)}=${it.value}" })
     }
 
-    /** Connexion (async) à l'API Car AOSP → CarPropertyManager ("property") ET CarDoorLockManager
-     *  ("doorlock"). Selon le firmware, la door est exposée par l'un ou l'autre → on lit via les deux. */
+    /** Connection (async) to the AOSP Car API → CarPropertyManager ("property") AND CarDoorLockManager
+     *  ("doorlock"). Depending on the firmware, the door is exposed by one or the other → read via both. */
     private fun connectCarProperty() {
         if (sCarPropMgr != null || sCarDoorMgr != null || sDoorConnecting) return
         val ctx = sAppContext ?: return
@@ -3480,7 +3480,7 @@ object MG4Hardware {
     }
 
     private fun startDoorPolling() {
-        registerDoorCallback()   // souscription ON_CHANGE (complète le poll)
+        registerDoorCallback()   // ON_CHANGE subscription (complements the poll)
         AppLogger.i(DOORWATCH_TAG, "watcher door actif (property=${sCarPropMgr != null} doorlock=${sCarDoorMgr != null})")
         val h = Handler(Looper.getMainLooper())
         val poll = object : Runnable {
@@ -3497,8 +3497,8 @@ object MG4Hardware {
         h.post(poll)
     }
 
-    /** Point d'entrée unique pour une value door (poll OU événement de souscription).
-     *  Met à jour l'state, log en change-only, puis réévalue le déclenchement volume. */
+    /** Single entry point for a door value (poll OR subscription event).
+     *  Updates the state, logs change-only, then re-evaluates the volume trigger. */
     @Synchronized
     private fun onDoorAreaValue(area: Int, v: Int) {
         val prev = sDoorReadLast[area]
@@ -3509,7 +3509,7 @@ object MG4Hardware {
         evaluateDoorTrigger()
     }
 
-    /** Recalcule "au moins une door choisie opene" à partir de l'state accumulé et applique
+    /** Recomputes "at least one selected door open" from the accumulated state and applies
      *  la baisse (front d'openure) / la restauration (front de fermeture). Idempotent. */
     private fun evaluateDoorTrigger() {
         if (!(sDoorWatcherOn && doorVolumeEnabled())) return
@@ -3536,7 +3536,7 @@ object MG4Hardware {
     }
 
     /** InvocationHandler commun aux deux interfaces de callback (onChangeEvent/onErrorEvent).
-     *  Filtre DLOCK_DOOR_OPEN_STS et alimente onDoorAreaValue. Gère aussi les methods Object. */
+     *  Filters DLOCK_DOOR_OPEN_STS and feeds onDoorAreaValue. Also handles Object methods. */
     private fun doorEventHandler(src: String) = InvocationHandler { proxy, method, args ->
         when (method.name) {
             "onChangeEvent" -> {
@@ -3568,9 +3568,9 @@ object MG4Hardware {
     }
 
     /**
-     * S'abonne aux changements de DLOCK_DOOR_OPEN_STS. Nécessaire sur SWI69/131/68/165 où le prop
-     * n'est PAS lisible à la demande (getProperty lève IllegalArgumentException "Failed to get value")
-     * mais poussé en ON_CHANGE. IMPORTANT : le Proxy doit être défini par le classloader de l'APP
+     * Subscribes to DLOCK_DOOR_OPEN_STS changes. Needed on SWI69/131/68/165 where the prop
+     * is NOT readable on demand (getProperty throws IllegalArgumentException "Failed to get value")
+     * but pushed via ON_CHANGE. IMPORTANT: the Proxy must be defined by the APP classloader
      * (android.car est en BootClassLoader → Proxy.newProxyInstance y fails). On tente DEUX voies :
      *   A) CarPropertyManager.registerListener (service "property")
      *   B) CarDoorLockManager.registerCallback   (service "doorlock", comme la SystemUI d'origine)
@@ -3579,7 +3579,7 @@ object MG4Hardware {
         val cl = sAppContext?.classLoader ?: return
 
         // Voie A — CarPropertyManager.registerListener(CarPropertyEventListener, propId, rate).
-        // rate=5f (et non 0f) : si le VHAL déclare la prop CONTINUOUS, un rate 0 = aucune mise à jour.
+        // rate=5f (not 0f): if the VHAL declares the prop CONTINUOUS, rate 0 = no updates.
         if (!sDoorSubProperty) sCarPropMgr?.let { m ->
             try {
                 val iface = cl.loadClass("android.car.hardware.property.CarPropertyManager\$CarPropertyEventListener")
