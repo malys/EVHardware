@@ -339,10 +339,10 @@ object MG4Hardware {
     }
 
     /**
-     * Temperature outside en °C, ou null si illisible (CPM non ready, property non
-     * supportsde par le firmware, exception).
+     * Outside temperature in °C, or null if unreadable (CPM not ready, property not
+     * supported by the firmware, exception).
      *
-     * Le null est significatif : il veut dire « on ne sait pas », pas « il fait 0 °C ».
+     * The null is significant: it means "we do not know", not "it is 0 °C".
      * A weather rule that receives null must NOT fire.
      */
     fun getOutsideTempCelsius(): Float? =
@@ -350,14 +350,17 @@ object MG4Hardware {
             ?: getFloatPropertyCPM(PROP_OUTSIDE_TEMP, 0)
 
     // -------------------------------------------------------------------------
-    // Climate + windows — READ ONLY, UNVERIFIED on MG4 firmware.
+    // Climate + windows — READ ONLY.
     //
-    // Standard AOSP VehicleProperty IDs. The R69 OEM sources expose these names, but the
-    // numeric ids and area ids are not confirmed against any MG4 generation. These reads
-    // exist so the MG4Tasker diagnostic screen can show whether a signal is actually
-    // readable BEFORE any write path is added. Every method returns null when unreadable —
-    // callers must treat null as "unknown", never as a value. No write counterpart exists
-    // on purpose: writing a wrong id to the vehicle is exactly the risk being deferred.
+    // The numeric property ids below are CONFIRMED against the R69 OEM sources
+    // (saicupdate_overseas_eh32 Q.java / d.java, which map these exact integers to the
+    // AOSP names): HVAC_FAN_SPEED 0x15400500, HVAC_TEMPERATURE_SET 0x15600503,
+    // HVAC_RECIRC_ON 0x15200508, WINDOW_POS 0x13400BC0. HVAC_AC_ON / HVAC_AUTO_ON use the
+    // canonical AOSP values (not surfaced in that mapping). What is still UNVERIFIED is the
+    // area ids and whether a given MG4 generation actually exposes each one live — hence
+    // read-only, and the MG4Tasker diagnostic screen exists to check exposure per car.
+    // Every method returns null when unreadable — treat null as "unknown", never a value.
+    // No write counterpart on purpose: a wrong id written to the vehicle is the deferred risk.
     // -------------------------------------------------------------------------
 
     private const val PROP_HVAC_AC_ON          = 0x15200505  // HVAC_AC_ON (bool)
@@ -365,7 +368,7 @@ object MG4Hardware {
     private const val PROP_HVAC_RECIRC_ON      = 0x15200508  // HVAC_RECIRC_ON (bool)
     private const val PROP_HVAC_FAN_SPEED      = 0x15400500  // HVAC_FAN_SPEED (int)
     private const val PROP_HVAC_TEMPERATURE_SET = 0x15600503 // HVAC_TEMPERATURE_SET (float °C)
-    private const val PROP_WINDOW_POS          = 0x13340BC0  // WINDOW_POS (int, per window area)
+    private const val PROP_WINDOW_POS          = 0x13400BC0  // WINDOW_POS (int, per window area) — R69-confirmed 322964416
 
     // Candidate HVAC area ids: the seat-heat area used elsewhere, plus GLOBAL and 0.
     private val HVAC_AREA_CANDIDATES = intArrayOf(AREA_HVAC, AREA_GLOBAL, 0)
