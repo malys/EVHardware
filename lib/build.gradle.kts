@@ -1,6 +1,10 @@
+// Plugin ids and dependency coordinates are hardcoded rather than pulled from a version
+// catalog: this module is included as a subproject by three different app repos, each with
+// its own `libs` catalog, and it must not depend on any of them defining the same aliases.
+// The AGP/Kotlin plugins resolve from whichever root puts them on the classpath.
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
@@ -9,8 +13,6 @@ android {
 
     defaultConfig {
         minSdk = 28
-        // Vehicle access is all reflection against android.car (absent from the compile SDK);
-        // there is nothing to test on an emulator, so no instrumentation runner.
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -39,12 +41,12 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.annotation)
-    implementation(libs.gson)
-    implementation(libs.kotlinx.coroutines.android)
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.annotation:annotation:1.8.0")
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
-    testImplementation(libs.junit)
-    testImplementation(libs.robolectric)
-    testImplementation(libs.androidx.test.core)
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test:core:1.6.1")
 }
