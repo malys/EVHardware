@@ -112,6 +112,15 @@ See [SECURITY.md](SECURITY.md). The library is the one place vehicle writes happ
 consumers, so the gate, the closed action vocabulary, and the per-firmware routing all live
 here rather than being reimplemented per app.
 
+## Installing the apps on the MG4
+
+MG4Hardware is a library — it ships inside the consumer apps (MG4Control, MG4Tasker), not
+as its own APK. Those apps are sideloaded on the head unit via the keyboard route: open a
+text field, long-press `,` on the on-screen keyboard → **Language settings** → search
+`backup` then press back to reach Android Settings → enable **Developer options** +
+**Install unknown apps** → search `storage` and open the APK. See each app's README for
+the full steps.
+
 ## License
 
 MIT — see [LICENSE](LICENSE) and [LICENSE.md](LICENSE.md). Runs on a vehicle; see
