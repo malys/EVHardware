@@ -2,6 +2,7 @@
 
 [![Tests](../../actions/workflows/tests.yml/badge.svg)](../../actions/workflows/tests.yml)
 [![Security](../../actions/workflows/security.yml/badge.svg)](../../actions/workflows/security.yml)
+[![Publish](../../actions/workflows/publish.yml/badge.svg)](../../actions/workflows/publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > ⚠️ **This library reads and writes a car's settings.** It runs inside apps installed on
@@ -86,6 +87,23 @@ app's decision.
 
 ---
 
+### External projects: consume the AAR
+
+Projects outside this org can depend on MG4Hardware as a binary instead of a submodule. A
+version tag publishes the AAR to GitHub Packages (`com.mg4:mg4hardware:<version>`), and
+`./gradlew :lib:publishToMavenLocal` installs it to `~/.m2` for local experimentation:
+
+```kotlin
+repositories {
+    mavenLocal()
+    maven { url = uri("https://maven.pkg.github.com/malys/MG4Hardware") } // GitHub Packages
+}
+dependencies { implementation("com.mg4:mg4hardware:0.1.0-SNAPSHOT") }
+```
+
+The AAR carries `consumer-rules.pro`, so a consumer's R8 keeps the reflected names. Vehicle
+writes still require the consuming app to be signed with the ROM platform key.
+
 ## Building (standalone)
 
 ```bash
@@ -93,7 +111,7 @@ app's decision.
 ./gradlew :lib:assembleDebug       # the AAR
 ```
 
-JDK 17 (AGP 8.5.2). `android.car` is not on the compile SDK, so all vehicle access is
+JDK 17 (AGP 9.1.1 / Gradle 9.3.1 / compileSdk 36). `android.car` is not on the compile SDK, so all vehicle access is
 reflection — there is nothing to test on an emulator; the JVM tests cover the decision
 logic (gate, firmware annotations, catalogue consistency).
 
@@ -120,6 +138,21 @@ text field, long-press `,` on the on-screen keyboard → **Language settings** �
 `backup` then press back to reach Android Settings → enable **Developer options** +
 **Install unknown apps** → search `storage` and open the APK. See each app's README for
 the full steps.
+
+## The MG4 app suite
+
+Part of a small set of projects for the SAIC MG4 (AAOS 9, MT2712), all sharing the
+**MG4Hardware** vehicle layer:
+
+| Project | Role |
+|---|---|
+| [MG4Hardware](https://github.com/malys/MG4Hardware) | Shared vehicle-access layer: reflection hardware layer, 0 km/h safety gate, driving models, condition/action catalogue + firmware matrix |
+| [MG4Control](https://github.com/malys/MG4Control) | Drive-profile manager; applies settings at startup; owns the signature-protected TaskerBridge |
+| [MG4Tasker](https://github.com/malys/MG4Tasker) | Rule engine — *when* conditions *then* actions — driving the car through MG4Control |
+| [MG4AbrpTelemetry](https://github.com/malys/MG4AbrpTelemetry) | Live telemetry uploader to A Better Route Planner |
+
+Common toolchain: **AGP 9.1.1 / Gradle 9.3.1 / compileSdk 36 / JDK 17**. Each app consumes
+MG4Hardware as a git submodule (`MG4Hardware/lib` as the `:mg4hardware` subproject).
 
 ## License
 
