@@ -1,0 +1,55 @@
+name: Security
+
+# Security checks for the shared vehicle layer. Blocking: secret scan. Informational
+# (SARIF): SAST. No permission-drift gate here — a library declares no app permissions;
+# that gate lives in each consuming app.
+on:
+  push:
+    branches: [main, master, "feat/**", "feature/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  secrets:
+    name: Secret scan (blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sast:
+    name: SAST mobile (mobsfscan + semgrep)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Run scanners (SARIF, non-blocking)
+        run: |
+          empty_sarif() {
+            printf '%s' '{"version":"2.1.0","$schema":"https://json.schemastore.org/sarif-2.1.0.json","runs":[{"tool":{"driver":{"name":"'"$1"'","rules":[]}},"results":[]}]}' > "$2"
+          }
+          pip install mobsfscan semgrep
+          mobsfscan --sarif -o mobsfscan.sarif . || true
+          [ -s mobsfscan.sarif ] || empty_sarif mobsfscan mobsfscan.sarif
+          semgrep --config p/java --config p/security-audit --sarif -o semgrep.sarif . || true
+          [ -s semgrep.sarif ] || empty_sarif semgrep semgrep.sarif
+      - name: Upload mobsfscan SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: mobsfscan.sarif
+          category: mobsfscan
+      - name: Upload Semgrep SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep

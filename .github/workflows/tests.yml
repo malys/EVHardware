@@ -1,0 +1,43 @@
+name: Tests
+
+# JVM unit tests for the shared vehicle layer. Blocking: this library decides when a car
+# gets written to, so a red test must never reach a consuming APK.
+on:
+  push:
+    branches: [main, master, "feat/**", "feature/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Unit tests (JVM)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Run unit tests
+        run: |
+          chmod +x gradlew
+          ./gradlew :lib:testDebugUnitTest --no-daemon
+      - name: Fail if the firmware matrix is stale
+        run: |
+          # The test regenerates docs/firmware-matrix.md; a diff means it was not committed.
+          if ! git diff --quiet -- docs/firmware-matrix.md; then
+            echo "::error::docs/firmware-matrix.md is out of date. Run ./gradlew :lib:testDebugUnitTest and commit it."
+            git --no-pager diff -- docs/firmware-matrix.md
+            exit 1
+          fi
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: lib/build/reports/tests/

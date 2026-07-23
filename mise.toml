@@ -1,0 +1,24 @@
+# Dev environment for MG4Hardware. JDK 17 (AGP 8.5.2). The Android SDK is shared with the
+# consuming apps (MG4Control installs it via its own `mise run bootstrap`).
+
+[tools]
+java = "17"
+
+[env]
+ANDROID_HOME = "{{env.HOME}}/Android/Sdk"
+ANDROID_SDK_ROOT = "{{env.HOME}}/Android/Sdk"
+
+[tasks.test]
+description = "JVM unit tests (also regenerates docs/firmware-matrix.md)"
+run = './gradlew -Dorg.gradle.java.home=$JAVA_HOME :lib:testDebugUnitTest'
+
+[tasks.build]
+description = "Assemble the debug AAR"
+run = './gradlew -Dorg.gradle.java.home=$JAVA_HOME :lib:assembleDebug'
+
+[tasks.check]
+description = "What CI runs"
+depends = ["test"]
+
+[tasks.clean]
+run = './gradlew -Dorg.gradle.java.home=$JAVA_HOME clean'
