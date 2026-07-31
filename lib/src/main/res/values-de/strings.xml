@@ -109,4 +109,5 @@
     <string name="act_las_vibration">Spurverlassen Lenkradvibration</string>
     <string name="act_launch_app">App starten</string>
     <string name="act_notify">Benachrichtigung anzeigen</string>
+    <string name="act_speak">Nachricht vorlesen</string>
 </resources>

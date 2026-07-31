@@ -109,4 +109,5 @@
     <string name="act_las_vibration">Lane departure steering vibration</string>
     <string name="act_launch_app">Launch an app</string>
     <string name="act_notify">Show a notification</string>
+    <string name="act_speak">Speak a message</string>
 </resources>

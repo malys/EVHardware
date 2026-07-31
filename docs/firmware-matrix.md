@@ -46,6 +46,7 @@
 |---|:--:|:--:|:--:|:--:|:--:|:--:|
 | LAUNCH_APP | — | — | — | — | — | — |
 | SHOW_NOTIFICATION | — | — | — | — | — | — |
+| SPEAK_TEXT | — | — | — | — | — | — |
 | APPLY_PROFILE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_DRIVE_MODE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_REGEN_LEVEL | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

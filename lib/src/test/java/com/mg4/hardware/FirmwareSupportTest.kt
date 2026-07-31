@@ -28,7 +28,8 @@ class FirmwareSupportTest {
     )
     private val firmwareIndependentActions = setOf(
         ActionType.LAUNCH_APP,
-        ActionType.SHOW_NOTIFICATION
+        ActionType.SHOW_NOTIFICATION,
+        ActionType.SPEAK_TEXT
     )
 
     @Test

@@ -235,6 +235,14 @@ enum class ActionType(
     SHOW_NOTIFICATION(
         R.string.act_notify, ActionGroup.SYSTEM,
         ValueSpec(ValueKind.TEXT), bridgeAction = null
+    ),
+    /**
+     * Speaks the text through the platform TTS engine. Local like the two above: nothing
+     * is written to the vehicle, so no firmware annotation and no bridge action.
+     */
+    SPEAK_TEXT(
+        R.string.act_speak, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.TEXT), bridgeAction = null
     );
 
     companion object {

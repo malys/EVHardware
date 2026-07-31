@@ -19,7 +19,9 @@ class CatalogConsistencyTest {
     fun `toute action vehicule cible une action du pont`() {
         // bridgeAction=null est réservé aux actions locales (lancer une app, notifier).
         // Une action véhicule sans cible serait silencieusement ignorée à l'exécution.
-        val localOnly = setOf(ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION)
+        val localOnly = setOf(
+            ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION, ActionType.SPEAK_TEXT
+        )
 
         ActionType.entries.filterNot { it in localOnly }.forEach { type ->
             assertNotNull("${type.name} n'a pas de bridgeAction", type.bridgeAction)
@@ -28,7 +30,7 @@ class CatalogConsistencyTest {
 
     @Test
     fun `les actions locales ne passent pas par le pont`() {
-        listOf(ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION).forEach { type ->
+        listOf(ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION, ActionType.SPEAK_TEXT).forEach { type ->
             assertTrue(
                 "${type.name} ne touche pas le véhicule et ne doit pas avoir de bridgeAction",
                 type.bridgeAction == null

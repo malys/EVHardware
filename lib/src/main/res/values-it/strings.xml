@@ -109,4 +109,5 @@
     <string name="act_las_vibration">Vibrazione volante cambio corsia</string>
     <string name="act_launch_app">Avvia un\'app</string>
     <string name="act_notify">Mostra una notifica</string>
+    <string name="act_speak">Pronuncia un messaggio</string>
 </resources>

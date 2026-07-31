@@ -109,4 +109,5 @@
     <string name="act_las_vibration">Vibration volant en sortie de voie</string>
     <string name="act_launch_app">Lancer une application</string>
     <string name="act_notify">Afficher une notification</string>
+    <string name="act_speak">Dire un message</string>
 </resources>

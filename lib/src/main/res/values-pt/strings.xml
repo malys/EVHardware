@@ -109,4 +109,5 @@
     <string name="act_las_vibration">Vibração do volante por saída de faixa</string>
     <string name="act_launch_app">Abrir uma app</string>
     <string name="act_notify">Mostrar uma notificação</string>
+    <string name="act_speak">Dizer uma mensagem</string>
 </resources>

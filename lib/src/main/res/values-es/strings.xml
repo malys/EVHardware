@@ -109,4 +109,5 @@
     <string name="act_las_vibration">Vibración del volante por cambio de carril</string>
     <string name="act_launch_app">Abrir una app</string>
     <string name="act_notify">Mostrar una notificación</string>
+    <string name="act_speak">Decir un mensaje</string>
 </resources>
