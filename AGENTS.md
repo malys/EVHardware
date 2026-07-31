@@ -1,7 +1,7 @@
 # AGENTS.md — MG4Hardware
 
 Shared vehicle-access library for the SAIC MG4 (AAOS 9, MT2712), consumed by MG4Control,
-MG4Tasker and ABRP_Uploader via git submodule + Gradle subproject.
+MG4Tasker and MG4ABRPUploader via git submodule + Gradle subproject.
 
 Commit author: malys.training@gmail.com
 

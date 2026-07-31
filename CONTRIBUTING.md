@@ -31,7 +31,7 @@ with a `values-fr/` translation.
 
 ## Consumers
 
-Changing a public signature ripples into MG4Control, MG4Tasker and ABRP_Uploader (submodule
+Changing a public signature ripples into MG4Control, MG4Tasker and MG4ABRPUploader (submodule
 consumers). Note the affected apps in the PR; a minified consumer must be verified on a
 vehicle because vehicle access is reflection-based.
 
