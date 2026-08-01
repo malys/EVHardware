@@ -111,43 +111,49 @@ enum class ActionType(
     ),
 
     // ── Audio ────────────────────────────────────────────────────────────────
+    // Everything below the media volume goes through the SAIC `caradapter` audio helper,
+    // which MG4Hardware binds only on the A9 platform (SWI69 / SWI131 / SWI132). These
+    // entries used to be annotated SWI133 + SWI132, read off `hasAudioControl()` — but that
+    // predicate describes the door-volume feature, a different thing. The effect was an
+    // action offered on SWI133, where the helper is never bound and the write silently
+    // returns false, and hidden on SWI69 / SWI131, where it works.
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
     SET_MEDIA_VOLUME(
         R.string.act_media_volume, ActionGroup.AUDIO,
         ValueSpec.dynamicNumber(0, VehicleEnums.MEDIA_VOLUME_FALLBACK_MAX),
         "SET_MEDIA_VOLUME"
     ),
-    @SupportedOn(SWI133, SWI132)
+    @SupportedOn(SWI69, SWI131, SWI132)
     SET_AUDIO_BALANCE(
         R.string.act_balance, ActionGroup.AUDIO,
         number(VehicleEnums.AUDIO_LEVEL_MIN, VehicleEnums.AUDIO_LEVEL_MAX),
         "SET_AUDIO_BALANCE"
     ),
-    @SupportedOn(SWI133, SWI132)
+    @SupportedOn(SWI69, SWI131, SWI132)
     SET_AUDIO_FADER(
         R.string.act_fader, ActionGroup.AUDIO,
         number(VehicleEnums.AUDIO_LEVEL_MIN, VehicleEnums.AUDIO_LEVEL_MAX),
         "SET_AUDIO_FADER"
     ),
-    @SupportedOn(SWI133, SWI132)
+    @SupportedOn(SWI69, SWI131, SWI132)
     SET_TONE_CONTROL(
         R.string.act_tone, ActionGroup.AUDIO,
         number(VehicleEnums.AUDIO_LEVEL_MIN, VehicleEnums.AUDIO_LEVEL_MAX),
         "SET_TONE_CONTROL"
     ),
-    @SupportedOn(SWI133, SWI132)
+    @SupportedOn(SWI69, SWI131, SWI132)
     SET_BOSE_SOUND_TYPE(
         R.string.act_bose, ActionGroup.AUDIO,
         number(VehicleEnums.AUDIO_TYPE_MIN, VehicleEnums.AUDIO_TYPE_MAX),
         "SET_BOSE_SOUND_TYPE"
     ),
-    @SupportedOn(SWI133, SWI132)
+    @SupportedOn(SWI69, SWI131, SWI132)
     SET_3D_EFFECT(
         R.string.act_3d, ActionGroup.AUDIO,
         number(VehicleEnums.AUDIO_TYPE_MIN, VehicleEnums.AUDIO_TYPE_MAX),
         "SET_3D_EFFECT"
     ),
-    @SupportedOn(SWI133, SWI132)
+    @SupportedOn(SWI69, SWI131, SWI132)
     SET_SPEED_VOLUME(
         R.string.act_speed_volume, ActionGroup.AUDIO,
         number(VehicleEnums.AUDIO_TYPE_MIN, VehicleEnums.AUDIO_TYPE_MAX),

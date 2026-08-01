@@ -1695,9 +1695,24 @@ object MG4Hardware {
         return ok
     }
 
-    fun getSeatHeatLeft(): Int  = getIntPropertyHvac(PROP_SEAT_HEAT_L, AREA_HVAC).coerceAtLeast(0)
-    fun getSeatHeatRight(): Int = getIntPropertyHvac(PROP_SEAT_HEAT_R, AREA_HVAC).coerceAtLeast(0)
-    fun isSteeringHeatOn(): Boolean = getIntPropertyHvac(PROP_STEERING_HEAT, AREA_HVAC) > 0
+    /*
+     * `…OrNull` readers: null means "could not be read", which is not the same as off/zero.
+     *
+     * A consumer that drives a switch (MG4Control) wants a Boolean and treats unreadable as
+     * off; a consumer that evaluates a rule (MG4Tasker) must not, or a car whose firmware
+     * never answers looks exactly like a car with the feature turned off — and the rule
+     * writes on that assumption. So the routing lives in the nullable reader and the
+     * historical non-null getter is a thin `?: false` / `?: 0` over it, unchanged for its
+     * callers.
+     */
+    fun seatHeatLeftOrNull(): Int?  = getIntPropertyHvac(PROP_SEAT_HEAT_L, AREA_HVAC).takeIf { it >= 0 }
+    fun seatHeatRightOrNull(): Int? = getIntPropertyHvac(PROP_SEAT_HEAT_R, AREA_HVAC).takeIf { it >= 0 }
+    fun steeringHeatOnOrNull(): Boolean? =
+        getIntPropertyHvac(PROP_STEERING_HEAT, AREA_HVAC).takeIf { it >= 0 }?.let { it > 0 }
+
+    fun getSeatHeatLeft(): Int  = seatHeatLeftOrNull() ?: 0
+    fun getSeatHeatRight(): Int = seatHeatRightOrNull() ?: 0
+    fun isSteeringHeatOn(): Boolean = steeringHeatOnOrNull() ?: false
 
     fun getDriveMode(): DriveMode? {
         val cpm = sCarPropertyManager ?: return null
@@ -1747,7 +1762,7 @@ object MG4Hardware {
     // ADAS API (Katman4)
     // -------------------------------------------------------------------------
 
-    fun isOverspeedAlarmOn(): Boolean {
+    fun overspeedAlarmOnOrNull(): Boolean? {
         if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132) {
             // VSM priority (CarVehicleSettingClient) — confirmed in SWI132 smali
             // getOverSpeedSoundMode() : 0=OFF, 1/2/3=ON
@@ -1756,10 +1771,12 @@ object MG4Hardware {
                 AppLogger.d(TAG, "  SWI132 overspeed GET via VSM → $vsm")
                 return vsm > 0
             }
-            return swi132BinderGet(VSM132_TX_GET_OVERSPEED) == 1
+            return swi132BinderGet(VSM132_TX_GET_OVERSPEED).takeIf { it >= 0 }?.let { it == 1 }
         }
-        return getIntPropertyVpm(PROP_OVERSPEED_ALARM) > 0
+        return getIntPropertyVpm(PROP_OVERSPEED_ALARM).takeIf { it >= 0 }?.let { it > 0 }
     }
+
+    fun isOverspeedAlarmOn(): Boolean = overspeedAlarmOnOrNull() ?: false
 
     @RequiresStandstill
     fun setOverspeedAlarm(on: Boolean): Boolean {
@@ -1780,7 +1797,7 @@ object MG4Hardware {
         return setIntPropertyVpm(PROP_OVERSPEED_ALARM, if (on) 1 else 0)
     }
 
-    fun isSpeedLimitToneOn(): Boolean {
+    fun speedLimitToneOnOrNull(): Boolean? {
         if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132) {
             // getSpeedLimitSoundMode() : 0=OFF, value positive=ON
             val vsm = callVsm("getSpeedLimitSoundMode") as? Int
@@ -1788,10 +1805,12 @@ object MG4Hardware {
                 AppLogger.d(TAG, "  SWI132 speedLimit GET via VSM → $vsm")
                 return vsm > 0
             }
-            return swi132BinderGet(VSM132_TX_GET_SPEED_LIMIT) == 1
+            return swi132BinderGet(VSM132_TX_GET_SPEED_LIMIT).takeIf { it >= 0 }?.let { it == 1 }
         }
-        return getIntPropertyVpm(PROP_SPEED_LIMIT_TONE) > 0
+        return getIntPropertyVpm(PROP_SPEED_LIMIT_TONE).takeIf { it >= 0 }?.let { it > 0 }
     }
+
+    fun isSpeedLimitToneOn(): Boolean = speedLimitToneOnOrNull() ?: false
 
     @RequiresStandstill
     fun setSpeedLimitTone(on: Boolean): Boolean {
@@ -1874,11 +1893,13 @@ object MG4Hardware {
      * SWI69/SWI131/SWI132 : getLasWarningSound()   (confirmed dans smali SWI132)
      * Values : 2=ON / 1=OFF
      */
-    fun isSoundWarningOn(): Boolean {
+    fun soundWarningOnOrNull(): Boolean? {
         val method = if (FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132)
             "getLasWarningSound" else "getLaneKeepingWarningSound"
-        return ((callVsm(method) as? Int) ?: 1) == 2
+        return (callVsm(method) as? Int)?.let { it == 2 }
     }
+
+    fun isSoundWarningOn(): Boolean = soundWarningOnOrNull() ?: false
 
     /** SWI68 : setLaneKeepingWarningSound(I)   SWI69/SWI131/SWI132 : setLasWarningSound(I) — void */
     @RequiresStandstill
@@ -1898,15 +1919,17 @@ object MG4Hardware {
      *                   Verified in SafeSettingsRepository SWI165 — same API as SWI68.
      * SWI69 / SWI131  : getFcwState() — 1=DISABLED, 2=ENABLED
      */
-    fun isAebEnabled(): Boolean {
+    fun aebEnabledOrNull(): Boolean? {
         return when {
             // SWI69 / SWI131 / SWI132 — CarVehicleSettingClient : getFcwState() (1=OFF, 2=ON)
             FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 ->
-                (callVsm("getFcwState") as? Int) == 2
-            FirmwareInfo.isVsmBased()  -> (callVsm("getFcwAlarmMode") as? Int) == 2  // SWI68 / SWI165
-            else                       -> getIntPropertyCPM(PROP_AEB_SWITCH, AREA_GLOBAL) == 0x2  // SWI133
+                (callVsm("getFcwState") as? Int)?.let { it == 2 }
+            FirmwareInfo.isVsmBased()  -> (callVsm("getFcwAlarmMode") as? Int)?.let { it == 2 }  // SWI68 / SWI165
+            else -> getIntPropertyCPM(PROP_AEB_SWITCH, AREA_GLOBAL).takeIf { it >= 0 }?.let { it == 0x2 }  // SWI133
         }
     }
+
+    fun isAebEnabled(): Boolean = aebEnabledOrNull() ?: false
 
     @RequiresStandstill
     fun setAebEnabled(on: Boolean): Boolean {
@@ -1957,6 +1980,15 @@ object MG4Hardware {
             if (raw < 1) -1 else raw
         }
     }
+
+    /**
+     * Same routing as [getAebMode], without the ALARM default the VSM branch falls back to.
+     * That default is a sane switch position for a UI, and a lie for a rule: it would make
+     * "AEB mode is Alert" true on a car that never answered.
+     */
+    fun aebModeOrNull(): Int? =
+        if (FirmwareInfo.isVsmBased()) (callVsm("getFcwAutoBrakeMode") as? Int)?.takeIf { it > 0 }
+        else getIntPropertyVpm(PROP_AEB_MODE).takeIf { it >= 1 }
 
     @RequiresStandstill
     fun setAebMode(mode: Int): Boolean {
@@ -2308,22 +2340,25 @@ object MG4Hardware {
     // TSR — Reconnaissance des panneaux de speed
     // -------------------------------------------------------------------------
 
-    fun isTsrOn(): Boolean = when {
+    fun tsrOnOrNull(): Boolean? = when {
         FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 ->
             // CarVehicleSettingClient priority (vehiclesetting binder SELinux-blocked)
             // Convention identique SWI69/SWI131 : 0=ON, 1=OFF
             (callVsm("getSLIFWarningState") as? Int)?.let { raw ->
                 AppLogger.d(TAG, "  SWI132 TSR GET via VSM → $raw")
                 raw == 0
-            } ?: (swi132BinderGet(VSM132_TX_GET_SLIF) == 1)  // fallback binder (rarement accessible)
+            // fallback binder (rarement accessible)
+            } ?: swi132BinderGet(VSM132_TX_GET_SLIF).takeIf { it >= 0 }?.let { it == 1 }
         FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133 ->
-            getIntPropertyVpm(PROP_TSR_MODE) > 0
+            getIntPropertyVpm(PROP_TSR_MODE).takeIf { it >= 0 }?.let { it > 0 }
         FirmwareInfo.isNewGenVsm() ->   // SWI69 + SWI131 — convention invertede : 0=ON, 1=OFF
-            (callVsm("getSLIFWarningState") as? Int) == 0
+            (callVsm("getSLIFWarningState") as? Int)?.let { it == 0 }
         FirmwareInfo.isVsmBased() ->    // SWI68 + SWI165
-            (callVsm("getSpeedAsstSlifWarning") as? Int) == 1
-        else -> false
+            (callVsm("getSpeedAsstSlifWarning") as? Int)?.let { it == 1 }
+        else -> null
     }
+
+    fun isTsrOn(): Boolean = tsrOnOrNull() ?: false
 
     @RequiresStandstill
     fun setTsrMode(enabled: Boolean): Boolean {
@@ -2410,15 +2445,17 @@ object MG4Hardware {
     // Energy saving (Endurance Mode)
     // -------------------------------------------------------------------------
 
-    fun isEnergySavingOn(): Boolean = when {
+    fun energySavingOnOrNull(): Boolean? = when {
         FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133 ->
-            getIntPropertyVpm(PROP_ENERGY_SAVING) == 1
+            getIntPropertyVpm(PROP_ENERGY_SAVING).takeIf { it >= 0 }?.let { it == 1 }
         FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 ->  // SWI69 + SWI131 + SWI132
-            (callVsm("getEnduranceMode") as? Int) == 1
+            (callVsm("getEnduranceMode") as? Int)?.let { it == 1 }
         FirmwareInfo.isVsmBased() ->        // SWI68 + SWI165
-            (callVsm("getLongerEndurance") as? Int) == 1
-        else -> false
+            (callVsm("getLongerEndurance") as? Int)?.let { it == 1 }
+        else -> null
     }
+
+    fun isEnergySavingOn(): Boolean = energySavingOnOrNull() ?: false
 
     @RequiresStandstill
     fun setEnergySavingMode(enabled: Boolean): Boolean {
