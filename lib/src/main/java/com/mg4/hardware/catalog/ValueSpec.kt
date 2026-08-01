@@ -54,7 +54,13 @@ data class ValueSpec(
     val max: Int = 0,
     @StringRes val unitRes: Int = 0,
     val options: List<EnumOption> = emptyList(),
-    val fallbackMax: Int = 0
+    val fallbackMax: Int = 0,
+    /**
+     * Placeholder for a free-text field, when the field alone does not say what to type.
+     * "103.5" is obvious once you know the box wants a frequency and impossible to guess
+     * before that.
+     */
+    @StringRes val hintRes: Int = 0
 ) {
     companion object {
         val NONE = ValueSpec(ValueKind.NONE)

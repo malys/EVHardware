@@ -27,6 +27,7 @@ here.
 |---|---|
 | Vehicle access | `MG4Hardware` — Katman1/4/5 reflection over `android.car` + SAIC SDK, per-firmware routing |
 | Safety | `VehicleWriteGate` (0 km/h, fail-closed) + `@RequiresStandstill` on every gated setter |
+| Vendor services | `saic.*` — the AIDL the head unit's own HVAC, charging, radio, hands-free and TTS apps use |
 | Firmware | `FirmwareInfo` (detection + capability helpers), `FirmwareGen` |
 | Models | `DrivingProfile`, `DriveMode`, `RegenLevel`, `ProfileBackup` |
 | Catalogue | `ConditionType`, `ActionType`, `ValueSpec`, `VehicleEnums`, `SnapshotKeys` |
@@ -40,6 +41,11 @@ speed is unreadable. Every gated setter in `MG4Hardware` carries `@RequiresStand
 a unit test asserts that exact set — a setter cannot silently gain or lose gating. Comfort
 writes (seat/steering heating, volume, brightness, audio) are not gated and not annotated.
 
+The threshold is configurable up to 50 km/h (`allowUpToKmh`, clamped here, default 0). One
+thing can rescue a refusal: **park**, and only the unreadable-speed one. A car in P is not
+moving whatever the speedometer failed to say, and the gear comes by another route — but it
+never overrides a speed that did read, because park at 30 km/h means a signal is wrong.
+
 ### Firmware compatibility is generated, not written
 
 Each vehicle catalogue entry carries `@SupportedOn(...)`, derived from `FirmwareInfo` and
@@ -51,12 +57,18 @@ car.
 > The matrix is derived from code, **not** on-vehicle testing. Consumers should surface a
 > diagnostic that reads each signal live; unreadable ≠ unsupported.
 
-### Climate/window reads are unverified
+### Climate, glass and charging go through the vendor services
 
-HVAC (A/C, AUTO, recirculation, fan, set-temperature) and window-position reads use
-standard AOSP property ids that the R69 OEM sources name but no MG4 generation confirms.
-They return null when unreadable and have **no write counterpart** — writing a wrong id to
-a vehicle is the risk being deferred.
+The AOSP property ids for HVAC and window position are the ones the R69 OEM sources name but
+no MG4 generation confirms. They are still used for *reads*, where a wrong id returns null
+and nothing else happens — but nothing is written through them, because writing an unverified
+id to a vehicle is a different kind of mistake.
+
+Writes go to `saic.*` instead: the binder interfaces the car's own HVAC, charging and vehicle
+apps call, read off the decompiled head-unit APKs. What those do is not in doubt; whether a
+given firmware answers is a bind, which consumers report live rather than tabulate. The
+electric tailgate stays out — the launcher defines OPEN and CLOSE as the same value, so it is
+a pulse whose direction depends on state this cannot read.
 
 ---
 

@@ -131,6 +131,8 @@
     <string name="act_charge_window">Plage de charge</string>
     <string name="act_battery_preheat">Préchauffage de la batterie</string>
     <string name="act_play_radio">Mettre la radio</string>
+    <string name="act_tune_radio">Régler la radio</string>
+    <string name="value_radio_hint">ex. 103.5 ou AM 1080</string>
     <string name="act_navigate">Naviguer vers</string>
     <string name="act_call">Appeler un numéro</string>
     <string name="cond_window_position">Ouverture des vitres</string>

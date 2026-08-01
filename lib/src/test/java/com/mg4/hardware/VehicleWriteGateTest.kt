@@ -55,6 +55,33 @@ class VehicleWriteGateTest {
     }
 
     @Test
+    fun `park rescues an unreadable speed`() {
+        // The case this exists for: the speed property answers nothing, so the gate has no
+        // evidence at all — and the gear supplies some.
+        assertEquals(VehicleWriteGate.Decision.ALLOWED, VehicleWriteGate.decide(null, 0f, parked = true))
+        assertEquals(
+            VehicleWriteGate.Decision.REFUSED_UNKNOWN_SPEED,
+            VehicleWriteGate.decide(null, 0f, parked = false)
+        )
+        // An unreadable gear leaves the refusal exactly where it was.
+        assertEquals(
+            VehicleWriteGate.Decision.REFUSED_UNKNOWN_SPEED,
+            VehicleWriteGate.decide(null, 0f, parked = null)
+        )
+    }
+
+    @Test
+    fun `park never overrides a speed that did read`() {
+        // If the gear says park while the car reads 30 km/h, one of the two is wrong. The
+        // gate refuses: trusting the gear here is how a stale signal would unlock writes at
+        // speed, which is the single outcome it exists to prevent.
+        assertEquals(
+            VehicleWriteGate.Decision.REFUSED_MOVING,
+            VehicleWriteGate.decide(30f, 0f, parked = true)
+        )
+    }
+
+    @Test
     fun `the stored threshold drives the single-argument decision`() {
         VehicleWriteGate.allowUpToKmh = 30f
         assertEquals(VehicleWriteGate.Decision.ALLOWED, VehicleWriteGate.decide(29f))

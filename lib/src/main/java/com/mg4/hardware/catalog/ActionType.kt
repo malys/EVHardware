@@ -282,9 +282,8 @@ enum class ActionType(
     /**
      * Makes radio the current audio source, resuming the last station.
      *
-     * Nothing to configure: `srcPlayRadio` takes no argument, and tuning a frequency needs a
-     * band plus a value the vendor service only accepts together — offering a control that
-     * cannot change what happens would be worse than offering none.
+     * Nothing to configure: `srcPlayRadio` takes no argument, and it resumes the last
+     * station. [TUNE_RADIO] is the one to use when the station matters.
      *
      * It resumes rather than opening the radio screen: a rule firing at ignition wants the
      * sound, not a screen thrown in front of the driver.
@@ -296,6 +295,25 @@ enum class ActionType(
     PLAY_RADIO(
         R.string.act_play_radio, ActionGroup.AUDIO,
         ValueSpec.NONE, "PLAY_RADIO"
+    ),
+
+    /**
+     * Tunes a station and makes the radio the current source.
+     *
+     * A free-text frequency rather than a band picker plus a slider: the driver knows their
+     * station as "103.5", and an FM slider covering 87.5–108.0 in 50 kHz steps is 410
+     * positions to drag past on a touchscreen. The text is parsed leniently — "103.5",
+     * "FM 103.5", "103,5", "1080 AM" all land — and a value that parses to nothing is
+     * reported as unsupported with what was typed, so the history names the typo.
+     *
+     * Bands are AM (522–1620 kHz, 9 kHz steps) and FM (87.5–108.0 MHz, 50 kHz steps), from
+     * `RadioConstants.AM_RANGE` / `FM_RANGE`. DAB is out: `tuneDab` takes a service and
+     * ensemble id, not a frequency, so there is nothing here for a driver to type.
+     */
+    @SupportedOn(SWI68, SWI165)
+    TUNE_RADIO(
+        R.string.act_tune_radio, ActionGroup.AUDIO,
+        ValueSpec(ValueKind.TEXT, hintRes = R.string.value_radio_hint), "TUNE_RADIO"
     ),
 
     // ── ADAS (gated) ─────────────────────────────────────────────────────────

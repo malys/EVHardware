@@ -1445,6 +1445,12 @@ object MG4Hardware {
      * Gear in P? true/false if determinable, null if unknown (→ block power-off).
      * Value P = 1 on all studied firmwares (SWI133 0x5030043, A9 getGearState confirmed,
      * SWI68/165 getCarGear = CarGearValue.PARK).
+     *
+     * When the generation-specific path answers nothing, the vendor `vehiclecondition`
+     * service on the hub is asked directly. Same signal, same P = 1, different route: the
+     * primary path depends on an in-process manager object that may never have arrived,
+     * while the service behind it is bound and answering. A null here blocks power-off and
+     * costs the write gate its standstill fallback, so a second source is worth having.
      */
     fun isVehicleInPark(): Boolean? {
         val gen = FirmwareInfo.getGeneration()
@@ -1456,9 +1462,11 @@ object MG4Hardware {
             gen == FirmwareInfo.Gen.SWI68 || gen == FirmwareInfo.Gen.SWI165 ->
                 readVcmCarGear()                  // VehicleConditionManager.getCarGear()
             else -> Int.MIN_VALUE
-        }
+        }.takeIf { it >= 0 }
+            ?: com.mg4.hardware.saic.SaicVehicleCondition.gearOrNull()
+            ?: return null
         AppLogger.i(TAG, "isVehicleInPark — gen=$gen gear=$gear (P=$GEAR_PARK_VALUE)")
-        return if (gear < 0) null else gear == GEAR_PARK_VALUE
+        return gear == GEAR_PARK_VALUE
     }
 
     // ── Read gear SWI68/165 (poll direct) + A9 (CarStateClient) ───────────

@@ -12,6 +12,11 @@ import android.widget.Toast
  * under the driver. The rule is therefore: 0 km/h or refuse — and refuse ALSO when the
  * speed is unreadable (fail closed), because an unknown speed could be any speed.
  *
+ * The one exception to failing closed is **park**. A car in P is not moving, whatever the
+ * speedometer failed to say, and the gear arrives from the vendor service on a different
+ * path from the AOSP speed property — so when the speed says nothing, the gear can still
+ * say standstill. It is never allowed to contradict a speed that *did* read: see [decide].
+ *
  * Comfort writes (seat/steering heating via CarHvacManager) are NOT affected: they do not
  * change road behaviour. Setters that are gated carry [RequiresStandstill].
  *
@@ -75,12 +80,40 @@ object VehicleWriteGate {
      */
     fun decide(speedKmh: Float?): Decision = decide(speedKmh, allowUpToKmh)
 
-    /** [decide] with the threshold passed in, so the rule is testable without global state. */
-    fun decide(speedKmh: Float?, allowUpToKmh: Float): Decision = when {
-        speedKmh == null || speedKmh.isNaN() -> Decision.REFUSED_UNKNOWN_SPEED
-        speedKmh < 0f                        -> Decision.REFUSED_UNKNOWN_SPEED
-        speedKmh <= allowUpToKmh.coerceIn(0f, MAX_ALLOWED_THRESHOLD_KMH) -> Decision.ALLOWED
-        else                                 -> Decision.REFUSED_MOVING
+    /**
+     * [decide] with the threshold passed in, so the rule is testable without global state.
+     *
+     * [parked] is a second, independent standstill signal — the gear, read from the vendor
+     * service rather than from `PERF_VEHICLE_SPEED`. It **only rescues the unreadable case**.
+     * Park is a mechanical guarantee that the car is not moving, so when the speed says
+     * nothing at all it is better evidence than none; but when the two disagree — park while
+     * the speedometer reads 30 — the disagreement itself is the reason to refuse. Rescuing a
+     * REFUSED_MOVING would mean a stale or wrong gear could unlock writes at speed, which is
+     * the one outcome this gate exists to prevent.
+     */
+    fun decide(speedKmh: Float?, allowUpToKmh: Float, parked: Boolean? = null): Decision {
+        val bySpeed = when {
+            speedKmh == null || speedKmh.isNaN() -> Decision.REFUSED_UNKNOWN_SPEED
+            speedKmh < 0f                        -> Decision.REFUSED_UNKNOWN_SPEED
+            speedKmh <= allowUpToKmh.coerceIn(0f, MAX_ALLOWED_THRESHOLD_KMH) -> Decision.ALLOWED
+            else                                 -> Decision.REFUSED_MOVING
+        }
+        if (bySpeed == Decision.REFUSED_UNKNOWN_SPEED && parked == true) return Decision.ALLOWED
+        return bySpeed
+    }
+
+    /**
+     * The decision for the vehicle as it is right now — what [allow] enforces, exposed so a
+     * caller can report the same verdict it is about to get instead of guessing at it.
+     *
+     * The gear is read only when the speed came back unreadable. That keeps the normal path
+     * at one property read: the extra binder round trip happens in the case that was going
+     * to be refused anyway.
+     */
+    fun decideNow(): Decision {
+        val bySpeed = decide(MG4Hardware.getVehicleSpeedKmh(), allowUpToKmh)
+        if (bySpeed != Decision.REFUSED_UNKNOWN_SPEED) return bySpeed
+        return decide(null, allowUpToKmh, parked = MG4Hardware.isVehicleInPark())
     }
 
     /**
@@ -88,7 +121,7 @@ object VehicleWriteGate {
      * user — a silent refusal would make the setting look applied when it was not.
      */
     fun allow(operation: String): Boolean {
-        val decision = decide(MG4Hardware.getVehicleSpeedKmh())
+        val decision = decideNow()
         if (decision == Decision.ALLOWED) return true
 
         AppLogger.w(TAG, "Write refused ($operation): $decision")

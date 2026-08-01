@@ -87,6 +87,7 @@
 | SET_3D_EFFECT | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | SET_SPEED_VOLUME | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | PLAY_RADIO | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| TUNE_RADIO | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_AEB_ENABLED | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_AEB_MODE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_AEB_SENSITIVITY | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

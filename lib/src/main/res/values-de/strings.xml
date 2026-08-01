@@ -131,6 +131,8 @@
     <string name="act_charge_window">Ladefenster</string>
     <string name="act_battery_preheat">Batterievorheizung</string>
     <string name="act_play_radio">Radio einschalten</string>
+    <string name="act_tune_radio">Radiosender einstellen</string>
+    <string name="value_radio_hint">z. B. 103.5 oder AM 1080</string>
     <string name="act_navigate">Navigieren zu</string>
     <string name="act_call">Nummer anrufen</string>
     <string name="cond_window_position">Fensteröffnung</string>

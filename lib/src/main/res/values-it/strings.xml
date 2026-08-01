@@ -131,6 +131,8 @@
     <string name="act_charge_window">Finestra di carica</string>
     <string name="act_battery_preheat">Preriscaldamento batteria</string>
     <string name="act_play_radio">Accendi la radio</string>
+    <string name="act_tune_radio">Sintonizza la radio</string>
+    <string name="value_radio_hint">es. 103.5 o AM 1080</string>
     <string name="act_navigate">Naviga verso</string>
     <string name="act_call">Chiama un numero</string>
     <string name="cond_window_position">Apertura finestrini</string>

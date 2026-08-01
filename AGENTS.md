@@ -16,7 +16,8 @@ The apps are thin; the vehicle lives here.
 - **The 0 km/h gate is here.** `VehicleWriteGate` refuses road-behaviour writes above
   0 km/h and fails closed on unreadable speed, inside the low-level write primitives. Every
   gated setter carries `@RequiresStandstill`; `RequiresStandstillTest`-style coverage keeps
-  the set honest. Comfort writes are not gated.
+  the set honest. Comfort writes are not gated. Park rescues the unreadable-speed refusal
+  and nothing else — it must never override a speed that did read.
 - **Per-firmware routing, never universal.** SWI68/69/131/132/133/165 differ; dispatch
   through `FirmwareInfo`. Any new vehicle call must branch per generation.
 - **Unreadable ≠ a value.** Getters return null / -1 when the layer is not ready or the
@@ -24,8 +25,9 @@ The apps are thin; the vehicle lives here.
 - **`@SupportedOn` is the source of truth** for `docs/firmware-matrix.md` (generated, never
   hand-edited) and for consumers' runtime filters. A vehicle catalogue entry without it
   fails the tests.
-- **Climate/window are read-only + unverified.** Standard AOSP ids the R69 sources name but
-  no MG4 confirms. No write counterpart until confirmed on a vehicle.
+- **Never write an unverified AOSP id.** The climate and window ids the R69 sources name
+  are used for reads only. Writes go through `saic.*`, the calls the car's own apps make —
+  and every constant there cites the APK it was read from.
 - **English only** — code, comments, commits, docs. User strings in `values/` (English) +
   `values-fr/`.
 

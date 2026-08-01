@@ -327,3 +327,40 @@ object SaicVehicleControl {
             if (locked) DOOR_LOCKED else DOOR_UNLOCKED
         )
 }
+
+/**
+ * The gear, read from the same hub as climate, charging and glass.
+ *
+ * A second source for something [com.mg4.hardware.MG4Hardware.isVehicleInPark] already
+ * reads. It exists because the primary path on SWI68/165 goes through the vendor
+ * `VehicleConditionManager` object held in-process, and when that object never arrived the
+ * gear was simply unknown — while the very same service was sitting on the hub, answering.
+ *
+ * Only gear 1 is named, and only because three independent places agree on it: MG4Hardware's
+ * own `GEAR_PARK_VALUE`, two head-unit apps using `carGear == 1` as the condition for playing
+ * video on the centre screen (`UsbVideoView`, `VideoListFragment`), and
+ * `IBackUpBinder.isSecureForBackUp`, which accepts gears 1 and 3 alongside `speed == 0`.
+ * Nothing pins 2, 3 and 4, so nothing here names them.
+ *
+ * `getCarSpeed` is on this interface too and is deliberately unused: the binder returns a
+ * float with no unit in any source, and a speed read in the wrong unit would open the write
+ * gate at 50 km/h believing it was 14. Speed keeps coming from the AOSP property, whose unit
+ * is specified.
+ *
+ * Source: `apks/vehiclesettingservice_eh32_eu_p` — `IVehicleConditionService` (codes) and
+ * `VehicleConditionBinder` (the CarSensorManager signals behind them).
+ */
+object SaicVehicleCondition {
+
+    private const val NAME = "vehiclecondition"
+    private const val DESCRIPTOR = "com.saicmotor.sdk.vehiclesettings.IVehicleConditionService"
+
+    private const val TX_GET_CAR_GEAR = 5
+
+    val isAvailable: Boolean get() = binder() != null
+
+    private fun binder(): IBinder? = SaicHub.service(NAME)
+
+    /** Raw gear, or null when unreadable — the binder answers -1 when the signal is absent. */
+    fun gearOrNull(): Int? = SaicAidl.callInt(binder(), DESCRIPTOR, TX_GET_CAR_GEAR)?.takeIf { it > 0 }
+}
