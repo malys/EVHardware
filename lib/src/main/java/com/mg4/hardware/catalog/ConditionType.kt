@@ -187,6 +187,22 @@ enum class ConditionType(
         R.string.cond_window_open, ConditionGroup.CLIMATE,
         ValueSpec.BOOL, SnapshotKeys.KEY_WINDOW_OPEN
     ),
+    /**
+     * How far the widest-open window is, in percent — the vendor read, unlike [WINDOW_OPEN]
+     * which is an unverified AOSP property. "Any window open" is `> 0`; a rule that closes
+     * them cares about the worst case, which is what this reports.
+     */
+    @SupportedOn(SWI68, SWI165)
+    WINDOW_POSITION(
+        R.string.cond_window_position, ConditionGroup.CLIMATE,
+        number(0, 100, R.string.unit_percent),
+        SnapshotKeys.KEY_WINDOW_PERCENT, comparable = true
+    ),
+    @SupportedOn(SWI68, SWI165)
+    DOORS_LOCKED(
+        R.string.cond_doors_locked, ConditionGroup.CONTEXT,
+        ValueSpec.BOOL, SnapshotKeys.KEY_DOORS_LOCKED
+    ),
 
     // ── Comfort ──────────────────────────────────────────────────────────────
     @SupportedOn(SWI133, SWI68, SWI165)

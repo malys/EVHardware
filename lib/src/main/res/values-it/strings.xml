@@ -133,4 +133,8 @@
     <string name="act_play_radio">Accendi la radio</string>
     <string name="act_navigate">Naviga verso</string>
     <string name="act_call">Chiama un numero</string>
+    <string name="cond_window_position">Apertura finestrini</string>
+    <string name="cond_doors_locked">Porte bloccate</string>
+    <string name="act_windows">Finestrini</string>
+    <string name="act_door_lock">Blocco porte</string>
 </resources>

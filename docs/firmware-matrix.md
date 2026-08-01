@@ -27,6 +27,8 @@
 | FAN_SPEED | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | TEMPERATURE_SET | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | WINDOW_OPEN | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| WINDOW_POSITION | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| DOORS_LOCKED | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SEAT_HEAT_LEFT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SEAT_HEAT_RIGHT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | STEERING_HEAT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -70,6 +72,8 @@
 | SET_FAN_LEVEL | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_FRONT_DEFROST | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_REAR_DEFROST | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_WINDOWS | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_DOOR_LOCK | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_CHARGE_LIMIT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_CHARGING_ENABLED | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_CHARGE_SCHEDULE | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |

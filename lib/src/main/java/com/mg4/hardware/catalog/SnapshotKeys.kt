@@ -52,4 +52,7 @@ object SnapshotKeys {
     const val KEY_BATTERY_PERCENT  = "batteryPct"
     const val KEY_CHARGING         = "charging"
     const val KEY_CHARGE_LIMIT     = "chargeLimitPct"
+    /** Widest-open window, 0–100 %. Replaces the unverified AOSP window read where it answers. */
+    const val KEY_WINDOW_PERCENT   = "windowPct"
+    const val KEY_DOORS_LOCKED     = "doorsLocked"
 }

@@ -47,7 +47,11 @@ enum class ActionGroup(@StringRes val labelRes: Int) {
  * name but that no MG4 confirmed, so writing them would have been a guess. The vendor calls
  * are the ones the car's own HVAC and charging screens make.
  *
- * Window writes stay absent — no vendor service exposes them.
+ * Window and door-lock writes go through `vehiclecontrol` on the same hub. They are not
+ * standstill-gated: the vehicle enforces its own speed limit on glass and locks, and
+ * duplicating it would refuse the case the action exists for. The electric tailgate stays
+ * out — the launcher defines its OPEN and CLOSE as the same value, so it is a pulse whose
+ * direction depends on state this cannot read.
  *
  * Also deliberately absent:
  *   • `VEHICLE_POWER_OFF` — cutting the vehicle must stay an explicit human gesture.
@@ -170,6 +174,26 @@ enum class ActionType(
     SET_REAR_DEFROST(
         R.string.act_rear_defrost, ActionGroup.CLIMATE,
         ValueSpec.BOOL, "SET_REAR_DEFROST"
+    ),
+
+    /**
+     * Moves all four windows to a position, 0 closed to 100 open.
+     *
+     * Not gated by the standstill threshold: the vehicle enforces its own speed limit on
+     * glass, and duplicating it here would refuse the case the action exists for — closing
+     * the windows when it starts raining. A write the car declines is reported in the
+     * history rather than hidden.
+     */
+    @SupportedOn(SWI68, SWI165)
+    SET_WINDOWS(
+        R.string.act_windows, ActionGroup.CLIMATE,
+        number(0, 100, R.string.unit_percent), "SET_WINDOWS",
+        currentKey = SnapshotKeys.KEY_WINDOW_PERCENT
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_DOOR_LOCK(
+        R.string.act_door_lock, ActionGroup.CLIMATE,
+        ValueSpec.BOOL, "SET_DOOR_LOCK", currentKey = SnapshotKeys.KEY_DOORS_LOCKED
     ),
 
     // ── Energy (vendor service — com.mg4.hardware.saic.SaicCharging) ─────────

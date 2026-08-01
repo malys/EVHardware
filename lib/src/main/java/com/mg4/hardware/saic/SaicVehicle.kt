@@ -233,3 +233,97 @@ object SaicCharging {
         return hourOk && minuteOk
     }
 }
+
+/**
+ * Windows and door locks, through the same hub as climate and charging.
+ *
+ * Positions are a **percentage, 0 closed to 100 open**. The scale is not documented in the
+ * SDK, but the launcher writes `TAILGATE_LOCK_ON = 100.0f` on the same float signal family
+ * and the service rounds rear-door status to two decimals of a 0–100 value
+ * (`VehicleControlBinder.isInvalidRearDoorSts`). What makes it safe to act on: the service
+ * validates every value against its own maximum and **silently drops anything out of
+ * range** — a wrong scale means the window does not move, not that it moves unexpectedly.
+ *
+ * No standstill gate here. The vehicle enforces its own speed limit on glass and locks, and
+ * duplicating it in the app would refuse the legitimate case — closing the windows when it
+ * starts raining on the motorway. A write the car declines is reported, not hidden.
+ *
+ * The electric tailgate is deliberately absent: the launcher defines OPEN and CLOSE as the
+ * same value (1.0f), so it is a pulse whose direction depends on state this cannot read.
+ * Firing it blind could open a boot at the wrong moment.
+ *
+ * Source: `apks/vehiclesettingservice_eh32_eu_p` — `IVehicleControlService` (codes) and
+ * `VehicleControlBinder` (the CarCabinManager properties behind them);
+ * `apks/launcher_eh32_eu_p` — `VehicleConstant` (value semantics).
+ */
+object SaicVehicleControl {
+
+    private const val NAME = "vehiclecontrol"
+    private const val DESCRIPTOR = "com.saicmotor.sdk.vehiclesettings.IVehicleControlService"
+
+    private const val TX_GET_DOOR_LOCK = 3
+    private const val TX_SET_DOOR_LOCK = 4
+    private const val TX_GET_DRIVER_WINDOW = 5
+    private const val TX_SET_DRIVER_WINDOW = 6
+    private const val TX_GET_PASSENGER_WINDOW = 7
+    private const val TX_SET_PASSENGER_WINDOW = 8
+    private const val TX_GET_LEFT_REAR_WINDOW = 9
+    private const val TX_SET_LEFT_REAR_WINDOW = 10
+    private const val TX_GET_RIGHT_REAR_WINDOW = 11
+    private const val TX_SET_RIGHT_REAR_WINDOW = 12
+
+    /** `VehicleConstant.DoorLockStateItem` — 1 locked, 2 unlocked. */
+    private const val DOOR_LOCKED = 1
+    private const val DOOR_UNLOCKED = 2
+
+    const val WINDOW_CLOSED = 0
+    const val WINDOW_OPEN = 100
+
+    private val WINDOW_READS = listOf(
+        TX_GET_DRIVER_WINDOW, TX_GET_PASSENGER_WINDOW,
+        TX_GET_LEFT_REAR_WINDOW, TX_GET_RIGHT_REAR_WINDOW
+    )
+    private val WINDOW_WRITES = listOf(
+        TX_SET_DRIVER_WINDOW, TX_SET_PASSENGER_WINDOW,
+        TX_SET_LEFT_REAR_WINDOW, TX_SET_RIGHT_REAR_WINDOW
+    )
+
+    val isAvailable: Boolean get() = binder() != null
+
+    private fun binder(): IBinder? = SaicHub.service(NAME)
+
+    /**
+     * The widest-open window, in percent — the one number a rule about glass wants. "Any
+     * window open" is `> 0`, and a rule closing them cares about the worst case.
+     */
+    fun widestWindowPercent(): Int? =
+        WINDOW_READS.mapNotNull { code -> SaicAidl.callFloat(binder(), DESCRIPTOR, code) }
+            .takeIf { it.isNotEmpty() }
+            ?.max()
+            ?.toInt()
+            ?.takeIf { it >= 0 }
+
+    /** Each window individually, for the diagnostic — this is what confirms the scale. */
+    fun windowPercents(): List<Float?> =
+        WINDOW_READS.map { code -> SaicAidl.callFloat(binder(), DESCRIPTOR, code) }
+
+    /** Moves all four windows. @return true when every one of them was accepted. */
+    fun setAllWindows(percent: Int): Boolean {
+        val value = percent.coerceIn(WINDOW_CLOSED, WINDOW_OPEN).toFloat()
+        // Every window attempted even if one refuses: three closed beats none closed, and
+        // the caller still learns that it was not complete.
+        return WINDOW_WRITES.map { code -> SaicAidl.callVoid(binder(), DESCRIPTOR, code, value) }
+            .all { it }
+    }
+
+    fun doorsLocked(): Boolean? =
+        SaicAidl.callInt(binder(), DESCRIPTOR, TX_GET_DOOR_LOCK)
+            ?.takeIf { it == DOOR_LOCKED || it == DOOR_UNLOCKED }
+            ?.let { it == DOOR_LOCKED }
+
+    fun setDoorsLocked(locked: Boolean): Boolean =
+        SaicAidl.callVoid(
+            binder(), DESCRIPTOR, TX_SET_DOOR_LOCK,
+            if (locked) DOOR_LOCKED else DOOR_UNLOCKED
+        )
+}
