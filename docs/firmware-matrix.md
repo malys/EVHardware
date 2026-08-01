@@ -9,6 +9,7 @@
 | TIME_OF_DAY | — | — | — | — | — | — |
 | DAY_OF_WEEK | — | — | — | — | — | — |
 | FIRMWARE_GEN | — | — | — | — | — | — |
+| LOCATION_WITHIN | — | — | — | — | — | — |
 | OUTSIDE_TEMP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IGNITION_STATE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IN_PARK | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -16,6 +17,10 @@
 | DRIVE_MODE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | REGEN_LEVEL | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | ENERGY_SAVING | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BATTERY_LEVEL | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| CHARGING | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| CHARGE_LIMIT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| CLIMATE_ON | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | AC_ON | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | HVAC_AUTO | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | RECIRC | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -47,6 +52,7 @@
 | LAUNCH_APP | — | — | — | — | — | — |
 | SHOW_NOTIFICATION | — | — | — | — | — | — |
 | SPEAK_TEXT | — | — | — | — | — | — |
+| NAVIGATE_TO | — | — | — | — | — | — |
 | APPLY_PROFILE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_DRIVE_MODE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_REGEN_LEVEL | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -56,6 +62,19 @@
 | SET_SEAT_HEAT_RIGHT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_STEERING_HEAT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_SCREEN_BRIGHTNESS | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SET_CLIMATE_POWER | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_CABIN_TEMP | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_AC | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_CLIMATE_AUTO | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_RECIRCULATION | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_FAN_LEVEL | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_FRONT_DEFROST | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_REAR_DEFROST | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_CHARGE_LIMIT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_CHARGING_ENABLED | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_CHARGE_SCHEDULE | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_CHARGE_WINDOW | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_BATTERY_PREHEAT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_MEDIA_VOLUME | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_AUDIO_BALANCE | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | SET_AUDIO_FADER | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
@@ -63,6 +82,7 @@
 | SET_BOSE_SOUND_TYPE | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | SET_3D_EFFECT | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | SET_SPEED_VOLUME | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| PLAY_RADIO | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_AEB_ENABLED | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_AEB_MODE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_AEB_SENSITIVITY | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -76,3 +96,4 @@
 | SET_SOUND_WARNING | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_LAS_WARNING_SOUND | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | SET_LAS_WARNING_VIBRATION | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| CALL_NUMBER | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |

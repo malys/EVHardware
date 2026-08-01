@@ -90,4 +90,15 @@ object VehicleEnums {
 
     /** Fallback when the vehicle does not report its real maximum volume. */
     const val MEDIA_VOLUME_FALLBACK_MAX = 30
+
+    // ── Climate — from the vendor HMI, not from the AOSP property ranges ─────
+    // apks/hvac_eh32_eu_p: HvacConst.AIR_VOLUME_MAX, and the 17…33 clamp in
+    // HvacActivity.onLongTouch where the two ends display as LO and HI.
+    const val FAN_LEVEL_MAX  = 11
+    const val CABIN_TEMP_MIN = 17
+    const val CABIN_TEMP_MAX = 33
+
+    /** Charge limit the vehicle accepts, in percent. */
+    const val CHARGE_LIMIT_MIN = 40
+    const val CHARGE_LIMIT_MAX = 100
 }

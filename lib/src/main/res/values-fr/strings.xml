@@ -110,4 +110,27 @@
     <string name="act_launch_app">Lancer une application</string>
     <string name="act_notify">Afficher une notification</string>
     <string name="act_speak">Dire un message</string>
+    <string name="group_energy">Énergie</string>
+    <string name="unit_metre">m</string>
+    <string name="cond_location">À proximité d’un lieu</string>
+    <string name="cond_battery">Niveau de batterie</string>
+    <string name="cond_charging">En charge</string>
+    <string name="cond_charge_limit">Limite de charge</string>
+    <string name="cond_climate_on">Climatisation active</string>
+    <string name="act_climate_power">Climatisation on/off</string>
+    <string name="act_cabin_temp">Température de consigne</string>
+    <string name="act_ac">Air conditionné</string>
+    <string name="act_climate_auto">Climatisation AUTO</string>
+    <string name="act_recirc">Recyclage de l’air</string>
+    <string name="act_fan_level">Vitesse de ventilation</string>
+    <string name="act_front_defrost">Dégivrage pare-brise</string>
+    <string name="act_rear_defrost">Dégivrage lunette arrière</string>
+    <string name="act_charge_limit">Limite de charge</string>
+    <string name="act_charging_enabled">Autoriser la charge</string>
+    <string name="act_charge_schedule">Charge programmée</string>
+    <string name="act_charge_window">Plage de charge</string>
+    <string name="act_battery_preheat">Préchauffage de la batterie</string>
+    <string name="act_play_radio">Mettre la radio</string>
+    <string name="act_navigate">Naviguer vers</string>
+    <string name="act_call">Appeler un numéro</string>
 </resources>

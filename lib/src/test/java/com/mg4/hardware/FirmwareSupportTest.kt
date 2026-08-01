@@ -24,12 +24,14 @@ class FirmwareSupportTest {
         ConditionType.ANY_BT_CONNECTED,
         ConditionType.TIME_OF_DAY,
         ConditionType.DAY_OF_WEEK,
-        ConditionType.FIRMWARE_GEN
+        ConditionType.FIRMWARE_GEN,
+        ConditionType.LOCATION_WITHIN
     )
     private val firmwareIndependentActions = setOf(
         ActionType.LAUNCH_APP,
         ActionType.SHOW_NOTIFICATION,
-        ActionType.SPEAK_TEXT
+        ActionType.SPEAK_TEXT,
+        ActionType.NAVIGATE_TO
     )
 
     @Test

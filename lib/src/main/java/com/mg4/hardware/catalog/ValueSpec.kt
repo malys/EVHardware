@@ -28,6 +28,12 @@ enum class ValueKind {
     APP,
     /** Free text (notification message). */
     TEXT,
+    /**
+     * A point and a radius: `text` holds "latitude,longitude", `number` the radius in
+     * metres. Two controls rather than one, but no new model field — the flat union in
+     * `Condition` already has both.
+     */
+    LOCATION,
     /** Nothing to enter. */
     NONE
 }

@@ -44,4 +44,12 @@ object SnapshotKeys {
     const val KEY_OVERSPEED_ALARM  = "overspeedAlarm"
     const val KEY_SPEED_LIMIT_TONE = "speedLimitTone"
     const val KEY_SOUND_WARNING    = "soundWarning"
+
+    // ── Vendor vehicle service (com.mg4.hardware.saic) ───────────────────────
+    // Read from the same service the car's own HVAC and charging screens use, so unlike
+    // the AOSP climate ids above these are confirmed rather than inferred.
+    const val KEY_CLIMATE_ON       = "climateOn"
+    const val KEY_BATTERY_PERCENT  = "batteryPct"
+    const val KEY_CHARGING         = "charging"
+    const val KEY_CHARGE_LIMIT     = "chargeLimitPct"
 }

@@ -47,16 +47,39 @@ object VehicleWriteGate {
         REFUSED_UNKNOWN_SPEED
     }
 
+    /** Highest threshold an app may set. Above this the gate stops being a gate. */
+    const val MAX_ALLOWED_THRESHOLD_KMH = 50f
+
+    /**
+     * Speed up to which a write is allowed, in km/h. Zero — standstill only — is the default
+     * and the only value that needs no justification.
+     *
+     * Raising it is a deliberate choice by the app that sets it: the vehicle itself refuses
+     * some of these settings while moving, so a higher threshold does not make a write
+     * succeed, it only stops this gate from being the one that says no. Values outside
+     * 0…[MAX_ALLOWED_THRESHOLD_KMH] are clamped, and an unreadable speed still fails closed
+     * whatever the threshold is.
+     */
+    @Volatile
+    var allowUpToKmh: Float = 0f
+        set(value) {
+            field = value.coerceIn(0f, MAX_ALLOWED_THRESHOLD_KMH)
+            AppLogger.i(TAG, "write threshold set to $field km/h")
+        }
+
     /**
      * Pure decision from a speed in km/h, [speedKmh] null when unreadable.
      *
      * A negative speed is treated as unreadable: the VHAL does not produce a negative speed
      * moving forward, and an aberrant value must never open the gate.
      */
-    fun decide(speedKmh: Float?): Decision = when {
+    fun decide(speedKmh: Float?): Decision = decide(speedKmh, allowUpToKmh)
+
+    /** [decide] with the threshold passed in, so the rule is testable without global state. */
+    fun decide(speedKmh: Float?, allowUpToKmh: Float): Decision = when {
         speedKmh == null || speedKmh.isNaN() -> Decision.REFUSED_UNKNOWN_SPEED
         speedKmh < 0f                        -> Decision.REFUSED_UNKNOWN_SPEED
-        speedKmh == 0f                       -> Decision.ALLOWED
+        speedKmh <= allowUpToKmh.coerceIn(0f, MAX_ALLOWED_THRESHOLD_KMH) -> Decision.ALLOWED
         else                                 -> Decision.REFUSED_MOVING
     }
 

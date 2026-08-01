@@ -19,6 +19,7 @@ enum class ConditionGroup(@StringRes val labelRes: Int) {
     CONTEXT(R.string.group_context),
     ENVIRONMENT(R.string.group_environment),
     DRIVING(R.string.group_driving),
+    ENERGY(R.string.group_energy),
     CLIMATE(R.string.group_climate),
     COMFORT(R.string.group_comfort),
     ADAS(R.string.group_adas)
@@ -70,6 +71,15 @@ enum class ConditionType(
         R.string.cond_firmware, ConditionGroup.CONTEXT,
         ValueSpec(ValueKind.ENUM), snapshotKey = SnapshotKeys.KEY_FIRMWARE_GEN
     ),
+    /**
+     * Inside a radius of a saved point. Context, not a vehicle signal: the fix comes from
+     * the platform location provider, so it works the same whatever the firmware exposes.
+     */
+    LOCATION_WITHIN(
+        R.string.cond_location, ConditionGroup.CONTEXT,
+        ValueSpec(ValueKind.LOCATION, min = 50, max = 2000, unitRes = R.string.unit_metre),
+        snapshotKey = null
+    ),
 
     // ── Environment ──────────────────────────────────────────────────────────
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
@@ -115,7 +125,35 @@ enum class ConditionType(
         ValueSpec.BOOL, SnapshotKeys.KEY_ENERGY_SAVING
     ),
 
+    // ── Energy (vendor charging service — see com.mg4.hardware.saic.SaicCharging) ──
+    @SupportedOn(SWI68, SWI165)
+    BATTERY_LEVEL(
+        R.string.cond_battery, ConditionGroup.ENERGY,
+        number(0, 100, R.string.unit_percent),
+        SnapshotKeys.KEY_BATTERY_PERCENT, comparable = true
+    ),
+    @SupportedOn(SWI68, SWI165)
+    CHARGING(
+        R.string.cond_charging, ConditionGroup.ENERGY,
+        ValueSpec.BOOL, SnapshotKeys.KEY_CHARGING
+    ),
+    @SupportedOn(SWI68, SWI165)
+    CHARGE_LIMIT(
+        R.string.cond_charge_limit, ConditionGroup.ENERGY,
+        number(0, 100, R.string.unit_percent),
+        SnapshotKeys.KEY_CHARGE_LIMIT, comparable = true
+    ),
+
     // ── Climate + windows (read only, unverified on MG4 — see MG4Hardware) ────
+    /**
+     * Whether the climate system is running, from the vendor service rather than an AOSP
+     * property id — the same source the car's own HVAC screen reads.
+     */
+    @SupportedOn(SWI68, SWI165)
+    CLIMATE_ON(
+        R.string.cond_climate_on, ConditionGroup.CLIMATE,
+        ValueSpec.BOOL, SnapshotKeys.KEY_CLIMATE_ON
+    ),
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
     AC_ON(
         R.string.cond_ac, ConditionGroup.CLIMATE,
@@ -132,14 +170,17 @@ enum class ConditionType(
         ValueSpec.BOOL, SnapshotKeys.KEY_RECIRC
     ),
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    // Bounds from the vendor HMI (HvacConst.AIR_VOLUME_MAX, and the 17…33 clamp in
+    // HvacActivity where the ends read as LO and HI), not from the AOSP property range.
     FAN_SPEED(
         R.string.cond_fan_speed, ConditionGroup.CLIMATE,
-        number(0, 7), SnapshotKeys.KEY_FAN_SPEED, comparable = true
+        number(0, VehicleEnums.FAN_LEVEL_MAX), SnapshotKeys.KEY_FAN_SPEED, comparable = true
     ),
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
     TEMPERATURE_SET(
         R.string.cond_temperature_set, ConditionGroup.CLIMATE,
-        number(16, 32, R.string.unit_celsius), SnapshotKeys.KEY_TEMPERATURE_SET, comparable = true
+        number(VehicleEnums.CABIN_TEMP_MIN, VehicleEnums.CABIN_TEMP_MAX, R.string.unit_celsius),
+        SnapshotKeys.KEY_TEMPERATURE_SET, comparable = true
     ),
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
     WINDOW_OPEN(

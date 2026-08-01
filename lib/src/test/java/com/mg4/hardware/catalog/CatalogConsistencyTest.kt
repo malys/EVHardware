@@ -20,7 +20,8 @@ class CatalogConsistencyTest {
         // bridgeAction=null est réservé aux actions locales (lancer une app, notifier).
         // Une action véhicule sans cible serait silencieusement ignorée à l'exécution.
         val localOnly = setOf(
-            ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION, ActionType.SPEAK_TEXT
+            ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION, ActionType.SPEAK_TEXT,
+            ActionType.NAVIGATE_TO
         )
 
         ActionType.entries.filterNot { it in localOnly }.forEach { type ->
@@ -30,7 +31,10 @@ class CatalogConsistencyTest {
 
     @Test
     fun `les actions locales ne passent pas par le pont`() {
-        listOf(ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION, ActionType.SPEAK_TEXT).forEach { type ->
+        listOf(
+            ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION, ActionType.SPEAK_TEXT,
+            ActionType.NAVIGATE_TO
+        ).forEach { type ->
             assertTrue(
                 "${type.name} ne touche pas le véhicule et ne doit pas avoir de bridgeAction",
                 type.bridgeAction == null
@@ -79,7 +83,8 @@ class CatalogConsistencyTest {
             ConditionType.BT_DEVICE_CONNECTED,
             ConditionType.ANY_BT_CONNECTED,
             ConditionType.TIME_OF_DAY,
-            ConditionType.DAY_OF_WEEK
+            ConditionType.DAY_OF_WEEK,
+            ConditionType.LOCATION_WITHIN
         )
 
         ConditionType.entries.filterNot { it in localOnly }.forEach { type ->
