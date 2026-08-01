@@ -87,3 +87,45 @@ object SaicPhone {
         SaicAidl.callString(service.binder(), DESCRIPTOR, TX_GET_CONN_DEVICE_NAME)
             ?.takeIf { it.isNotBlank() }
 }
+
+/**
+ * The vehicle's own voice — the one that says "left front tyre abnormality".
+ *
+ * This is what makes the "speak" action work on a head unit with no Android TTS engine
+ * installed, which is the normal case: the car talks, but through a vendor service rather
+ * than through `android.speech.tts`. Probing for a platform engine and finding none was
+ * therefore the right answer to the wrong question.
+ *
+ * Bound by component name, not by action — the service declares no intent filter, and the
+ * car's own voice app reaches it exactly this way.
+ *
+ * Source: `apks/saicvoiceservice_overseas_eh32` — `VoiceAnnounceModel` (component name and
+ * the call it makes) and `ITtsService` (descriptor, transaction codes).
+ */
+object SaicTts {
+
+    private const val PACKAGE = "com.saicmotor.voicetts"
+    private const val CLASS = "com.saicmotor.voicetts.TtsService"
+    private const val DESCRIPTOR = "com.saicmotor.voicetts.ITtsService"
+
+    private const val TX_PROMPT = 1
+    private const val TX_STOP = 3
+
+    private val service = SaicService.byComponent(PACKAGE, CLASS, "voicetts")
+
+    val isAvailable: Boolean get() = service.isReady
+
+    fun connect(context: Context) = service.connect(context)
+
+    /**
+     * Speaks [text].
+     *
+     * [interrupt] true stops whatever the car is currently announcing — false queues behind
+     * it, which is what a rule message should do: a tyre warning outranks "profile applied".
+     * The tag is the caller's package, as the vendor apps pass their own.
+     */
+    fun speak(text: String, interrupt: Boolean = false, tag: String = "com.mg4.tasker"): Boolean =
+        SaicAidl.callVoid(service.binder(), DESCRIPTOR, TX_PROMPT, text, interrupt, tag)
+
+    fun stop(): Boolean = SaicAidl.callVoid(service.binder(), DESCRIPTOR, TX_STOP)
+}

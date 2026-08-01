@@ -21,11 +21,18 @@ import com.mg4.hardware.AppLogger
  * service is up returns null rather than blocking: the rule engine has a cycle to finish, and
  * a vendor service that is slow to come up must not hold it.
  */
-class SaicService(
+class SaicService private constructor(
     private val packageName: String,
-    private val action: String,
+    private val action: String?,
+    private val className: String?,
     private val tag: String,
 ) {
+
+    /** Most vendor services publish an action; this is the usual way in. */
+    constructor(packageName: String, action: String, tag: String) :
+        this(packageName, action, null, tag)
+
+
 
     @Volatile
     private var binder: IBinder? = null
@@ -45,13 +52,17 @@ class SaicService(
     fun connect(context: Context) {
         if (isReady || connecting) return
         connecting = true
-        val intent = Intent(action).setPackage(packageName)
+        val intent = if (className != null) {
+            Intent().setComponent(ComponentName(packageName, className))
+        } else {
+            Intent(action).setPackage(packageName)
+        }
         val bound = runCatching {
             context.applicationContext.bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }.getOrDefault(false)
         if (!bound) {
             connecting = false
-            AppLogger.w(TAG, "$tag: bindService($packageName/$action) refused")
+            AppLogger.w(TAG, "$tag: bindService($packageName/${className ?: action}) refused")
         }
     }
 
@@ -68,8 +79,15 @@ class SaicService(
         }
     }
 
-    private companion object {
-        const val TAG = "MG4_SAIC"
+    companion object {
+        private const val TAG = "MG4_SAIC"
+
+        /**
+         * For a service with no intent filter, reached by explicit component — how the car's
+         * own apps bind the TTS service, and the only way it answers.
+         */
+        fun byComponent(packageName: String, className: String, tag: String) =
+            SaicService(packageName, null, className, tag)
     }
 }
 
