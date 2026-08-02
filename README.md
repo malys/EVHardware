@@ -21,8 +21,19 @@ here.
 
 ---
 
-## What's in it
+## Contents
 
+- [Overview](#overview)
+- [How it works](#how-it-works)
+- [Install](#install)
+- [The MG4 app suite](#the-mg4-app-suite)
+- [Building](#building)
+- [Project documents](#project-documents)
+- [Security](#security)
+- [Contributing](#contributing)
+- [Legal](#legal)
+
+## Overview
 | Area | Types |
 |---|---|
 | Vehicle access | `MG4Hardware` — Katman1/4/5 reflection over `android.car` + SAIC SDK, per-firmware routing |
@@ -72,8 +83,7 @@ a pulse whose direction depends on state this cannot read.
 
 ---
 
-## Using it
-
+## How it works
 MG4Hardware is consumed as a **git submodule** exposed as a Gradle subproject. In a
 consumer app:
 
@@ -118,8 +128,29 @@ dependencies { implementation("com.mg4:mg4hardware:0.1.0-SNAPSHOT") }
 The AAR carries `consumer-rules.pro`, so a consumer's R8 keeps the reflected names. Vehicle
 writes still require the consuming app to be signed with the ROM platform key.
 
-## Building (standalone)
+## Install
+MG4Hardware is a library — it ships inside the consumer apps (MG4Control, MG4Tasker), not
+as its own APK. Those apps are sideloaded on the head unit via the keyboard route: open a
+text field, long-press `,` on the on-screen keyboard → **Language settings** → search
+`backup` then press back to reach Android Settings → enable **Developer options** +
+**Install unknown apps** → search `storage` and open the APK. See each app's README for
+the full steps.
 
+## The MG4 app suite
+Part of a small set of projects for the SAIC MG4 (AAOS 9, MT2712), all sharing the
+**MG4Hardware** vehicle layer:
+
+| Project | Role |
+|---|---|
+| [MG4Hardware](https://github.com/malys/MG4Hardware) | Shared vehicle-access layer: reflection hardware layer, 0 km/h safety gate, driving models, condition/action catalogue + firmware matrix |
+| [MG4Control](https://github.com/malys/MG4Control) | Drive-profile manager; applies settings at startup; owns the signature-protected TaskerBridge |
+| [MG4Tasker](https://github.com/malys/MG4Tasker) | Rule engine — *when* conditions *then* actions — driving the car through MG4Control |
+| [MG4AbrpTelemetry](https://github.com/malys/MG4AbrpTelemetry) | Live telemetry uploader to A Better Route Planner |
+
+Common toolchain: **AGP 9.1.1 / Gradle 9.3.1 / compileSdk 36 / JDK 17**. Each app consumes
+MG4Hardware as a git submodule (`MG4Hardware/lib` as the `:mg4hardware` subproject).
+
+## Building
 ```bash
 ./gradlew :lib:testDebugUnitTest   # unit tests + regenerates docs/firmware-matrix.md
 ./gradlew :lib:assembleDebug       # the AAR
@@ -138,37 +169,28 @@ next test run.
 
 ---
 
-## Security
+## Project documents
+| Document | What it covers |
+|---|---|
+| [DESIGN.md](DESIGN.md) | The MG4Suite design system — colour, type, touch targets, icons |
+| [AGENTS.md](AGENTS.md) | Context for AI agents working in this repository |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to build, test and submit a change |
+| [SECURITY.md](SECURITY.md) | Threat model and vulnerability disclosure |
+| [DISCLAIMER.md](DISCLAIMER.md) | Vehicle-safety disclaimer — read before installing |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
+| [LICENSE.md](LICENSE.md) | Licence text |
 
+## Security
 See [SECURITY.md](SECURITY.md). The library is the one place vehicle writes happen for its
 consumers, so the gate, the closed action vocabulary, and the per-firmware routing all live
 here rather than being reimplemented per app.
 
-## Installing the apps on the MG4
+## Contributing
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. In short: this
+code runs in a moving vehicle, so changes stay small, carry tests, and say in the diff
+what would break without them. Anything touching the interface follows
+[DESIGN.md](DESIGN.md).
 
-MG4Hardware is a library — it ships inside the consumer apps (MG4Control, MG4Tasker), not
-as its own APK. Those apps are sideloaded on the head unit via the keyboard route: open a
-text field, long-press `,` on the on-screen keyboard → **Language settings** → search
-`backup` then press back to reach Android Settings → enable **Developer options** +
-**Install unknown apps** → search `storage` and open the APK. See each app's README for
-the full steps.
-
-## The MG4 app suite
-
-Part of a small set of projects for the SAIC MG4 (AAOS 9, MT2712), all sharing the
-**MG4Hardware** vehicle layer:
-
-| Project | Role |
-|---|---|
-| [MG4Hardware](https://github.com/malys/MG4Hardware) | Shared vehicle-access layer: reflection hardware layer, 0 km/h safety gate, driving models, condition/action catalogue + firmware matrix |
-| [MG4Control](https://github.com/malys/MG4Control) | Drive-profile manager; applies settings at startup; owns the signature-protected TaskerBridge |
-| [MG4Tasker](https://github.com/malys/MG4Tasker) | Rule engine — *when* conditions *then* actions — driving the car through MG4Control |
-| [MG4AbrpTelemetry](https://github.com/malys/MG4AbrpTelemetry) | Live telemetry uploader to A Better Route Planner |
-
-Common toolchain: **AGP 9.1.1 / Gradle 9.3.1 / compileSdk 36 / JDK 17**. Each app consumes
-MG4Hardware as a git submodule (`MG4Hardware/lib` as the `:mg4hardware` subproject).
-
-## License
-
+## Legal
 MIT — see [LICENSE](LICENSE) and [LICENSE.md](LICENSE.md). Runs on a vehicle; see
 [DISCLAIMER.md](DISCLAIMER.md).

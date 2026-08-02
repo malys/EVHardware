@@ -1,0 +1,109 @@
+name: 🔐 Security Vulnerability
+description: Report a security vulnerability in the library
+title: "[SECURITY] "
+labels: [security, confidential]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # Security Vulnerability Report
+
+        **⚠️ CONFIDENTIAL:** Do not disclose vulnerability details publicly.
+
+        Please report security issues via private GitHub Security Advisory instead:
+        1. Click "Report a vulnerability" at `/security/advisories/new`
+        2. Or email: [maintainer security contact]
+        3. Do **not** post details in public issues
+
+        This template is for urgent in-scope vulnerabilities only.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: "Security Classification"
+      description: "Select the vulnerability type"
+      options:
+        - label: "Prompt injection / malicious input not validated"
+        - label: "Unsafe property ID validation (accepts arbitrary IDs)"
+        - label: "Speed gate responsibility not documented to consumers"
+        - label: "Binder IHubService security bypass"
+        - label: "Firmware detection spoofing (wrong firmware → wrong behavior)"
+        - label: "Null dereference or crashes in vehicle property access"
+        - label: "Consumer apps inherit unsafe vehicle write patterns"
+        - label: "Code execution vulnerability in vehicle communication"
+        - label: "Information disclosure (leaks property values)"
+        - label: "API design enables vehicle safety bypasses"
+        - label: "Other security issue affecting library consumers"
+    validations:
+      required: true
+
+  - type: input
+    id: title
+    attributes:
+      label: "Vulnerability Title"
+      description: "Concise title (do not include exploit details)"
+      placeholder: "CarPropertyAdapter does not validate property write authorization"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Vulnerability Description"
+      description: |
+        High-level description (no exploit steps or proof-of-concept):
+        - What is vulnerable
+        - Why it matters
+        - Impact on vehicle safety or security
+      placeholder: |
+        The library does not check speed before allowing profile writes.
+        Consumer projects inherit this lack of protection.
+        Impact: All apps using MG4Hardware can bypass speed gate; ADAS can be disabled while driving.
+      rows: 6
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: "Severity (CVSS)"
+      description: "CVSS v3.1 rating"
+      options:
+        - "Critical (9.0–10.0) — Affects all consumer projects"
+        - "High (7.0–8.9) — Significant security impact"
+        - "Medium (4.0–6.9) — Moderate risk"
+        - "Low (0.1–3.9) — Minor issue"
+    validations:
+      required: true
+
+  - type: input
+    id: affected
+    attributes:
+      label: "Affected Versions & Projects"
+      description: "Which library versions and consumer projects are affected?"
+      placeholder: "MG4Hardware < 0.5.0; impacts MG4Control, MG4ABRPUploader"
+    validations:
+      required: true
+
+  - type: textarea
+    id: remediation
+    attributes:
+      label: "Suggested Remediation"
+      description: "How should this be fixed?"
+      placeholder: |
+        1. Add speed-gate validation to writeVehicleProperty()
+        2. Consumer projects must not bypass library safety checks
+        3. Document API contract: writes must fail at speed > 0 km/h
+      rows: 5
+
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: "Consent"
+      options:
+        - label: I understand this vulnerability will be handled according to the security policy
+          required: true
+        - label: I consent to coordinated disclosure and a reasonable embargo period
+          required: true

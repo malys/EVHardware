@@ -1,0 +1,130 @@
+name: 🐛 Bug Report
+description: Report a bug or issue in the MG4Hardware library
+title: "[BUG] "
+labels: [bug, needs-review]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # Bug Report
+
+        Thank you for helping improve the MG4Hardware library! Please provide as much detail as possible.
+
+        **⚠️ VEHICLE ACCESS:** If this bug affects vehicle property reads/writes or binder communication, it's critical for dependent projects.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: "Pre-submission checks"
+      description: "Ensure you've done these before submitting"
+      options:
+        - label: I've searched existing issues and found no duplicate
+          required: true
+        - label: I'm using the latest version
+          required: true
+        - label: I've tested this on the actual vehicle (or emulator)
+          required: false
+        - label: This bug affects vehicle property access or binder communication
+          required: false
+
+  - type: input
+    id: title
+    attributes:
+      label: "Bug Summary"
+      description: "One-line summary of the bug"
+      placeholder: "CarPropertyAdapter throws NullPointerException on firmware SWI132"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Description"
+      description: |
+        Detailed description of the bug. Include:
+        - What you expected to happen
+        - What actually happened
+        - Why this is a problem
+      placeholder: |
+        Expected: HVAC seat heat property reads correctly on all firmware versions
+        Actual: NullPointerException when calling getHvacSeatHeat() on SWI132
+        Impact: Dependent apps cannot safely access HVAC features on certain firmware
+      rows: 6
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to Reproduce"
+      description: "Exact steps to reproduce the bug"
+      placeholder: |
+        1. Initialize MG4Hardware on a vehicle with firmware SWI132
+        2. Call HvacPropertyAdapter.getHvacSeatHeat()
+        3. Observe NullPointerException
+      rows: 5
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: "Environment"
+      description: "Device and software details"
+      placeholder: |
+        - Vehicle: MG4 EV
+        - Firmware: SWI132
+        - Android Automotive: v9
+        - Library Version: 0.5.0
+        - Consumer App: MG4Control v1.2.3
+      rows: 4
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Stack Trace or Logs"
+      description: |
+        Attach:
+        - Full exception stack trace
+        - Logcat output
+        - Any relevant CarPropertyManager logs
+      placeholder: "Paste stack trace or logcat output here"
+      rows: 8
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: "Severity"
+      description: "How critical is this bug?"
+      options:
+        - "Critical (breaks library for entire firmware version)"
+        - "High (feature broken for specific property / binder call)"
+        - "Medium (workaround available / intermittent)"
+        - "Low (cosmetic / minor)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: "Impact Scope"
+      description: "Which consumer projects are affected?"
+      options:
+        - "MG4Control only"
+        - "MG4ABRPUploader only"
+        - "Multiple projects (affects core library)"
+        - "Unknown"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: "Consent"
+      options:
+        - label: I understand this project is not affiliated with SAIC/MG Motor and carries no warranty (see DISCLAIMER.md)
+          required: true
