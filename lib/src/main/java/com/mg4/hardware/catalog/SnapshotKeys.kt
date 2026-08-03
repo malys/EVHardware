@@ -13,6 +13,10 @@ package com.mg4.hardware.catalog
  */
 object SnapshotKeys {
     const val KEY_FIRMWARE_GEN     = "firmwareGen"
+    const val KEY_STAR_LEFT_SHORT  = "starLeftShortPress"
+    const val KEY_STAR_LEFT_LONG   = "starLeftLongPress"
+    const val KEY_STAR_RIGHT_SHORT = "starRightShortPress"
+    const val KEY_STAR_RIGHT_LONG  = "starRightLongPress"
     const val KEY_OUTSIDE_TEMP     = "outsideTempC"
     const val KEY_IGNITION         = "ignition"
     const val KEY_IN_PARK          = "inPark"

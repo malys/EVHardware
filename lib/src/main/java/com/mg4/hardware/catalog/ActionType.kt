@@ -417,6 +417,14 @@ enum class ActionType(
         R.string.act_navigate, ActionGroup.SYSTEM,
         ValueSpec(ValueKind.TEXT), bridgeAction = null
     ),
+    WEBHOOK_GET(
+        R.string.act_webhook_get, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.WEBHOOK), bridgeAction = null
+    ),
+    WEBHOOK_POST(
+        R.string.act_webhook_post, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.WEBHOOK), bridgeAction = null
+    ),
 
     /**
      * Calls a number through the car's own hands-free stack.

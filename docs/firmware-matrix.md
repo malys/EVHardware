@@ -10,6 +10,10 @@
 | DAY_OF_WEEK | — | — | — | — | — | — |
 | FIRMWARE_GEN | — | — | — | — | — | — |
 | LOCATION_WITHIN | — | — | — | — | — | — |
+| STAR_LEFT_SHORT_PRESS | — | — | — | — | — | — |
+| STAR_LEFT_LONG_PRESS | — | — | — | — | — | — |
+| STAR_RIGHT_SHORT_PRESS | — | — | — | — | — | — |
+| STAR_RIGHT_LONG_PRESS | — | — | — | — | — | — |
 | OUTSIDE_TEMP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IGNITION_STATE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IN_PARK | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -55,6 +59,8 @@
 | SHOW_NOTIFICATION | — | — | — | — | — | — |
 | SPEAK_TEXT | — | — | — | — | — | — |
 | NAVIGATE_TO | — | — | — | — | — | — |
+| WEBHOOK_GET | — | — | — | — | — | — |
+| WEBHOOK_POST | — | — | — | — | — | — |
 | APPLY_PROFILE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_DRIVE_MODE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_REGEN_LEVEL | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

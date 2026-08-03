@@ -21,7 +21,7 @@ class CatalogConsistencyTest {
         // Une action véhicule sans cible serait silencieusement ignorée à l'exécution.
         val localOnly = setOf(
             ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION, ActionType.SPEAK_TEXT,
-            ActionType.NAVIGATE_TO
+            ActionType.NAVIGATE_TO, ActionType.WEBHOOK_GET, ActionType.WEBHOOK_POST
         )
 
         ActionType.entries.filterNot { it in localOnly }.forEach { type ->
@@ -33,7 +33,7 @@ class CatalogConsistencyTest {
     fun `les actions locales ne passent pas par le pont`() {
         listOf(
             ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION, ActionType.SPEAK_TEXT,
-            ActionType.NAVIGATE_TO
+            ActionType.NAVIGATE_TO, ActionType.WEBHOOK_GET, ActionType.WEBHOOK_POST
         ).forEach { type ->
             assertTrue(
                 "${type.name} ne touche pas le véhicule et ne doit pas avoir de bridgeAction",

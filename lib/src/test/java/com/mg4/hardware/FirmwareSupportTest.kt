@@ -25,13 +25,19 @@ class FirmwareSupportTest {
         ConditionType.TIME_OF_DAY,
         ConditionType.DAY_OF_WEEK,
         ConditionType.FIRMWARE_GEN,
-        ConditionType.LOCATION_WITHIN
+        ConditionType.LOCATION_WITHIN,
+        ConditionType.STAR_LEFT_SHORT_PRESS,
+        ConditionType.STAR_LEFT_LONG_PRESS,
+        ConditionType.STAR_RIGHT_SHORT_PRESS,
+        ConditionType.STAR_RIGHT_LONG_PRESS
     )
     private val firmwareIndependentActions = setOf(
         ActionType.LAUNCH_APP,
         ActionType.SHOW_NOTIFICATION,
         ActionType.SPEAK_TEXT,
-        ActionType.NAVIGATE_TO
+        ActionType.NAVIGATE_TO,
+        ActionType.WEBHOOK_GET,
+        ActionType.WEBHOOK_POST
     )
 
     @Test

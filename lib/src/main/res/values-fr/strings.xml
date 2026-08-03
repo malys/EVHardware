@@ -113,6 +113,10 @@
     <string name="group_energy">Énergie</string>
     <string name="unit_metre">m</string>
     <string name="cond_location">À proximité d’un lieu</string>
+    <string name="cond_star_left_short">Appui court sur le bouton étoile gauche</string>
+    <string name="cond_star_left_long">Appui long sur le bouton étoile gauche</string>
+    <string name="cond_star_right_short">Appui court sur le bouton étoile droit</string>
+    <string name="cond_star_right_long">Appui long sur le bouton étoile droit</string>
     <string name="cond_battery">Niveau de batterie</string>
     <string name="cond_charging">En charge</string>
     <string name="cond_charge_limit">Limite de charge</string>
@@ -134,6 +138,8 @@
     <string name="act_tune_radio">Régler la radio</string>
     <string name="value_radio_hint">ex. 103.5 ou AM 1080</string>
     <string name="act_navigate">Naviguer vers</string>
+    <string name="act_webhook_get">Appeler un webhook (GET)</string>
+    <string name="act_webhook_post">Appeler un webhook (POST)</string>
     <string name="act_call">Appeler un numéro</string>
     <string name="cond_window_position">Ouverture des vitres</string>
     <string name="cond_doors_locked">Portes verrouillées</string>

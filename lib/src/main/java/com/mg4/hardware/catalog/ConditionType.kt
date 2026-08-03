@@ -80,6 +80,22 @@ enum class ConditionType(
         ValueSpec(ValueKind.LOCATION, min = 50, max = 2000, unitRes = R.string.unit_metre),
         snapshotKey = null
     ),
+    STAR_LEFT_SHORT_PRESS(
+        R.string.cond_star_left_short, ConditionGroup.CONTEXT,
+        ValueSpec.BOOL, SnapshotKeys.KEY_STAR_LEFT_SHORT
+    ),
+    STAR_LEFT_LONG_PRESS(
+        R.string.cond_star_left_long, ConditionGroup.CONTEXT,
+        ValueSpec.BOOL, SnapshotKeys.KEY_STAR_LEFT_LONG
+    ),
+    STAR_RIGHT_SHORT_PRESS(
+        R.string.cond_star_right_short, ConditionGroup.CONTEXT,
+        ValueSpec.BOOL, SnapshotKeys.KEY_STAR_RIGHT_SHORT
+    ),
+    STAR_RIGHT_LONG_PRESS(
+        R.string.cond_star_right_long, ConditionGroup.CONTEXT,
+        ValueSpec.BOOL, SnapshotKeys.KEY_STAR_RIGHT_LONG
+    ),
 
     // ── Environment ──────────────────────────────────────────────────────────
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)

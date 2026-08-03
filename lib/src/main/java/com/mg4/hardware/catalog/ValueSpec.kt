@@ -28,6 +28,8 @@ enum class ValueKind {
     APP,
     /** Free text (notification message). */
     TEXT,
+    /** Webhook URL plus an optional POST body. */
+    WEBHOOK,
     /**
      * A point and a radius: `text` holds "latitude,longitude", `number` the radius in
      * metres. Two controls rather than one, but no new model field — the flat union in
@@ -53,6 +55,7 @@ data class ValueSpec(
     val min: Int = 0,
     val max: Int = 0,
     @StringRes val unitRes: Int = 0,
+    @StringRes val hintRes: Int = 0,
     val options: List<EnumOption> = emptyList(),
     val fallbackMax: Int = 0,
     /**

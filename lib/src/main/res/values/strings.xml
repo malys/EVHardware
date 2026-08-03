@@ -113,6 +113,10 @@
     <string name="group_energy">Energy</string>
     <string name="unit_metre">m</string>
     <string name="cond_location">Near a place</string>
+    <string name="cond_star_left_short">Left star button short press</string>
+    <string name="cond_star_left_long">Left star button long press</string>
+    <string name="cond_star_right_short">Right star button short press</string>
+    <string name="cond_star_right_long">Right star button long press</string>
     <string name="cond_battery">Battery level</string>
     <string name="cond_charging">Charging</string>
     <string name="cond_charge_limit">Charge limit</string>
@@ -134,6 +138,8 @@
     <string name="act_tune_radio">Tune the radio</string>
     <string name="value_radio_hint">e.g. 103.5 or AM 1080</string>
     <string name="act_navigate">Navigate to</string>
+    <string name="act_webhook_get">Call webhook (GET)</string>
+    <string name="act_webhook_post">Call webhook (POST)</string>
     <string name="act_call">Call a number</string>
     <string name="cond_window_position">Window opening</string>
     <string name="cond_doors_locked">Doors locked</string>
