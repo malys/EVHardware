@@ -2,9 +2,10 @@
 
 <p align="center"><img src="docs/logo.svg" width="440" alt="MG4Hardware"></p>
 
-[![Tests](../../actions/workflows/tests.yml/badge.svg)](../../actions/workflows/tests.yml)
-[![Security](../../actions/workflows/security.yml/badge.svg)](../../actions/workflows/security.yml)
-[![Publish](../../actions/workflows/publish.yml/badge.svg)](../../actions/workflows/publish.yml)
+[![Tests](https://github.com/malys/MG4Hardware/actions/workflows/tests.yml/badge.svg)](https://github.com/malys/MG4Hardware/actions/workflows/tests.yml)
+[![Security](https://github.com/malys/MG4Hardware/actions/workflows/security.yml/badge.svg)](https://github.com/malys/MG4Hardware/actions/workflows/security.yml)
+[![Publish](https://github.com/malys/MG4Hardware/actions/workflows/publish.yml/badge.svg)](https://github.com/malys/MG4Hardware/actions/workflows/publish.yml)
+[![Release](https://img.shields.io/github/v/release/malys/MG4Hardware?include_prereleases&amp;sort=semver)](https://github.com/malys/MG4Hardware/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > ⚠️ **This library reads and writes a car's settings.** It runs inside apps installed on

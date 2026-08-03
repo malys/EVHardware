@@ -1,13 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="460" height="120" viewBox="0 0 460 120" role="img" aria-label="MG4Hardware">
-  <rect x="1" y="1" width="458" height="118" rx="16" fill="#12161a" stroke="#232a31" stroke-width="2"/>
-  <!-- icon: cog + circuit nodes (shared vehicle layer) -->
-  <g transform="translate(34,26)" fill="none" stroke="#4FC3F7" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M34 6 v8 M34 54 v8 M6 34 h8 M54 34 h8 M13 13 l6 6 M55 55 l-6 -6 M55 13 l-6 6 M13 55 l6 -6"/>
-    <circle cx="34" cy="34" r="16"/>
-    <circle cx="34" cy="34" r="5" fill="#4FC3F7" stroke="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="120" viewBox="0 0 480 120" role="img" aria-label="MG4 Hardware">
+  <rect x="1" y="1" width="478" height="118" rx="16" fill="#12161a" stroke="#232a31" stroke-width="2"/>
+  <!-- icon: shared launcher style — vehicle hub with four connections -->
+  <g transform="translate(31,27)" fill="none" stroke="#F4F7FA" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="32" cy="32" r="16"/>
+    <path d="M32 2V12 M32 52V62 M2 32H12 M52 32H62"/>
   </g>
-  <!-- wordmark -->
-  <text x="128" y="56" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="34" font-weight="700" fill="#eef2f5">MG4<tspan fill="#4FC3F7">Hardware</tspan></text>
-  <text x="129" y="82" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#9aa4ad">Shared vehicle-access layer · 0 km/h gate · catalogue</text>
+  <circle cx="63" cy="59" r="5" fill="#E0424C"/>
+  <text x="128" y="56" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="34" font-weight="700" fill="#eef2f5">MG4<tspan fill="#E0424C">Hardware</tspan></text>
+  <text x="129" y="82" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" fill="#9aa4ad">Shared vehicle-access layer · safety gate · catalogue</text>
   <text x="129" y="101" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" fill="#5b6670">SAIC MG4 · AAOS 9 · MT2712</text>
 </svg>
