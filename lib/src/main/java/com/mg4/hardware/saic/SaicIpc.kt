@@ -14,8 +14,8 @@ import com.mg4.hardware.AppLogger
  * Those apps ship an SDK (`com.saicmotor.sdk.*`) that wraps each service, but the SDK lives
  * inside their APKs, not on the boot classpath — reflection cannot reach it from here. What
  * *is* reachable is the AIDL underneath: a service to bind, an interface descriptor, and a
- * transaction code per method. Every constant in this package was read off the decompiled
- * head-unit APKs (`apks/`), which is also the only place they are documented.
+ * transaction code per method. Keep every constant documented here as an implementation
+ * detail and validate compatibility on each supported firmware generation.
  *
  * The binding is asynchronous and survives for the process' lifetime. A call made before the
  * service is up returns null rather than blocking: the rule engine has a cycle to finish, and

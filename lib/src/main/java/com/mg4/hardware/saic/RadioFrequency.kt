@@ -10,7 +10,7 @@ package com.mg4.hardware.saic
  *
  * Android-free on purpose: this is the part worth testing, and it runs on the JVM.
  *
- * Bounds and steps come from `apks/radio_eh32_eu_p` — `RadioConstants.AM_RANGE` /
+ * Bounds and steps follow the project's radio contract: `RadioConstants.AM_RANGE` /
  * `FM_RANGE`, and the tuning scale's own step (`NormalRadioInfoFragment`: 9 kHz on AM,
  * 50 kHz on FM).
  */

@@ -9,7 +9,7 @@ import android.os.IBinder
  * One bound service exposes a *hub*: `getService(name)` hands back the binder for a named
  * sub-service. Both consumers below go through it, so the bind happens once.
  *
- * Source: `apks/hvac_eh32_eu_p` — `com.saicmotor.sdk.vehiclesettings.manager.BaseManager`
+ * Binding contract: `com.saicmotor.sdk.vehiclesettings.manager.BaseManager`
  * (bind target), `IHubService` (the lookup), `AirConditionManager` and
  * `VehicleChargingManager` (the two names used here).
  */
@@ -42,8 +42,8 @@ object SaicHub {
  * Climate control, as the stock HVAC app performs it.
  *
  * This is the write path the project deliberately did without until now: MG4Hardware could
- * only *read* climate through standard AOSP property ids that the R69 sources name but that
- * no MG4 confirmed, so there was no honest way to change anything. These calls are the ones
+ * only *read* climate through standard AOSP property ids that no MG4 confirmed, so there
+ * was no honest way to change anything. These calls are the ones
  * the car's own HVAC screen makes, so what they do is not in doubt — only whether the
  * service answers on a given firmware, which the Diagnostic tab now reports.
  *
@@ -154,7 +154,7 @@ object SaicClimate {
  * `DrivingBatteryHeat` the battery pre-heat switch — the three things the vehicle's own
  * screen offers and the only ones exposed here.
  *
- * Source: `apks/hvac_eh32_eu_p` — `VehicleChargingManager` and `IVehicleChargingService`.
+ * Binding contract: `VehicleChargingManager` and `IVehicleChargingService`.
  */
 object SaicCharging {
 
@@ -252,9 +252,9 @@ object SaicCharging {
  * same value (1.0f), so it is a pulse whose direction depends on state this cannot read.
  * Firing it blind could open a boot at the wrong moment.
  *
- * Source: `apks/vehiclesettingservice_eh32_eu_p` — `IVehicleControlService` (codes) and
+ * Binding contract: `IVehicleControlService` (codes) and
  * `VehicleControlBinder` (the CarCabinManager properties behind them);
- * `apks/launcher_eh32_eu_p` — `VehicleConstant` (value semantics).
+ * `VehicleConstant` (value semantics).
  */
 object SaicVehicleControl {
 
@@ -347,7 +347,7 @@ object SaicVehicleControl {
  * gate at 50 km/h believing it was 14. Speed keeps coming from the AOSP property, whose unit
  * is specified.
  *
- * Source: `apks/vehiclesettingservice_eh32_eu_p` — `IVehicleConditionService` (codes) and
+ * Binding contract: `IVehicleConditionService` (codes) and
  * `VehicleConditionBinder` (the CarSensorManager signals behind them).
  */
 object SaicVehicleCondition {

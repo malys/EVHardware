@@ -25,9 +25,9 @@ The apps are thin; the vehicle lives here.
 - **`@SupportedOn` is the source of truth** for `docs/firmware-matrix.md` (generated, never
   hand-edited) and for consumers' runtime filters. A vehicle catalogue entry without it
   fails the tests.
-- **Never write an unverified AOSP id.** The climate and window ids the R69 sources name
-  are used for reads only. Writes go through `saic.*`, the calls the car's own apps make —
-  and every constant there cites the APK it was read from.
+- **Never write an unverified AOSP id.** The climate and window ids currently known are
+  used for reads only. Writes go through `saic.*`, with every constant documented and
+  validated per supported firmware generation.
 - **English only** — code, comments, commits, docs. User strings in `values/` (English) +
   `values-fr/`.
 

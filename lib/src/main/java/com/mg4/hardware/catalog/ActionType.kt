@@ -43,8 +43,8 @@ enum class ActionGroup(@StringRes val labelRes: Int) {
  *
  * Climate and charging writes go through the SAIC vendor services
  * (`com.mg4.hardware.saic`), not through AOSP property ids. That distinction is the reason
- * they exist at all: the AOSP climate ids MG4Hardware reads are standard ids the R69 sources
- * name but that no MG4 confirmed, so writing them would have been a guess. The vendor calls
+ * they exist at all: the AOSP climate ids MG4Hardware reads are standard ids that no MG4
+ * confirmed, so writing them would have been a guess. The vendor calls
  * are the ones the car's own HVAC and charging screens make.
  *
  * Window and door-lock writes go through `vehiclecontrol` on the same hub. They are not

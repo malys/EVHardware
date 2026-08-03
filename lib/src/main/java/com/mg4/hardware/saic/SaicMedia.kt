@@ -5,7 +5,7 @@ import android.content.Context
 /**
  * The head unit's radio, as its own radio app drives it.
  *
- * Source: `apks/radio_eh32_eu_p` — `RadioOptionManager` (bind target, from
+ * Binding contract: `RadioOptionManager` (bind target, from
  * `RadioConstants.SERVICE_PACKAGE` / `SERVICE_ACTION`), `IRadioAppService` (transaction
  * codes) and `RadioType` (the band values).
  */
@@ -57,7 +57,7 @@ object SaicRadio {
  * `placeCall` does. Going through the platform telephony intent would find nothing to handle
  * it.
  *
- * Source: `apks/btcall_eh32_eu_p` — `BtCallManager` (bind target, from
+ * Binding contract: `BtCallManager` (bind target, from
  * `BtConstant.SERVICE_PACKAGE` / `SERVICE_ACTION`) and `IBtCall` (transaction codes).
  */
 object SaicPhone {
@@ -99,7 +99,7 @@ object SaicPhone {
  * Bound by component name, not by action — the service declares no intent filter, and the
  * car's own voice app reaches it exactly this way.
  *
- * Source: `apks/saicvoiceservice_overseas_eh32` — `VoiceAnnounceModel` (component name and
+ * Binding contract: `VoiceAnnounceModel` (component name and
  * the call it makes) and `ITtsService` (descriptor, transaction codes).
  */
 object SaicTts {

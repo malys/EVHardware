@@ -77,7 +77,7 @@ and nothing else happens — but nothing is written through them, because writin
 id to a vehicle is a different kind of mistake.
 
 Writes go to `saic.*` instead: the binder interfaces the car's own HVAC, charging and vehicle
-apps call, read off the decompiled head-unit APKs. What those do is not in doubt; whether a
+apps call. The integration contract is known; whether a
 given firmware answers is a bind, which consumers report live rather than tabulate. The
 electric tailgate stays out — the launcher defines OPEN and CLOSE as the same value, so it is
 a pulse whose direction depends on state this cannot read.
