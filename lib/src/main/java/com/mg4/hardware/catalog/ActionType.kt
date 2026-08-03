@@ -427,6 +427,22 @@ enum class ActionType(
     ),
 
     /**
+     * Waits, in seconds, before the rule's next action runs.
+     *
+     * A rule's actions are executed one after the other, so a rule that switches the climate
+     * on and then sets the fan level asks for the second value while the car is still acting
+     * on the first — and the vehicle answers from the state it had. This is the pause between
+     * the two, placed by the user where they know one write needs to land before the next.
+     *
+     * Bounded to a minute: the wait holds the cycle thread, and a rule that pauses longer
+     * than the ignition transition it reacts to is a rule whose later actions may never run.
+     */
+    DELAY(
+        R.string.act_delay, ActionGroup.SYSTEM,
+        number(1, 60, R.string.unit_second), bridgeAction = null
+    ),
+
+    /**
      * Calls a number through the car's own hands-free stack.
      *
      * A vehicle action despite looking like a phone one: the head unit has no SIM and no

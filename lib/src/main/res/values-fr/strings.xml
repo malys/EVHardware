@@ -163,4 +163,6 @@
     <string name="cond_doors_locked">Portes verrouillées</string>
     <string name="act_windows">Vitres</string>
     <string name="act_door_lock">Verrouillage des portes</string>
+    <string name="act_delay">Attendre</string>
+    <string name="unit_second">s</string>
 </resources>

@@ -35,7 +35,8 @@ class FirmwareSupportTest {
         ActionType.SPEAK_TEXT,
         ActionType.NAVIGATE_TO,
         ActionType.WEBHOOK_GET,
-        ActionType.WEBHOOK_POST
+        ActionType.WEBHOOK_POST,
+        ActionType.DELAY
     )
 
     @Test

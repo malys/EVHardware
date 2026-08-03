@@ -142,4 +142,6 @@
     <string name="cond_doors_locked">Portas trancadas</string>
     <string name="act_windows">Vidros</string>
     <string name="act_door_lock">Trancamento das portas</string>
+    <string name="act_delay">Esperar</string>
+    <string name="unit_second">s</string>
 </resources>

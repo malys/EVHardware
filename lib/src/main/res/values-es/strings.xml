@@ -142,4 +142,6 @@
     <string name="cond_doors_locked">Puertas bloqueadas</string>
     <string name="act_windows">Ventanillas</string>
     <string name="act_door_lock">Bloqueo de puertas</string>
+    <string name="act_delay">Esperar</string>
+    <string name="unit_second">s</string>
 </resources>

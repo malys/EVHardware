@@ -163,4 +163,6 @@
     <string name="cond_doors_locked">Doors locked</string>
     <string name="act_windows">Windows</string>
     <string name="act_door_lock">Door locks</string>
+    <string name="act_delay">Wait</string>
+    <string name="unit_second">s</string>
 </resources>

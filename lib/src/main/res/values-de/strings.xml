@@ -142,4 +142,6 @@
     <string name="cond_doors_locked">Türen verriegelt</string>
     <string name="act_windows">Fenster</string>
     <string name="act_door_lock">Türverriegelung</string>
+    <string name="act_delay">Warten</string>
+    <string name="unit_second">s</string>
 </resources>

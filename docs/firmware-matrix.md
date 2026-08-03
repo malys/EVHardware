@@ -59,6 +59,7 @@
 | NAVIGATE_TO | — | — | — | — | — | — |
 | WEBHOOK_GET | — | — | — | — | — | — |
 | WEBHOOK_POST | — | — | — | — | — | — |
+| DELAY | — | — | — | — | — | — |
 | APPLY_PROFILE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_DRIVE_MODE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_REGEN_LEVEL | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
