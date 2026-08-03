@@ -38,6 +38,12 @@ Submodule at `./MG4Hardware`; `settings.gradle.kts` includes `MG4Hardware/lib` a
 permissions and no `sharedUserId` — vehicle-write capability is the app's platform-signing
 decision, not the library's.
 
+**Every consuming app tracks the HEAD of `master`.** Never pin an older commit, and never
+commit on a detached submodule HEAD: the catalogue is shared, so an entry removed here must
+disappear from every app at once, and two apps on two lines of this library means the same
+change written twice and reconciled by hand afterwards. Land library work in the standalone
+checkout, push it, then move each app's pointer forward and run that app's tests.
+
 ## Reflection + R8
 
 All vehicle access reflects `android.car` (absent from the compile SDK). `consumer-rules.pro`
