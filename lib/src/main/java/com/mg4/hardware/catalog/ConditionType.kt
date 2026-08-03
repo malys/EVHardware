@@ -47,7 +47,9 @@ enum class ConditionType(
     val spec: ValueSpec,
     val snapshotKey: String?,
     /** true when </> comparison is meaningful (otherwise only equality is offered). */
-    val comparable: Boolean = false
+    val comparable: Boolean = false,
+    /** True when the condition itself supplies the event that addresses the rule. */
+    val eventDriven: Boolean = false
 ) {
 
     // ── Context (firmware-independent) ───────────────────────────────────────
@@ -67,6 +69,10 @@ enum class ConditionType(
         R.string.cond_day, ConditionGroup.CONTEXT,
         ValueSpec(ValueKind.DAYS), snapshotKey = null
     ),
+    DATE(
+        R.string.cond_date, ConditionGroup.CONTEXT,
+        ValueSpec(ValueKind.DATE), snapshotKey = null
+    ),
     FIRMWARE_GEN(
         R.string.cond_firmware, ConditionGroup.CONTEXT,
         ValueSpec(ValueKind.ENUM), snapshotKey = SnapshotKeys.KEY_FIRMWARE_GEN
@@ -80,21 +86,10 @@ enum class ConditionType(
         ValueSpec(ValueKind.LOCATION, min = 50, max = 2000, unitRes = R.string.unit_metre),
         snapshotKey = null
     ),
-    STAR_LEFT_SHORT_PRESS(
-        R.string.cond_star_left_short, ConditionGroup.CONTEXT,
-        ValueSpec.BOOL, SnapshotKeys.KEY_STAR_LEFT_SHORT
-    ),
-    STAR_LEFT_LONG_PRESS(
-        R.string.cond_star_left_long, ConditionGroup.CONTEXT,
-        ValueSpec.BOOL, SnapshotKeys.KEY_STAR_LEFT_LONG
-    ),
-    STAR_RIGHT_SHORT_PRESS(
-        R.string.cond_star_right_short, ConditionGroup.CONTEXT,
-        ValueSpec.BOOL, SnapshotKeys.KEY_STAR_RIGHT_SHORT
-    ),
-    STAR_RIGHT_LONG_PRESS(
-        R.string.cond_star_right_long, ConditionGroup.CONTEXT,
-        ValueSpec.BOOL, SnapshotKeys.KEY_STAR_RIGHT_LONG
+    PHYSICAL_BUTTON(
+        R.string.cond_physical_button, ConditionGroup.CONTEXT,
+        ValueSpec(ValueKind.PHYSICAL_BUTTON), SnapshotKeys.KEY_PHYSICAL_BUTTON_EVENT,
+        eventDriven = true
     ),
 
     // ── Environment ──────────────────────────────────────────────────────────

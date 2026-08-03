@@ -48,6 +48,7 @@
     <string name="cond_bt_any">Qualsiasi dispositivo Bluetooth connesso</string>
     <string name="cond_time">Ora del giorno</string>
     <string name="cond_day">Giorno della settimana</string>
+    <string name="cond_date">Data esatta</string>
     <string name="cond_firmware">Generazione firmware</string>
     <string name="cond_outside_temp">Temperatura esterna</string>
     <string name="cond_ignition">Stato del quadro</string>
@@ -113,6 +114,7 @@
     <string name="group_energy">Energia</string>
     <string name="unit_metre">m</string>
     <string name="cond_location">Vicino a un luogo</string>
+    <string name="cond_physical_button">Pulsanti fisici</string>
     <string name="cond_battery">Livello batteria</string>
     <string name="cond_charging">In carica</string>
     <string name="cond_charge_limit">Limite di carica</string>
@@ -135,6 +137,7 @@
     <string name="value_radio_hint">es. 103.5 o AM 1080</string>
     <string name="act_navigate">Naviga verso</string>
     <string name="act_call">Chiama un numero</string>
+    <string name="act_call_contact">Chiama un contatto</string>
     <string name="cond_window_position">Apertura finestrini</string>
     <string name="cond_doors_locked">Porte bloccate</string>
     <string name="act_windows">Finestrini</string>

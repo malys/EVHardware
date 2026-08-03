@@ -8,12 +8,10 @@
 | ANY_BT_CONNECTED | — | — | — | — | — | — |
 | TIME_OF_DAY | — | — | — | — | — | — |
 | DAY_OF_WEEK | — | — | — | — | — | — |
+| DATE | — | — | — | — | — | — |
 | FIRMWARE_GEN | — | — | — | — | — | — |
 | LOCATION_WITHIN | — | — | — | — | — | — |
-| STAR_LEFT_SHORT_PRESS | — | — | — | — | — | — |
-| STAR_LEFT_LONG_PRESS | — | — | — | — | — | — |
-| STAR_RIGHT_SHORT_PRESS | — | — | — | — | — | — |
-| STAR_RIGHT_LONG_PRESS | — | — | — | — | — | — |
+| PHYSICAL_BUTTON | — | — | — | — | — | — |
 | OUTSIDE_TEMP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IGNITION_STATE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IN_PARK | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -108,3 +106,4 @@
 | SET_LAS_WARNING_SOUND | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | SET_LAS_WARNING_VIBRATION | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | CALL_NUMBER | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| CALL_CONTACT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |

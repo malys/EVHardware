@@ -48,6 +48,7 @@
     <string name="cond_bt_any">Any Bluetooth device connected</string>
     <string name="cond_time">Time of day</string>
     <string name="cond_day">Day of week</string>
+    <string name="cond_date">Exact date</string>
     <string name="cond_firmware">Firmware generation</string>
     <string name="cond_outside_temp">Outside temperature</string>
     <string name="cond_ignition">Ignition state</string>
@@ -113,10 +114,26 @@
     <string name="group_energy">Energy</string>
     <string name="unit_metre">m</string>
     <string name="cond_location">Near a place</string>
+    <string name="cond_physical_button">Physical buttons</string>
     <string name="cond_star_left_short">Left star button short press</string>
     <string name="cond_star_left_long">Left star button long press</string>
     <string name="cond_star_right_short">Right star button short press</string>
     <string name="cond_star_right_long">Right star button long press</string>
+    <string name="cond_assistant_short">Assistant button short press</string>
+    <string name="cond_assistant_long">Assistant button long press</string>
+    <string name="cond_phone_short">Phone button short press</string><string name="cond_phone_long">Phone button long press</string>
+    <string name="cond_center_short">Center button short press</string><string name="cond_center_long">Center button long press</string>
+    <string name="cond_volume_up_short">Volume up short press</string><string name="cond_volume_up_long">Volume up long press</string>
+    <string name="cond_volume_down_short">Volume down short press</string><string name="cond_volume_down_long">Volume down long press</string>
+    <string name="cond_media_next_short">Next track short press</string><string name="cond_media_next_long">Next track long press</string>
+    <string name="cond_media_previous_short">Previous track short press</string><string name="cond_media_previous_long">Previous track long press</string>
+    <string name="cond_mute_short">Mute button short press</string><string name="cond_mute_long">Mute button long press</string>
+    <string name="cond_up_short">Up button short press</string><string name="cond_up_long">Up button long press</string>
+    <string name="cond_down_short">Down button short press</string><string name="cond_down_long">Down button long press</string>
+    <string name="cond_ok_short">OK button short press</string><string name="cond_ok_long">OK button long press</string>
+    <string name="cond_left_short">Left button short press</string><string name="cond_left_long">Left button long press</string>
+    <string name="cond_right_short">Right button short press</string><string name="cond_right_long">Right button long press</string>
+    <string name="cond_source_short">Source button short press</string><string name="cond_source_long">Source button long press</string>
     <string name="cond_battery">Battery level</string>
     <string name="cond_charging">Charging</string>
     <string name="cond_charge_limit">Charge limit</string>
@@ -141,6 +158,7 @@
     <string name="act_webhook_get">Call webhook (GET)</string>
     <string name="act_webhook_post">Call webhook (POST)</string>
     <string name="act_call">Call a number</string>
+    <string name="act_call_contact">Call a contact</string>
     <string name="cond_window_position">Window opening</string>
     <string name="cond_doors_locked">Doors locked</string>
     <string name="act_windows">Windows</string>

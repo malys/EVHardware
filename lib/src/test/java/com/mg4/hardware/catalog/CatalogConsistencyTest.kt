@@ -84,6 +84,7 @@ class CatalogConsistencyTest {
             ConditionType.ANY_BT_CONNECTED,
             ConditionType.TIME_OF_DAY,
             ConditionType.DAY_OF_WEEK,
+            ConditionType.DATE,
             ConditionType.LOCATION_WITHIN
         )
 

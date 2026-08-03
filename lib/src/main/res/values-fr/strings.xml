@@ -48,6 +48,7 @@
     <string name="cond_bt_any">Un appareil Bluetooth est connecté</string>
     <string name="cond_time">Heure</string>
     <string name="cond_day">Jour de la semaine</string>
+    <string name="cond_date">Date précise</string>
     <string name="cond_firmware">Génération de firmware</string>
     <string name="cond_outside_temp">Température extérieure</string>
     <string name="cond_ignition">État d\'allumage</string>
@@ -113,10 +114,26 @@
     <string name="group_energy">Énergie</string>
     <string name="unit_metre">m</string>
     <string name="cond_location">À proximité d’un lieu</string>
+    <string name="cond_physical_button">Boutons physiques</string>
     <string name="cond_star_left_short">Appui court sur le bouton étoile gauche</string>
     <string name="cond_star_left_long">Appui long sur le bouton étoile gauche</string>
     <string name="cond_star_right_short">Appui court sur le bouton étoile droit</string>
     <string name="cond_star_right_long">Appui long sur le bouton étoile droit</string>
+    <string name="cond_assistant_short">Appui court sur le bouton assistant</string>
+    <string name="cond_assistant_long">Appui long sur le bouton assistant</string>
+    <string name="cond_phone_short">Appui court sur le bouton téléphone</string><string name="cond_phone_long">Appui long sur le bouton téléphone</string>
+    <string name="cond_center_short">Appui court sur le bouton central</string><string name="cond_center_long">Appui long sur le bouton central</string>
+    <string name="cond_volume_up_short">Appui court sur volume plus</string><string name="cond_volume_up_long">Appui long sur volume plus</string>
+    <string name="cond_volume_down_short">Appui court sur volume moins</string><string name="cond_volume_down_long">Appui long sur volume moins</string>
+    <string name="cond_media_next_short">Appui court sur piste suivante</string><string name="cond_media_next_long">Appui long sur piste suivante</string>
+    <string name="cond_media_previous_short">Appui court sur piste précédente</string><string name="cond_media_previous_long">Appui long sur piste précédente</string>
+    <string name="cond_mute_short">Appui court sur sourdine</string><string name="cond_mute_long">Appui long sur sourdine</string>
+    <string name="cond_up_short">Appui court sur haut</string><string name="cond_up_long">Appui long sur haut</string>
+    <string name="cond_down_short">Appui court sur bas</string><string name="cond_down_long">Appui long sur bas</string>
+    <string name="cond_ok_short">Appui court sur OK</string><string name="cond_ok_long">Appui long sur OK</string>
+    <string name="cond_left_short">Appui court sur gauche</string><string name="cond_left_long">Appui long sur gauche</string>
+    <string name="cond_right_short">Appui court sur droite</string><string name="cond_right_long">Appui long sur droite</string>
+    <string name="cond_source_short">Appui court sur source</string><string name="cond_source_long">Appui long sur source</string>
     <string name="cond_battery">Niveau de batterie</string>
     <string name="cond_charging">En charge</string>
     <string name="cond_charge_limit">Limite de charge</string>
@@ -141,6 +158,7 @@
     <string name="act_webhook_get">Appeler un webhook (GET)</string>
     <string name="act_webhook_post">Appeler un webhook (POST)</string>
     <string name="act_call">Appeler un numéro</string>
+    <string name="act_call_contact">Appeler un contact</string>
     <string name="cond_window_position">Ouverture des vitres</string>
     <string name="cond_doors_locked">Portes verrouillées</string>
     <string name="act_windows">Vitres</string>

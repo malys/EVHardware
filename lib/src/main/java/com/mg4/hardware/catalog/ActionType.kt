@@ -437,6 +437,12 @@ enum class ActionType(
     CALL_NUMBER(
         R.string.act_call, ActionGroup.SYSTEM,
         ValueSpec(ValueKind.TEXT), "CALL_NUMBER"
+    ),
+    /** Selects from the PBAP-synchronised Android phone book, then calls the stored number. */
+    @SupportedOn(SWI68, SWI165)
+    CALL_CONTACT(
+        R.string.act_call_contact, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.CONTACT), "CALL_CONTACT"
     );
 
     companion object {

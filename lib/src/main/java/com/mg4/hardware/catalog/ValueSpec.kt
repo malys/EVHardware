@@ -22,10 +22,14 @@ enum class ValueKind {
     TIME_RANGE,
     /** Day-of-week selection. */
     DAYS,
+    /** One exact local calendar date, stored as ISO-8601 (yyyy-MM-dd). */
+    DATE,
     /** MG4Control driving profile, identified by id. */
     PROFILE,
     /** Installed application, identified by package name. */
     APP,
+    /** Phone-book entry; the rule stores the selected number, not a mutable contact id. */
+    CONTACT,
     /** Free text (notification message). */
     TEXT,
     /** Webhook URL plus an optional POST body. */
@@ -36,6 +40,8 @@ enum class ValueKind {
      * `Condition` already has both.
      */
     LOCATION,
+    /** Physical button + short/long event, edited with two dropdowns. */
+    PHYSICAL_BUTTON,
     /** Nothing to enter. */
     NONE
 }
@@ -55,7 +61,6 @@ data class ValueSpec(
     val min: Int = 0,
     val max: Int = 0,
     @StringRes val unitRes: Int = 0,
-    @StringRes val hintRes: Int = 0,
     val options: List<EnumOption> = emptyList(),
     val fallbackMax: Int = 0,
     /**

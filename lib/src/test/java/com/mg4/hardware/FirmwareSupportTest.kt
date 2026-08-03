@@ -24,12 +24,10 @@ class FirmwareSupportTest {
         ConditionType.ANY_BT_CONNECTED,
         ConditionType.TIME_OF_DAY,
         ConditionType.DAY_OF_WEEK,
+        ConditionType.DATE,
         ConditionType.FIRMWARE_GEN,
         ConditionType.LOCATION_WITHIN,
-        ConditionType.STAR_LEFT_SHORT_PRESS,
-        ConditionType.STAR_LEFT_LONG_PRESS,
-        ConditionType.STAR_RIGHT_SHORT_PRESS,
-        ConditionType.STAR_RIGHT_LONG_PRESS
+        ConditionType.PHYSICAL_BUTTON
     )
     private val firmwareIndependentActions = setOf(
         ActionType.LAUNCH_APP,
@@ -43,7 +41,7 @@ class FirmwareSupportTest {
     @Test
     fun `every vehicle condition declares firmware support`() {
         ConditionType.entries
-            .filterNot { it in firmwareIndependentConditions }
+            .filterNot { it in firmwareIndependentConditions || it.eventDriven }
             .forEach {
                 assertTrue("${it.name} is missing @SupportedOn", FirmwareSupport.gensOf(it) != null)
             }
@@ -61,6 +59,9 @@ class FirmwareSupportTest {
     @Test
     fun `context entries stay firmware-independent`() {
         firmwareIndependentConditions.forEach {
+            assertNull("${it.name} should not be firmware-specific", FirmwareSupport.gensOf(it))
+        }
+        ConditionType.entries.filter { it.eventDriven }.forEach {
             assertNull("${it.name} should not be firmware-specific", FirmwareSupport.gensOf(it))
         }
         firmwareIndependentActions.forEach {
