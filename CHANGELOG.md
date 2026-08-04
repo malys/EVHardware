@@ -6,6 +6,18 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Shared diagnostic engine** in `com.mg4.hardware.diag`, so the apps stop each carrying
+  their own copy:
+  - `CrashLogger` writes an uncaught exception, its cause chain and the `AppLogger` buffer
+    to `filesDir/last_crash.txt`, chaining the previous handler and truncating from the tail
+    so the exception survives. It replaces the two divergent copies in MG4Control and
+    MG4Tasker, each of which carried a fix the other was missing.
+  - `PrivateBin` uploads a report to a PrivateBin instance, zero-knowledge — the key never
+    leaves the URL fragment. Moved verbatim from MG4Tasker.
+  No UI: rendering a report and deciding when to paste it stay in the apps.
+
 ### Changed
 
 - **One "Call" action.** `CALL_NUMBER` now carries a `CONTACT` value, so the same entry takes

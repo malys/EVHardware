@@ -44,7 +44,7 @@ here.
 | Models | `DrivingProfile`, `DriveMode`, `RegenLevel`, `ProfileBackup` |
 | Catalogue | `ConditionType`, `ActionType`, `ValueSpec`, `VehicleEnums`, `SnapshotKeys` |
 | Compatibility | `@SupportedOn`, `FirmwareSupport`, `FirmwareMatrix` → [docs/firmware-matrix.md](docs/firmware-matrix.md) |
-| Diagnostics | `AppLogger` (ring buffer, no ADB needed) |
+| Diagnostics | `AppLogger` (ring buffer, no ADB needed), `diag.CrashLogger`, `diag.PrivateBin` |
 
 ### The safety gate and `@RequiresStandstill`
 
