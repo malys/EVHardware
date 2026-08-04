@@ -16,10 +16,16 @@ The apps are thin; the vehicle lives here.
 
 ## Non-negotiables
 
-- **The 0 km/h gate is here.** `VehicleWriteGate` permits a vehicle-setting write only when
-  speed is readable and exactly 0 km/h, inside the low-level write primitives. Every setter
-  carries `@RequiresStandstill`; coverage keeps the set honest. Unknown/negative speed
-  fails closed, and park state does not override that refusal.
+- **The 0 km/h gate is here.** `VehicleWriteGate` decides every vehicle-setting write inside
+  the low-level write primitives. Every setter carries `@RequiresStandstill`; coverage keeps
+  the set honest. Unknown or negative speed fails closed, and a moving reading is never
+  rescued by anything.
+  Two widenings of that rule are still in the code and are **safety debt to remove, not a
+  pattern to extend**: `allowUpToKmh`, a caller-settable threshold of up to 50 km/h, and the
+  park rescue, which turns an unreadable speed into ALLOWED when the gear reads park. The
+  target the suite documents (`MG4Tasker/AGENTS.md`, `MG4Control/AGENTS.md`) is a fixed gate
+  at a *readable* 0 km/h with no threshold and no rescue. Do not describe the gate as already
+  being that until this file says so.
 - **Per-firmware routing, never universal.** SWI68/69/131/132/133/165 differ; dispatch
   through `FirmwareInfo`. Any new vehicle call must branch per generation.
 - **Unreadable ≠ a value.** Getters return null / -1 when the layer is not ready or the
