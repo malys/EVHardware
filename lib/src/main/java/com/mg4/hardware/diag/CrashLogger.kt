@@ -51,11 +51,19 @@ object CrashLogger {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
 
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            AppLogger.e(TAG, "uncaught exception on thread '${thread.name}': $throwable")
-            runCatching { write(appContext, appName, thread, throwable) }
-            // Chain, never swallow: the platform still needs to terminate the process,
-            // and swallowing here would leave the app in an undefined state instead.
-            previous?.uncaughtException(thread, throwable)
+            try {
+                // Logging is inside the guard too: AppLogger formats through a shared
+                // SimpleDateFormat, so a concurrent log call can make this throw — and a
+                // throw here would cost both the report and the previous handler.
+                runCatching {
+                    AppLogger.e(TAG, "uncaught exception on thread '${thread.name}': $throwable")
+                }
+                runCatching { write(appContext, appName, thread, throwable) }
+            } finally {
+                // Chain, never swallow: the platform still needs to terminate the process,
+                // and swallowing here would leave the app in an undefined state instead.
+                previous?.uncaughtException(thread, throwable)
+            }
         }
     }
 

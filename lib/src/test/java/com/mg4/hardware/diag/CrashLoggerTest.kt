@@ -91,9 +91,16 @@ class CrashLoggerTest {
 
     @Test
     fun `truncation never cuts a multi-byte character in half`() {
-        val content = "é".repeat(maxBytes)
-        val truncated = CrashLogger.truncate(content)
-        // Cutting mid-character would produce a replacement character.
-        assertFalse("character cut in half", String(truncated, Charsets.UTF_8).contains('�'))
+        // Two and three bytes per character. Where the cut lands relative to a character
+        // boundary depends on the marker's own length, so a single width can happen to
+        // land cleanly and never exercise the backup loop; two widths cannot both.
+        for (glyph in listOf("é", "€")) {
+            val truncated = CrashLogger.truncate(glyph.repeat(maxBytes))
+            assertFalse(
+                "character cut in half for $glyph",
+                String(truncated, Charsets.UTF_8).contains('�')
+            )
+            assertTrue("ceiling exceeded for $glyph: ${truncated.size}", truncated.size <= maxBytes)
+        }
     }
 }

@@ -58,10 +58,18 @@ object FirmwareInfo {
     /**
      * Raw string read from system properties (e.g. "SWI131-12345-xxx").
      * Useful to show the exact version to the user in the warning dialog.
+     *
+     * Read here rather than through [getGeneration], which returns early on a forced
+     * generation and so never reaches the property. Forcing a compatibility mode changes
+     * which code path runs; it does not change which firmware the head unit is running,
+     * and that is the one thing this function exists to report.
      */
     fun getDetectedString(): String {
-        if (detectedString == null) getGeneration()
-        return detectedString ?: "?"
+        detectedString?.let { return it }
+        val version = readProp("ro.build.mt2712.version")
+            ?: readProp("ro.build.version.incremental")
+        detectedString = version
+        return version ?: "?"
     }
 
     /**
