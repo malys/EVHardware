@@ -452,9 +452,13 @@ enum class ActionType(
     @SupportedOn(SWI68, SWI165)
     CALL_NUMBER(
         R.string.act_call, ActionGroup.SYSTEM,
-        ValueSpec(ValueKind.TEXT), "CALL_NUMBER"
+        ValueSpec(ValueKind.CONTACT), "CALL_NUMBER"
     ),
-    /** Selects from the PBAP-synchronised Android phone book, then calls the stored number. */
+    /**
+     * Kept only so rules saved by releases that exposed a separate contact action still load.
+     * New rules use [CALL_NUMBER], whose editor accepts either a number or a contact.
+     */
+    @Deprecated("Compatibility alias for saved rules; use CALL_NUMBER")
     @SupportedOn(SWI68, SWI165)
     CALL_CONTACT(
         R.string.act_call_contact, ActionGroup.SYSTEM,
@@ -462,6 +466,8 @@ enum class ActionType(
     );
 
     companion object {
-        fun byGroup(): Map<ActionGroup, List<ActionType>> = entries.groupBy { it.group }
+        @Suppress("DEPRECATION")
+        fun byGroup(): Map<ActionGroup, List<ActionType>> =
+            entries.filterNot { it == CALL_CONTACT }.groupBy { it.group }
     }
 }

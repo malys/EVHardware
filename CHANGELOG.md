@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **One "Call" action.** `CALL_NUMBER` now carries a `CONTACT` value, so the same entry takes
+  either a typed number or a name from the phone book. `CALL_CONTACT` is deprecated and no
+  longer offered by `ActionType.byGroup()`: it stays in the enum only so rules saved by a
+  release that exposed it still load and still call, since enum entries are persisted by name
+  and a removed one deserialises to null.
+
 ## [0.2.0] - 2026-08-02
 
 ### Added

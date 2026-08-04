@@ -3,6 +3,9 @@
 Shared vehicle-access library for the SAIC MG4 (AAOS 9, MT2712), consumed by MG4Control,
 MG4Tasker and MG4ABRPUploader via git submodule + Gradle subproject.
 
+MG4Hardware is the shared vehicle layer for **MG4Suite**. The workspace `AGENTS.md` and
+normative workspace `DESIGN.md` apply; this file defines library-specific invariants.
+
 Commit author: malys.training@gmail.com
 
 ## Why this exists
@@ -13,11 +16,10 @@ The apps are thin; the vehicle lives here.
 
 ## Non-negotiables
 
-- **The 0 km/h gate is here.** `VehicleWriteGate` refuses road-behaviour writes above
-  0 km/h and fails closed on unreadable speed, inside the low-level write primitives. Every
-  gated setter carries `@RequiresStandstill`; `RequiresStandstillTest`-style coverage keeps
-  the set honest. Comfort writes are not gated. Park rescues the unreadable-speed refusal
-  and nothing else — it must never override a speed that did read.
+- **The 0 km/h gate is here.** `VehicleWriteGate` permits a vehicle-setting write only when
+  speed is readable and exactly 0 km/h, inside the low-level write primitives. Every setter
+  carries `@RequiresStandstill`; coverage keeps the set honest. Unknown/negative speed
+  fails closed, and park state does not override that refusal.
 - **Per-firmware routing, never universal.** SWI68/69/131/132/133/165 differ; dispatch
   through `FirmwareInfo`. Any new vehicle call must branch per generation.
 - **Unreadable ≠ a value.** Getters return null / -1 when the layer is not ready or the

@@ -136,7 +136,7 @@
     <string name="act_tune_radio">Radiosender einstellen</string>
     <string name="value_radio_hint">z. B. 103.5 oder AM 1080</string>
     <string name="act_navigate">Navigieren zu</string>
-    <string name="act_call">Nummer anrufen</string>
+    <string name="act_call">Anrufen</string>
     <string name="act_call_contact">Kontakt anrufen</string>
     <string name="cond_window_position">Fensteröffnung</string>
     <string name="cond_doors_locked">Türen verriegelt</string>

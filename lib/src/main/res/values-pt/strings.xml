@@ -136,7 +136,7 @@
     <string name="act_tune_radio">Sintonizar o rádio</string>
     <string name="value_radio_hint">ex. 103.5 ou AM 1080</string>
     <string name="act_navigate">Navegar para</string>
-    <string name="act_call">Ligar para um número</string>
+    <string name="act_call">Ligar</string>
     <string name="act_call_contact">Ligar para um contacto</string>
     <string name="cond_window_position">Abertura dos vidros</string>
     <string name="cond_doors_locked">Portas trancadas</string>

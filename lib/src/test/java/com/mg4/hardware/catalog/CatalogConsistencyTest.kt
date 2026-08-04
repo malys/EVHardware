@@ -4,6 +4,7 @@ import com.mg4.hardware.catalog.ActionType
 import com.mg4.hardware.catalog.ConditionType
 import com.mg4.hardware.catalog.ValueKind
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -14,6 +15,16 @@ import org.junit.Test
  * contourne le verrou de vitesse.
  */
 class CatalogConsistencyTest {
+
+    @Suppress("DEPRECATION")
+    @Test
+    fun `call is one public action accepting numbers or contacts`() {
+        val publicActions = ActionType.byGroup().values.flatten()
+
+        assertEquals(ValueKind.CONTACT, ActionType.CALL_NUMBER.spec.kind)
+        assertTrue(ActionType.CALL_NUMBER in publicActions)
+        assertFalse(ActionType.CALL_CONTACT in publicActions)
+    }
 
     @Test
     fun `toute action vehicule cible une action du pont`() {

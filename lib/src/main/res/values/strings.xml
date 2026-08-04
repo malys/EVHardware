@@ -157,7 +157,7 @@
     <string name="act_navigate">Navigate to</string>
     <string name="act_webhook_get">Call webhook (GET)</string>
     <string name="act_webhook_post">Call webhook (POST)</string>
-    <string name="act_call">Call a number</string>
+    <string name="act_call">Call</string>
     <string name="act_call_contact">Call a contact</string>
     <string name="cond_window_position">Window opening</string>
     <string name="cond_doors_locked">Doors locked</string>
