@@ -82,6 +82,20 @@ enum class ActionType(
         R.string.act_apply_profile, ActionGroup.PROFILE,
         ValueSpec(ValueKind.PROFILE), bridgeAction = "APPLY_PROFILE", gated = true
     ),
+    /**
+     * Opens MG4Control's profile picker and leaves the choice to the driver.
+     *
+     * The counterpart of [APPLY_PROFILE], for the rules that must not decide alone: arriving
+     * at a charger, the profile to apply depends on what the driver is about to do, which no
+     * condition reads. Gated like the profile it leads to — MG4Control refuses to put the
+     * picker in front of a moving driver, so offering it without the mark would promise a
+     * dialog that never appears.
+     */
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SHOW_PROFILE_PICKER(
+        R.string.act_show_profile_picker, ActionGroup.PROFILE,
+        ValueSpec.NONE, bridgeAction = "SHOW_PROFILE_PICKER", gated = true
+    ),
 
     // ── Driving (gated) ──────────────────────────────────────────────────────
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)

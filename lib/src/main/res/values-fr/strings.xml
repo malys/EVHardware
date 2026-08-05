@@ -82,6 +82,7 @@
     <string name="cond_temperature_set">Température de consigne</string>
     <string name="cond_window_open">Une vitre est ouverte</string>
     <string name="act_apply_profile">Appliquer un profil</string>
+    <string name="act_show_profile_picker">Demander un profil</string>
     <string name="act_drive_mode">Mode de conduite</string>
     <string name="act_regen">Récupération</string>
     <string name="act_one_pedal">Conduite une pédale</string>

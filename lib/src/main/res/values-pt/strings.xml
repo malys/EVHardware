@@ -82,6 +82,7 @@
     <string name="cond_temperature_set">Temperatura definida</string>
     <string name="cond_window_open">Uma janela está aberta</string>
     <string name="act_apply_profile">Aplicar um perfil</string>
+    <string name="act_show_profile_picker">Pedir um perfil</string>
     <string name="act_drive_mode">Modo de condução</string>
     <string name="act_regen">Regeneração</string>
     <string name="act_one_pedal">Condução com um pedal</string>

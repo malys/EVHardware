@@ -63,6 +63,7 @@
 | WEBHOOK_POST | — | — | — | — | — | — |
 | DELAY | — | — | — | — | — | — |
 | APPLY_PROFILE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SHOW_PROFILE_PICKER | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_DRIVE_MODE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_REGEN_LEVEL | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_ONE_PEDAL | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

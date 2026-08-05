@@ -82,6 +82,7 @@
     <string name="cond_temperature_set">Solltemperatur</string>
     <string name="cond_window_open">Ein Fenster ist offen</string>
     <string name="act_apply_profile">Profil anwenden</string>
+    <string name="act_show_profile_picker">Profil abfragen</string>
     <string name="act_drive_mode">Fahrmodus</string>
     <string name="act_regen">Rekuperation</string>
     <string name="act_one_pedal">Ein-Pedal-Fahren</string>
