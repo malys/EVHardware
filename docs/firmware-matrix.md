@@ -6,6 +6,8 @@
 |---|:--:|:--:|:--:|:--:|:--:|:--:|
 | BT_DEVICE_CONNECTED | — | — | — | — | — | — |
 | ANY_BT_CONNECTED | — | — | — | — | — | — |
+| BT_DEVICE_ONBOARD | — | — | — | — | — | — |
+| BT_DEVICE_HANDSFREE | — | — | — | — | — | — |
 | TIME_OF_DAY | — | — | — | — | — | — |
 | DAY_OF_WEEK | — | — | — | — | — | — |
 | DATE | — | — | — | — | — | — |

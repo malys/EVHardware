@@ -95,6 +95,8 @@ class CatalogConsistencyTest {
         val localOnly = setOf(
             ConditionType.BT_DEVICE_CONNECTED,
             ConditionType.ANY_BT_CONNECTED,
+            ConditionType.BT_DEVICE_ONBOARD,
+            ConditionType.BT_DEVICE_HANDSFREE,
             ConditionType.TIME_OF_DAY,
             ConditionType.DAY_OF_WEEK,
             ConditionType.DATE,

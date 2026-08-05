@@ -46,6 +46,8 @@
     <string name="ignition_start">Starting</string>
     <string name="cond_bt_device">Bluetooth phone connected</string>
     <string name="cond_bt_any">Any Bluetooth device connected</string>
+    <string name="cond_bt_onboard">Phone on board (Bluetooth)</string>
+    <string name="cond_bt_handsfree">Bluetooth hands-free phone</string>
     <string name="cond_time">Time of day</string>
     <string name="cond_day">Day of week</string>
     <string name="cond_date">Exact date</string>

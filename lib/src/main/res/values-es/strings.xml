@@ -46,6 +46,8 @@
     <string name="ignition_start">Arrancando</string>
     <string name="cond_bt_device">Teléfono Bluetooth conectado</string>
     <string name="cond_bt_any">Cualquier dispositivo Bluetooth conectado</string>
+    <string name="cond_bt_onboard">Teléfono a bordo (Bluetooth)</string>
+    <string name="cond_bt_handsfree">Teléfono manos libres Bluetooth</string>
     <string name="cond_time">Hora del día</string>
     <string name="cond_day">Día de la semana</string>
     <string name="cond_date">Fecha exacta</string>

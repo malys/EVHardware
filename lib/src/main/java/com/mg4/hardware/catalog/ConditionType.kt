@@ -61,6 +61,34 @@ enum class ConditionType(
         R.string.cond_bt_any, ConditionGroup.CONTEXT,
         ValueSpec.BOOL, snapshotKey = null
     ),
+    /**
+     * A phone that is *in the car*, not merely within radio range of it.
+     *
+     * [BT_DEVICE_CONNECTED] answers "the link is up", which a phone left in the house
+     * answers just as well when the car is parked ten metres away — and it is what made
+     * arrival rules fire on the driveway. This one is only true of a device still connected
+     * once the car has actually moved, so a phone that stayed behind drops out of it.
+     *
+     * Unknowable until the car has driven: before that the condition is UNAVAILABLE, never
+     * false, and rules that must act at ignition should gate on [BT_DEVICE_CONNECTED] plus
+     * a vehicle signal instead.
+     */
+    BT_DEVICE_ONBOARD(
+        R.string.cond_bt_onboard, ConditionGroup.CONTEXT,
+        ValueSpec(ValueKind.BT_DEVICE), snapshotKey = null
+    ),
+    /**
+     * The phone the head unit has made its hands-free device.
+     *
+     * The head unit picks one, whatever the number of phones in range, and that choice is
+     * available from the first second of the drive — which is what [BT_DEVICE_ONBOARD]
+     * cannot offer. With two phones both in range it is the head unit's answer, not a
+     * measurement, so it is a hint about which phone is driving, not proof.
+     */
+    BT_DEVICE_HANDSFREE(
+        R.string.cond_bt_handsfree, ConditionGroup.CONTEXT,
+        ValueSpec(ValueKind.BT_DEVICE), snapshotKey = null
+    ),
     TIME_OF_DAY(
         R.string.cond_time, ConditionGroup.CONTEXT,
         ValueSpec(ValueKind.TIME_RANGE), snapshotKey = null
