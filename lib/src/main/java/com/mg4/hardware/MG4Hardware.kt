@@ -316,13 +316,34 @@ object MG4Hardware {
     }
 
     /**
-     * Lit l'state d'ignition courant via CarPropertyManager.
-     * Returns -1 si CPM non ready, 0 si property non supportsde.
+     * État d'ignition courant, en valeurs [IgnitionState] (AAOS).
+     *
+     * CarPropertyManager d'abord. Mais SWI68 n'expose pas IGNITION_STATE via CPM : la
+     * property revient vide, et l'état d'allumage passait pour illisible alors que Katman5
+     * le rapporte correctement — le log le montre (`Katman5: state initial = 2 (RUN/READY)`)
+     * pendant que le diagnostic classait IGNITION_STATE en NOT_READABLE.
+     *
+     * D'où le repli sur le dernier état livré par IVehicleConditionService, converti :
+     * Katman5 parle en [CarIgnitionItem], cette fonction rend du [IgnitionState], et les
+     * deux échelles ne coïncident pas (RUN vaut 2 chez l'un, OFF vaut 2 chez l'autre).
+     *
+     * Returns -1 si rien n'est lisible, 0 si la property existe mais ne dit rien.
      */
     fun getCurrentIgnitionState(): Int {
         val v0 = getIntPropertyCPM(PROP_IGNITION_STATE, 0)
         if (v0 > 0) return v0
-        return getIntPropertyCPM(PROP_IGNITION_STATE, AREA_GLOBAL)
+        val global = getIntPropertyCPM(PROP_IGNITION_STATE, AREA_GLOBAL)
+        if (global > 0) return global
+        return vcmIgnitionAsAaos() ?: global
+    }
+
+    /** Le dernier état Katman5 traduit en [IgnitionState], ou null s'il n'y en a pas eu. */
+    private fun vcmIgnitionAsAaos(): Int? = when (sLastVcmIgnitionState) {
+        CarIgnitionItem.OFF       -> IgnitionState.OFF
+        CarIgnitionItem.ACCESSORY -> IgnitionState.ACC
+        CarIgnitionItem.RUN       -> IgnitionState.ON
+        CarIgnitionItem.CRANK     -> IgnitionState.START
+        else                      -> null
     }
 
     /**
