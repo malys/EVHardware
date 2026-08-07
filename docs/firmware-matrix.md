@@ -59,8 +59,7 @@
 | SHOW_NOTIFICATION | — | — | — | — | — | — |
 | SPEAK_TEXT | — | — | — | — | — | — |
 | NAVIGATE_TO | — | — | — | — | — | — |
-| WEBHOOK_GET | — | — | — | — | — | — |
-| WEBHOOK_POST | — | — | — | — | — | — |
+| WEBHOOK | — | — | — | — | — | — |
 | DELAY | — | — | — | — | — | — |
 | APPLY_PROFILE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SHOW_PROFILE_PICKER | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

@@ -158,8 +158,7 @@
     <string name="act_tune_radio">Régler la radio</string>
     <string name="value_radio_hint">ex. 103.5 ou AM 1080</string>
     <string name="act_navigate">Naviguer vers</string>
-    <string name="act_webhook_get">Appeler un webhook (GET)</string>
-    <string name="act_webhook_post">Appeler un webhook (POST)</string>
+    <string name="act_webhook">Appeler un webhook</string>
     <string name="act_call">Appeler</string>
     <string name="act_call_contact">Appeler un contact</string>
     <string name="cond_window_position">Ouverture des vitres</string>

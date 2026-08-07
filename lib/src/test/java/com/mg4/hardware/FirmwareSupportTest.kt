@@ -36,8 +36,7 @@ class FirmwareSupportTest {
         ActionType.SHOW_NOTIFICATION,
         ActionType.SPEAK_TEXT,
         ActionType.NAVIGATE_TO,
-        ActionType.WEBHOOK_GET,
-        ActionType.WEBHOOK_POST,
+        ActionType.WEBHOOK,
         ActionType.DELAY
     )
 
