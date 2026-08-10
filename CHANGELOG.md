@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-10
+
 ### Added
 
 - **Shared diagnostic engine** in `com.mg4.hardware.diag`, so the apps stop each carrying
