@@ -1,5 +1,5 @@
-# Dev environment for MG4Hardware. JDK 17 (AGP 8.5.2). The Android SDK is shared with the
-# consuming apps (MG4Control installs it via its own `mise run bootstrap`).
+# Dev environment for EVHardware. JDK 17 (AGP 8.5.2). The Android SDK is shared with the
+# consuming apps (EVProfile installs it via its own `mise run bootstrap`).
 
 [tools]
 java = "17"

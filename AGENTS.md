@@ -1,9 +1,9 @@
-# AGENTS.md — MG4Hardware
+# AGENTS.md — EVHardware
 
-Shared vehicle-access library for the SAIC MG4 (AAOS 9, MT2712), consumed by MG4Control,
-MG4Tasker and MG4ABRPUploader via git submodule + Gradle subproject.
+Shared vehicle-access library for the SAIC MG4 (AAOS 9, MT2712), consumed by EVProfile,
+EVTasker and EVABRPUploader via git submodule + Gradle subproject.
 
-MG4Hardware is the shared vehicle layer for **MG4Suite**. The workspace `AGENTS.md` and
+EVHardware is the shared vehicle layer for **EVSuite**. The workspace `AGENTS.md` and
 normative workspace `DESIGN.md` apply; this file defines library-specific invariants.
 
 Commit author: malys.training@gmail.com
@@ -20,12 +20,7 @@ The apps are thin; the vehicle lives here.
   the low-level write primitives. Every setter carries `@RequiresStandstill`; coverage keeps
   the set honest. Unknown or negative speed fails closed, and a moving reading is never
   rescued by anything.
-  Two widenings of that rule are still in the code and are **safety debt to remove, not a
-  pattern to extend**: `allowUpToKmh`, a caller-settable threshold of up to 50 km/h, and the
-  park rescue, which turns an unreadable speed into ALLOWED when the gear reads park. The
-  target the suite documents (`MG4Tasker/AGENTS.md`, `MG4Control/AGENTS.md`) is a fixed gate
-  at a *readable* 0 km/h with no threshold and no rescue. Do not describe the gate as already
-  being that until this file says so.
+  The threshold is fixed at a *readable* 0 km/h, with no caller override and no park rescue.
 - **Per-firmware routing, never universal.** SWI68/69/131/132/133/165 differ; dispatch
   through `FirmwareInfo`. Any new vehicle call must branch per generation.
 - **Unreadable ≠ a value.** Getters return null / -1 when the layer is not ready or the
@@ -41,8 +36,8 @@ The apps are thin; the vehicle lives here.
 
 ## Consuming it
 
-Submodule at `./MG4Hardware`; `settings.gradle.kts` includes `MG4Hardware/lib` as
-`:mg4hardware`; app depends on `project(":mg4hardware")`. The library declares no
+Submodule at `./EVHardware`; `settings.gradle.kts` includes `EVHardware/lib` as
+`:evhardware`; app depends on `project(":evhardware")`. The library declares no
 permissions and no `sharedUserId` — vehicle-write capability is the app's platform-signing
 decision, not the library's.
 

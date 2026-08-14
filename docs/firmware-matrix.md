@@ -59,6 +59,7 @@
 | SHOW_NOTIFICATION | — | — | — | — | — | — |
 | SPEAK_TEXT | — | — | — | — | — | — |
 | NAVIGATE_TO | — | — | — | — | — | — |
+| ASK_CONFIRM | — | — | — | — | — | — |
 | WEBHOOK | — | — | — | — | — | — |
 | DELAY | — | — | — | — | — | — |
 | APPLY_PROFILE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

@@ -1,0 +1,112 @@
+package com.evsuite.hardware
+
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
+
+/**
+ * [T-904] Policy: a vehicle setting write is permitted **only when stopped** (0 km/h).
+ *
+ * Changing AEB, ELK, ACC/TJA or the drive mode while moving alters how the car behaves
+ * under the driver. The rule is therefore: 0 km/h or refuse — and refuse ALSO when the
+ * speed is unreadable (fail closed), because an unknown speed could be any speed.
+ *
+ * Comfort writes (seat/steering heating via CarHvacManager) are NOT affected: they do not
+ * change road behaviour. Setters that are gated carry [RequiresStandstill].
+ *
+ * This object lives in the shared `mg4-hardware` module, compiled into both EVProfile and
+ * EVTasker. It carries no dependency on either app's resources: the refusal message shown
+ * to the driver comes from [messageProvider], which an app may set to its own localized
+ * strings; the English fallback keeps the module self-contained.
+ */
+object VehicleWriteGate {
+
+    private const val TAG = "EV_GATE"
+
+    /** Anti-spam on the user message: at most one refusal toast per second. */
+    private const val TOAST_THROTTLE_MS = 1_000L
+
+    @Volatile
+    private var lastToastMs = 0L
+
+    /**
+     * Optional localized message source. An app sets this at init to surface its own
+     * strings; when null, the English fallback below is used. Returning null suppresses the
+     * toast for that decision.
+     */
+    @Volatile
+    var messageProvider: ((Decision) -> String?)? = null
+
+    enum class Decision {
+        /** Vehicle stopped — write allowed. */
+        ALLOWED,
+        /** Vehicle moving — write refused. */
+        REFUSED_MOVING,
+        /** Speed unreadable — write refused (fail closed). */
+        REFUSED_UNKNOWN_SPEED
+    }
+
+    /**
+     * Pure decision from a speed in km/h, [speedKmh] null when unreadable.
+     *
+     * A negative speed is treated as unreadable: the VHAL does not produce a negative speed
+     * moving forward, and an aberrant value must never open the gate.
+     */
+    fun decide(speedKmh: Float?): Decision =
+        when {
+            speedKmh == null || speedKmh.isNaN() -> Decision.REFUSED_UNKNOWN_SPEED
+            speedKmh < 0f                        -> Decision.REFUSED_UNKNOWN_SPEED
+            speedKmh == 0f                        -> Decision.ALLOWED
+            else                                 -> Decision.REFUSED_MOVING
+        }
+
+    /**
+     * The decision for the vehicle as it is right now — what [allow] enforces, exposed so a
+     * caller can report the same verdict it is about to get instead of guessing at it.
+     *
+     * The speed is read immediately for this decision. No other signal can rescue an
+     * unreadable value: park may be stale, so using it would weaken the fail-closed rule.
+     */
+    fun decideNow(): Decision = decide(EVHardware.getVehicleSpeedKmh())
+
+    /**
+     * True if the [operation] write is allowed now. On refusal it logs and notifies the
+     * user — a silent refusal would make the setting look applied when it was not.
+     */
+    fun allow(operation: String): Boolean {
+        if (!FirmwareInfo.isDetectedGenerationSupported()) {
+            AppLogger.w(TAG, "Write refused ($operation): unsupported firmware")
+            notifyUser("Setting change refused: firmware is not supported")
+            return false
+        }
+        val decision = decideNow()
+        if (decision == Decision.ALLOWED) return true
+
+        AppLogger.w(TAG, "Write refused ($operation): $decision")
+        notifyUser(decision)
+        return false
+    }
+
+    private fun notifyUser(decision: Decision) {
+        val message = messageProvider?.invoke(decision) ?: defaultMessage(decision) ?: return
+        notifyUser(message)
+    }
+
+    private fun notifyUser(message: String) {
+        val context: Context = EVHardware.appContext() ?: return
+        val now = System.currentTimeMillis()
+        if (now - lastToastMs < TOAST_THROTTLE_MS) return
+        lastToastMs = now
+
+        Handler(Looper.getMainLooper()).post {
+            runCatching { Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
+        }
+    }
+
+    private fun defaultMessage(decision: Decision): String? = when (decision) {
+        Decision.REFUSED_MOVING        -> "Setting change refused: vehicle is moving"
+        Decision.REFUSED_UNKNOWN_SPEED -> "Setting change refused: speed unreadable"
+        Decision.ALLOWED               -> null
+    }
+}

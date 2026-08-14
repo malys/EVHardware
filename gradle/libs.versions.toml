@@ -1,4 +1,4 @@
-# Aligned with MG4Control / MG4Tasker: the three share signing and this shared library,
+# Aligned with EVProfile / EVTasker: the three share signing and this shared library,
 # so there is no reason for the toolchains to diverge.
 [versions]
 agp = "9.1.1"

@@ -1,0 +1,95 @@
+package com.evsuite.hardware.catalog
+
+import androidx.annotation.StringRes
+
+/**
+ * The kind of value a condition or action manipulates.
+ *
+ * This is what keeps the UI small: the editor knows no individual condition or action, it
+ * only knows how to draw one control per [ValueKind]. Adding a catalogue entry is
+ * therefore one enum line, not another screen.
+ */
+enum class ValueKind {
+    /** On/off switch. */
+    BOOL,
+    /** Bounded slider (see [ValueSpec.min] / [ValueSpec.max]). */
+    NUMBER,
+    /** Closed list of named values ([ValueSpec.options]). */
+    ENUM,
+    /** Paired Bluetooth device, identified by MAC address. */
+    BT_DEVICE,
+    /** Start → end time range. */
+    TIME_RANGE,
+    /** Day-of-week selection. */
+    DAYS,
+    /** One exact local calendar date, stored as ISO-8601 (yyyy-MM-dd). */
+    DATE,
+    /** EVProfile driving profile, identified by id. */
+    PROFILE,
+    /** Installed application, identified by package name. */
+    APP,
+    /** Phone-book entry; the rule stores the selected number, not a mutable contact id. */
+    CONTACT,
+    /** Free text (notification message). */
+    TEXT,
+    /**
+     * A navigation destination: an address or "latitude,longitude", in `text`.
+     *
+     * Free text would have been enough to store it, and was — but nobody types coordinates
+     * at the wheel. The kind exists so the editor can offer the two things that make the
+     * field answerable there: the car's own position, and the places already saved.
+     */
+    DESTINATION,
+    /** Webhook URL plus an optional POST body. */
+    WEBHOOK,
+    /**
+     * A point and a radius: `text` holds "latitude,longitude", `number` the radius in
+     * metres. Two controls rather than one, but no new model field — the flat union in
+     * `Condition` already has both.
+     */
+    LOCATION,
+    /** Physical button + short/long event, edited with two dropdowns. */
+    PHYSICAL_BUTTON,
+    /** Nothing to enter. */
+    NONE
+}
+
+/** One named value of a [ValueKind.ENUM]. */
+data class EnumOption(val value: Int, @StringRes val labelRes: Int)
+
+/**
+ * Description of the input control.
+ *
+ * [max] is -1 when the bound is only known at runtime — the maximum media volume depends
+ * on the firmware and is readable only from the vehicle snapshot. The editor substitutes
+ * the real value, falling back to [fallbackMax] when the car does not answer.
+ */
+data class ValueSpec(
+    val kind: ValueKind,
+    val min: Int = 0,
+    val max: Int = 0,
+    @StringRes val unitRes: Int = 0,
+    val options: List<EnumOption> = emptyList(),
+    val fallbackMax: Int = 0,
+    /**
+     * Placeholder for a free-text field, when the field alone does not say what to type.
+     * "103.5" is obvious once you know the box wants a frequency and impossible to guess
+     * before that.
+     */
+    @StringRes val hintRes: Int = 0
+) {
+    companion object {
+        val NONE = ValueSpec(ValueKind.NONE)
+        val BOOL = ValueSpec(ValueKind.BOOL)
+
+        fun number(min: Int, max: Int, @StringRes unitRes: Int = 0) =
+            ValueSpec(ValueKind.NUMBER, min = min, max = max, unitRes = unitRes)
+
+        /** Upper bound resolved at runtime from the vehicle snapshot. */
+        fun dynamicNumber(min: Int, fallbackMax: Int, @StringRes unitRes: Int = 0) =
+            ValueSpec(ValueKind.NUMBER, min = min, max = -1, unitRes = unitRes, fallbackMax = fallbackMax)
+
+        fun enum(vararg options: EnumOption) =
+            ValueSpec(ValueKind.ENUM, options = options.toList())
+    }
+}

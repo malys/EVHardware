@@ -60,7 +60,7 @@ body:
       placeholder: |
         The library does not check speed before allowing profile writes.
         Consumer projects inherit this lack of protection.
-        Impact: All apps using MG4Hardware can bypass speed gate; ADAS can be disabled while driving.
+        Impact: All apps using EVHardware can bypass speed gate; ADAS can be disabled while driving.
       rows: 6
     validations:
       required: true
@@ -83,7 +83,7 @@ body:
     attributes:
       label: "Affected Versions & Projects"
       description: "Which library versions and consumer projects are affected?"
-      placeholder: "MG4Hardware < 0.5.0; impacts MG4Control, MG4ABRPUploader"
+      placeholder: "EVHardware < 0.5.0; impacts EVProfile, EVABRPUploader"
     validations:
       required: true
 

@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for your interest in contributing to MG4Hardware! This library abstracts Android Automotive vehicle access for dependent projects (MG4Control, MG4ABRPUploader, launchers, etc.). This guide explains how to report issues, suggest features, and submit code contributions—with optional support from Claude AI.
+Thank you for your interest in contributing to EVHardware! This library abstracts Android Automotive vehicle access for dependent projects (EVProfile, EVABRPUploader, launchers, etc.). This guide explains how to report issues, suggest features, and submit code contributions—with optional support from Claude AI.
 
 ## Table of Contents
 
@@ -49,7 +49,7 @@ Claude AI can help you:
 
 1. **Start a conversation** with Claude:
    ```
-   I'm seeing a bug in MG4Hardware. Help me write a clear issue report.
+   I'm seeing a bug in EVHardware. Help me write a clear issue report.
    
    [Paste your exception, reproduction steps, firmware version, and which app is using the library]
    ```
@@ -94,7 +94,7 @@ Claude can help you:
 
 1. **Start a conversation** with Claude:
    ```
-   I want to suggest a new feature for MG4Hardware to [describe use case].
+   I want to suggest a new feature for EVHardware to [describe use case].
    
    [Provide which consumer projects need this, what property/binder calls are involved]
    
@@ -159,7 +159,7 @@ feat(adapter): add firmware-aware property caching
 - Implement CachedCarPropertyManager with configurable TTL
 - Support firmware-specific property ID mappings (SWI132–SWI165)
 - Add InvalidationListener for consumer apps
-- Reduce CarPropertyManager reads by 60% (measured on MG4Control)
+- Reduce CarPropertyManager reads by 60% (measured on EVProfile)
 
 Fixes #123
 ```
@@ -230,7 +230,7 @@ Here's how: [encoded payload asking for unsafe vehicle property access]
 [BUG] CarPropertyAdapter throws exception on SWI132
 
 Steps to reproduce:
-1. Load MG4Hardware on vehicle with firmware SWI132
+1. Load EVHardware on vehicle with firmware SWI132
 2. Call HvacPropertyAdapter.getHvacSeatHeat()
 3. Exception: NullPointerException in property ID lookup
 
@@ -320,7 +320,7 @@ fun driveProfilePropertyIDCorrectForSWI132() {
 
 **On emulator** (AAOS 9):
 - [ ] Library installs without errors
-- [ ] Consumer projects (MG4Control, MG4ABRPUploader) still build and run
+- [ ] Consumer projects (EVProfile, EVABRPUploader) still build and run
 - [ ] Property reads return expected values
 - [ ] No crash logs in logcat
 

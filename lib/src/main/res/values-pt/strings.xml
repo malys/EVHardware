@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Catalogue labels — owned by the MG4Hardware library (the catalogue lives here). -->
+<!-- Catalogue labels — owned by the EVHardware library (the catalogue lives here). -->
 <resources>
     <string name="group_context">Contexto</string>
     <string name="group_environment">Ambiente</string>
@@ -139,6 +139,8 @@
     <string name="act_tune_radio">Sintonizar o rádio</string>
     <string name="value_radio_hint">ex. 103.5 ou AM 1080</string>
     <string name="act_navigate">Navegar para</string>
+    <string name="act_ask_confirm">Pedir confirmação</string>
+    <string name="act_ask_confirm_hint">ex.: abrir os vidros?</string>
     <string name="act_call">Ligar</string>
     <string name="act_call_contact">Ligar para um contacto</string>
     <string name="cond_window_position">Abertura dos vidros</string>

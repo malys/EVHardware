@@ -57,7 +57,7 @@ Describe how you tested your changes:
 ## Consumer Project Impact
 
 If this is a breaking change:
-- [ ] List affected consumer projects: MG4Control, MG4ABRPUploader, etc.
+- [ ] List affected consumer projects: EVProfile, EVABRPUploader, etc.
 - [ ] Provide migration guide for dependent projects
 - [ ] Update example code in documentation
 

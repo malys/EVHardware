@@ -1,7 +1,7 @@
 name: Publish AAR
 
-# Publishes the MG4Hardware AAR to GitHub Packages on a version tag, for EXTERNAL projects
-# that want a binary dependency. The MG4 apps in this org keep the git-submodule source
+# Publishes the EVHardware AAR to GitHub Packages on a version tag, for EXTERNAL projects
+# that want a binary dependency. The EVSuite apps keep the git-submodule source
 # dependency and do not use this.
 on:
   push:
@@ -28,11 +28,11 @@ jobs:
       - name: Publish
         env:
           # Version from the tag (v1.2.3 -> 1.2.3); GITHUB_ACTOR/TOKEN authenticate the repo.
-          MG4HARDWARE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.1.0-SNAPSHOT' }}
+          EVHARDWARE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.1.0-SNAPSHOT' }}
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           chmod +x gradlew
           # Strip a leading 'v' from the tag for a clean Maven version.
-          export MG4HARDWARE_VERSION="${MG4HARDWARE_VERSION#v}"
+          export EVHARDWARE_VERSION="${EVHARDWARE_VERSION#v}"
           ./gradlew :lib:publishReleasePublicationToGitHubPackagesRepository --no-daemon

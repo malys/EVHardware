@@ -10,14 +10,14 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
-- **Shared diagnostic engine** in `com.mg4.hardware.diag`, so the apps stop each carrying
+- **Shared diagnostic engine** in `com.evsuite.hardware.diag`, so the apps stop each carrying
   their own copy:
   - `CrashLogger` writes an uncaught exception, its cause chain and the `AppLogger` buffer
     to `filesDir/last_crash.txt`, chaining the previous handler and truncating from the tail
-    so the exception survives. It replaces the two divergent copies in MG4Control and
-    MG4Tasker, each of which carried a fix the other was missing.
+    so the exception survives. It replaces the two divergent copies in EVProfile and
+    EVTasker, each of which carried a fix the other was missing.
   - `PrivateBin` uploads a report to a PrivateBin instance, zero-knowledge — the key never
-    leaves the URL fragment. Moved verbatim from MG4Tasker.
+    leaves the URL fragment. Moved verbatim from EVTasker.
   No UI: rendering a report and deciding when to paste it stay in the apps.
 
 ### Changed
@@ -45,7 +45,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
-- Adopted the MG4Suite documentation structure: shared README skeleton, generated table
+- Adopted the EVSuite documentation structure: shared README skeleton, generated table
   of contents, and [DESIGN.md](DESIGN.md) carried in every suite repository.
 
 ## [0.1.0] - 2026-07-23

@@ -1,22 +1,24 @@
-# MG4Hardware
+# EVHardware
 
-<p align="center"><img src="docs/logo.svg" width="440" alt="MG4Hardware"></p>
+<p align="center"><img src="docs/logo.svg" width="440" alt="EVHardware"></p>
 
-[![Tests](https://github.com/malys/MG4Hardware/actions/workflows/tests.yml/badge.svg)](https://github.com/malys/MG4Hardware/actions/workflows/tests.yml)
-[![Security](https://github.com/malys/MG4Hardware/actions/workflows/security.yml/badge.svg)](https://github.com/malys/MG4Hardware/actions/workflows/security.yml)
-[![Publish](https://github.com/malys/MG4Hardware/actions/workflows/publish.yml/badge.svg)](https://github.com/malys/MG4Hardware/actions/workflows/publish.yml)
-[![Release](https://img.shields.io/github/v/release/malys/MG4Hardware?include_prereleases&amp;sort=semver)](https://github.com/malys/MG4Hardware/releases)
+[![Tests](https://github.com/malys/EVHardware/actions/workflows/tests.yml/badge.svg)](https://github.com/malys/EVHardware/actions/workflows/tests.yml)
+[![Security](https://github.com/malys/EVHardware/actions/workflows/security.yml/badge.svg)](https://github.com/malys/EVHardware/actions/workflows/security.yml)
+[![Publish](https://github.com/malys/EVHardware/actions/workflows/publish.yml/badge.svg)](https://github.com/malys/EVHardware/actions/workflows/publish.yml)
+[![Release](https://img.shields.io/github/v/release/malys/EVHardware?include_prereleases&amp;sort=semver)](https://github.com/malys/EVHardware/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > ⚠️ **This library reads and writes a car's settings.** It runs inside apps installed on
 > an MG4 head unit. Read [DISCLAIMER.md](DISCLAIMER.md) before depending on it.
+> MG and MG4 are third-party marks used only to identify compatibility; this project is
+> independent and is not approved by SAIC Motor or MG Motor.
 
 Shared vehicle-access layer for the SAIC MG4 (Android Automotive OS 9, MT2712). One
 implementation of the reflection-based hardware layer, the 0 km/h safety gate, the driving
-models, and the **condition/action catalogue** — consumed by the MG4 apps so they do not
+models, and the **condition/action catalogue** — consumed by the EVSuite apps so they do not
 each re-derive it and drift apart.
 
-The design line: **the apps are thin. MG4Hardware provides the vehicle.** MG4Tasker, for
+The design line: **the apps are thin. EVHardware provides the vehicle.** EVTasker, for
 example, is only a rule engine between conditions and actions — both of which are defined
 here.
 
@@ -27,7 +29,7 @@ here.
 - [Overview](#overview)
 - [How it works](#how-it-works)
 - [Install](#install)
-- [The MG4 app suite](#the-mg4-app-suite)
+- [The EVSuite](#the-mg4-app-suite)
 - [Building](#building)
 - [Project documents](#project-documents)
 - [Security](#security)
@@ -37,7 +39,7 @@ here.
 ## Overview
 | Area | Types |
 |---|---|
-| Vehicle access | `MG4Hardware` — Katman1/4/5 reflection over `android.car` + SAIC SDK, per-firmware routing |
+| Vehicle access | `EVHardware` — Katman1/4/5 reflection over `android.car` + SAIC SDK, per-firmware routing |
 | Safety | `VehicleWriteGate` (0 km/h, fail-closed) + `@RequiresStandstill` on every gated setter |
 | Vendor services | `saic.*` — the AIDL the head unit's own HVAC, charging, radio, hands-free and TTS apps use |
 | Firmware | `FirmwareInfo` (detection + capability helpers), `FirmwareGen` |
@@ -49,19 +51,18 @@ here.
 ### The safety gate and `@RequiresStandstill`
 
 `VehicleWriteGate` refuses any road-behaviour write above 0 km/h, and fails closed when the
-speed is unreadable. Every gated setter in `MG4Hardware` carries `@RequiresStandstill`, and
+speed is unreadable. Every gated setter in `EVHardware` carries `@RequiresStandstill`, and
 a unit test asserts that exact set — a setter cannot silently gain or lose gating. Comfort
 writes (seat/steering heating, volume, brightness, audio) are not gated and not annotated.
 
-The threshold is configurable up to 50 km/h (`allowUpToKmh`, clamped here, default 0). One
-thing can rescue a refusal: **park**, and only the unreadable-speed one. A car in P is not
-moving whatever the speedometer failed to say, and the gear comes by another route — but it
-never overrides a speed that did read, because park at 30 km/h means a signal is wrong.
+The threshold is fixed at exactly 0 km/h. It is not configurable, and no secondary signal
+(including park) can rescue an unreadable speed. Every decision reads the speed again so a
+sequence is cancelled as soon as the vehicle moves or the signal disappears.
 
 ### Firmware compatibility is generated, not written
 
 Each vehicle catalogue entry carries `@SupportedOn(...)`, derived from `FirmwareInfo` and
-`MG4Hardware`'s per-generation routing. [docs/firmware-matrix.md](docs/firmware-matrix.md)
+`EVHardware`'s per-generation routing. [docs/firmware-matrix.md](docs/firmware-matrix.md)
 is rendered from those annotations by `FirmwareMatrix` and checked by a test — never edited
 by hand. Consumers use the same annotations to hide entries unsupported on the connected
 car.
@@ -71,8 +72,8 @@ car.
 
 ### Climate, glass and charging go through the vendor services
 
-The AOSP property ids for HVAC and window position are the ones the R69 OEM sources name but
-no MG4 generation confirms. They are still used for *reads*, where a wrong id returns null
+The AOSP property ids for HVAC and window position match the R69 runtime names but are not
+confirmed on every MG4 generation. They are still used for *reads*, where a wrong id returns null
 and nothing else happens — but nothing is written through them, because writing an unverified
 id to a vehicle is a different kind of mistake.
 
@@ -85,24 +86,24 @@ a pulse whose direction depends on state this cannot read.
 ---
 
 ## How it works
-MG4Hardware is consumed as a **git submodule** exposed as a Gradle subproject. In a
+EVHardware is consumed as a **git submodule** exposed as a Gradle subproject. In a
 consumer app:
 
 ```bash
-git submodule add https://github.com/malys/MG4Hardware MG4Hardware
+git submodule add https://github.com/malys/EVHardware EVHardware
 ```
 
 `settings.gradle.kts`:
 
 ```kotlin
-include(":mg4hardware")
-project(":mg4hardware").projectDir = file("MG4Hardware/lib")
+include(":evhardware")
+project(":evhardware").projectDir = file("EVHardware/lib")
 ```
 
 `app/build.gradle.kts`:
 
 ```kotlin
-dependencies { implementation(project(":mg4hardware")) }
+dependencies { implementation(project(":evhardware")) }
 ```
 
 Vehicle writes require the app to be signed with the ROM **platform key** (the car
@@ -114,42 +115,42 @@ app's decision.
 
 ### External projects: consume the AAR
 
-Projects outside this org can depend on MG4Hardware as a binary instead of a submodule. A
-version tag publishes the AAR to GitHub Packages (`com.mg4:mg4hardware:<version>`), and
+Projects outside this org can depend on EVHardware as a binary instead of a submodule. A
+version tag publishes the AAR to GitHub Packages (`com.evsuite:evhardware:<version>`), and
 `./gradlew :lib:publishToMavenLocal` installs it to `~/.m2` for local experimentation:
 
 ```kotlin
 repositories {
     mavenLocal()
-    maven { url = uri("https://maven.pkg.github.com/malys/MG4Hardware") } // GitHub Packages
+    maven { url = uri("https://maven.pkg.github.com/malys/EVHardware") } // GitHub Packages
 }
-dependencies { implementation("com.mg4:mg4hardware:0.1.0-SNAPSHOT") }
+dependencies { implementation("com.evsuite:evhardware:0.1.0-SNAPSHOT") }
 ```
 
 The AAR carries `consumer-rules.pro`, so a consumer's R8 keeps the reflected names. Vehicle
 writes still require the consuming app to be signed with the ROM platform key.
 
 ## Install
-MG4Hardware is a library — it ships inside the consumer apps (MG4Control, MG4Tasker), not
+EVHardware is a library — it ships inside the consumer apps (EVProfile, EVTasker), not
 as its own APK. Those apps are sideloaded on the head unit via the keyboard route: open a
 text field, long-press `,` on the on-screen keyboard → **Language settings** → search
 `backup` then press back to reach Android Settings → enable **Developer options** +
 **Install unknown apps** → search `storage` and open the APK. See each app's README for
 the full steps.
 
-## The MG4 app suite
+## The EVSuite
 Part of a small set of projects for the SAIC MG4 (AAOS 9, MT2712), all sharing the
-**MG4Hardware** vehicle layer:
+**EVHardware** vehicle layer:
 
 | Project | Role |
 |---|---|
-| [MG4Hardware](https://github.com/malys/MG4Hardware) | Shared vehicle-access layer: reflection hardware layer, 0 km/h safety gate, driving models, condition/action catalogue + firmware matrix |
-| [MG4Control](https://github.com/malys/MG4Control) | Drive-profile manager; applies settings at startup; owns the signature-protected TaskerBridge |
-| [MG4Tasker](https://github.com/malys/MG4Tasker) | Rule engine — *when* conditions *then* actions — driving the car through MG4Control |
-| [MG4AbrpTelemetry](https://github.com/malys/MG4AbrpTelemetry) | Live telemetry uploader to A Better Route Planner |
+| [EVHardware](https://github.com/malys/EVHardware) | Shared vehicle-access layer: reflection hardware layer, 0 km/h safety gate, driving models, condition/action catalogue + firmware matrix |
+| [EVProfile](https://github.com/malys/EVProfile) | Drive-profile manager; applies settings at startup; owns the signature-protected TaskerBridge |
+| [EVTasker](https://github.com/malys/EVTasker) | Rule engine — *when* conditions *then* actions — driving the car through EVProfile |
+| [EVABRPUploader](https://github.com/malys/EVABRPUploader) | Live telemetry uploader to A Better Route Planner |
 
 Common toolchain: **AGP 9.1.1 / Gradle 9.3.1 / compileSdk 36 / JDK 17**. Each app consumes
-MG4Hardware as a git submodule (`MG4Hardware/lib` as the `:mg4hardware` subproject).
+EVHardware as a git submodule (`EVHardware/lib` as the `:evhardware` subproject).
 
 ## Building
 ```bash
@@ -173,7 +174,7 @@ next test run.
 ## Project documents
 | Document | What it covers |
 |---|---|
-| [DESIGN.md](DESIGN.md) | The MG4Suite design system — colour, type, touch targets, icons |
+| [DESIGN.md](DESIGN.md) | The EVSuite design system — colour, type, touch targets, icons |
 | [AGENTS.md](AGENTS.md) | Context for AI agents working in this repository |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to build, test and submit a change |
 | [SECURITY.md](SECURITY.md) | Threat model and vulnerability disclosure |

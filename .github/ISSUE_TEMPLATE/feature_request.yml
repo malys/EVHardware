@@ -10,9 +10,9 @@ body:
       value: |
         # Feature Request
 
-        Have an idea to improve MG4Hardware? We'd love to hear it!
+        Have an idea to improve EVHardware? We'd love to hear it!
 
-        **Before requesting:** Please check if a similar feature has been requested in [Discussions](https://github.com/malys/MG4Hardware/discussions).
+        **Before requesting:** Please check if a similar feature has been requested in [Discussions](https://github.com/malys/EVHardware/discussions).
 
   - type: checkboxes
     id: checks
@@ -88,7 +88,7 @@ body:
       label: "Expected Adoption"
       description: "How many consumer projects would use this?"
       options:
-        - "1 project (MG4Control / MG4ABRPUploader / launcher)"
+        - "1 project (EVProfile / EVABRPUploader / launcher)"
         - "2–3 projects (multiple consumers)"
         - "All projects (core library feature)"
         - "Unknown"

@@ -5,18 +5,18 @@
 plugins {
     id("com.android.library")
     // Publishes a release AAR (GitHub Packages / mavenLocal) so EXTERNAL projects can
-    // depend on MG4Hardware as a binary. The MG4 apps in this org keep the git-submodule
+    // depend on EVHardware as a binary. The EVSuite apps keep the git-submodule
     // source dependency; the AAR is purely for outside consumers.
     id("maven-publish")
 }
 
 // Coordinates for the published AAR. Version tracks git tags in CI (see publish workflow);
 // the default here is for local publishing.
-group = "com.mg4"
-version = System.getenv("MG4HARDWARE_VERSION") ?: "0.1.0-SNAPSHOT"
+group = "com.evsuite"
+version = System.getenv("EVHARDWARE_VERSION") ?: "0.1.0-SNAPSHOT"
 
 android {
-    namespace = "com.mg4.hardware"
+    namespace = "com.evsuite.hardware"
     compileSdk = 36
 
     defaultConfig {
@@ -33,7 +33,7 @@ android {
 
     buildFeatures {
         // The catalogue's string labels (cond_*/act_*) resolve against this library's own R,
-        // which is why MG4Hardware is a real Android library and not a shared source set.
+        // which is why EVHardware is a real Android library and not a shared source set.
         resValues = true
     }
 
@@ -60,8 +60,8 @@ kotlin {
 publishing {
     publications {
         register<MavenPublication>("release") {
-            groupId = "com.mg4"
-            artifactId = "mg4hardware"
+            groupId = "com.evsuite"
+            artifactId = "evhardware"
             afterEvaluate { from(components["release"]) }
         }
     }
@@ -73,7 +73,7 @@ publishing {
         if (ghUser != null && ghToken != null) {
             maven {
                 name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/malys/MG4Hardware")
+                url = uri("https://maven.pkg.github.com/malys/EVHardware")
                 credentials { username = ghUser; password = ghToken }
             }
         }

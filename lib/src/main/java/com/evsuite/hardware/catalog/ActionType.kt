@@ -1,0 +1,502 @@
+package com.evsuite.hardware.catalog
+
+import androidx.annotation.StringRes
+import com.evsuite.hardware.R
+import com.evsuite.hardware.catalog.SnapshotKeys
+import com.evsuite.hardware.catalog.VehicleEnums
+import com.evsuite.hardware.SupportedOn
+import com.evsuite.hardware.FirmwareGen.SWI131
+import com.evsuite.hardware.FirmwareGen.SWI132
+import com.evsuite.hardware.FirmwareGen.SWI133
+import com.evsuite.hardware.FirmwareGen.SWI165
+import com.evsuite.hardware.FirmwareGen.SWI68
+import com.evsuite.hardware.FirmwareGen.SWI69
+import com.evsuite.hardware.catalog.ValueSpec.Companion.number
+
+/** Grouping in the action picker. */
+enum class ActionGroup(@StringRes val labelRes: Int) {
+    PROFILE(R.string.group_profile),
+    DRIVING(R.string.group_driving),
+    COMFORT(R.string.group_comfort),
+    CLIMATE(R.string.group_climate),
+    ENERGY(R.string.group_energy),
+    AUDIO(R.string.group_audio),
+    ADAS(R.string.group_adas),
+    SYSTEM(R.string.group_system)
+}
+
+/**
+ * Catalogue of executable actions.
+ *
+ * [bridgeAction] is the identifier sent to `TaskerBridgeService.applyAction`. It is null
+ * for actions handled locally by EVTasker (launch an app, notify), which never touch the
+ * vehicle and therefore have no business in the bridge.
+ *
+ * [gated] marks writes that change road behaviour. EVProfile refuses them while the car
+ * is moving or when its speed is unreadable. The editor shows the mark so the user knows
+ * up front that such an action only applies when stopped, instead of discovering a
+ * refusal in the history afterwards.
+ *
+ * The [SupportedOn] annotation declares firmware support (from EVProfile routing); it
+ * drives the generated README matrix and the editor's runtime filter. Local actions carry
+ * no annotation — they are firmware-independent.
+ *
+ * Climate and charging writes go through the SAIC vendor services
+ * (`com.evsuite.hardware.saic`), not through AOSP property ids. That distinction is the reason
+ * they exist at all: the AOSP climate ids EVHardware reads are standard ids that no MG4
+ * confirmed, so writing them would have been a guess. The vendor calls
+ * are the ones the car's own HVAC and charging screens make.
+ *
+ * Window and door-lock writes go through `vehiclecontrol` on the same hub. They are not
+ * standstill-gated: the vehicle enforces its own speed limit on glass and locks, and
+ * duplicating it would refuse the case the action exists for. The electric tailgate stays
+ * out — the launcher defines its OPEN and CLOSE as the same value, so it is a pulse whose
+ * direction depends on state this cannot read.
+ *
+ * Also deliberately absent:
+ *   • `VEHICLE_POWER_OFF` — cutting the vehicle must stay an explicit human gesture.
+ *   • `SET_SOUND_FIELD`   — EVHardware.getSoundFieldType() always returns -1, so the
+ *                           state is never readable back and a rule's effect would be
+ *                           unverifiable.
+ */
+enum class ActionType(
+    @StringRes val labelRes: Int,
+    val group: ActionGroup,
+    val spec: ValueSpec,
+    val bridgeAction: String?,
+    val gated: Boolean = false,
+    /**
+     * Snapshot key holding what this action controls, right now, when the car can report it.
+     *
+     * The editor opens the control on that value instead of on the bottom of its range. A
+     * brightness slider that starts at 5% invites the driver to confirm 5% by accident; one
+     * that starts where the screen already is makes the rule an edit of the present state,
+     * which is what the user is thinking about. Null where nothing reads it back.
+     */
+    val currentKey: String? = null
+) {
+
+    // ── Profile ──────────────────────────────────────────────────────────────
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    APPLY_PROFILE(
+        R.string.act_apply_profile, ActionGroup.PROFILE,
+        ValueSpec(ValueKind.PROFILE), bridgeAction = "APPLY_PROFILE", gated = true
+    ),
+    /**
+     * Opens EVProfile's profile picker and leaves the choice to the driver.
+     *
+     * The counterpart of [APPLY_PROFILE], for the rules that must not decide alone: arriving
+     * at a charger, the profile to apply depends on what the driver is about to do, which no
+     * condition reads. Gated like the profile it leads to — EVProfile refuses to put the
+     * picker in front of a moving driver, so offering it without the mark would promise a
+     * dialog that never appears.
+     */
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SHOW_PROFILE_PICKER(
+        R.string.act_show_profile_picker, ActionGroup.PROFILE,
+        ValueSpec.NONE, bridgeAction = "SHOW_PROFILE_PICKER", gated = true
+    ),
+
+    // ── Driving (gated) ──────────────────────────────────────────────────────
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_DRIVE_MODE(
+        R.string.act_drive_mode, ActionGroup.DRIVING,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.DRIVE_MODES),
+        "SET_DRIVE_MODE", gated = true, currentKey = SnapshotKeys.KEY_DRIVE_MODE
+    ),
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_REGEN_LEVEL(
+        R.string.act_regen, ActionGroup.DRIVING,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.REGEN_LEVELS),
+        "SET_REGEN_LEVEL", gated = true, currentKey = SnapshotKeys.KEY_REGEN_LEVEL
+    ),
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_ONE_PEDAL(
+        R.string.act_one_pedal, ActionGroup.DRIVING,
+        ValueSpec.BOOL, "SET_ONE_PEDAL", gated = true
+    ),
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_ENERGY_SAVING(
+        R.string.act_energy_saving, ActionGroup.DRIVING,
+        ValueSpec.BOOL, "SET_ENERGY_SAVING", gated = true, currentKey = SnapshotKeys.KEY_ENERGY_SAVING
+    ),
+
+    // ── Comfort (not gated: does not alter road behaviour) ───────────────────
+    @SupportedOn(SWI133, SWI68, SWI165)
+    SET_SEAT_HEAT_LEFT(
+        R.string.act_seat_heat_l, ActionGroup.COMFORT,
+        number(0, 3), "SET_SEAT_HEAT_LEFT", currentKey = SnapshotKeys.KEY_SEAT_HEAT_L
+    ),
+    @SupportedOn(SWI133, SWI68, SWI165)
+    SET_SEAT_HEAT_RIGHT(
+        R.string.act_seat_heat_r, ActionGroup.COMFORT,
+        number(0, 3), "SET_SEAT_HEAT_RIGHT", currentKey = SnapshotKeys.KEY_SEAT_HEAT_R
+    ),
+    @SupportedOn(SWI133, SWI68, SWI165)
+    SET_STEERING_HEAT(
+        R.string.act_steering_heat, ActionGroup.COMFORT,
+        ValueSpec.BOOL, "SET_STEERING_HEAT", currentKey = SnapshotKeys.KEY_STEERING_HEAT
+    ),
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_SCREEN_BRIGHTNESS(
+        R.string.act_brightness, ActionGroup.COMFORT,
+        number(VehicleEnums.BRIGHTNESS_MIN, VehicleEnums.BRIGHTNESS_MAX, R.string.unit_percent),
+        "SET_SCREEN_BRIGHTNESS", currentKey = SnapshotKeys.KEY_BRIGHTNESS
+    ),
+
+    // ── Climate (vendor service — com.evsuite.hardware.saic.SaicClimate) ─────────
+    // These are the calls the car's own HVAC screen makes, so what they do is not in doubt.
+    // Not gated: changing the cabin temperature does not alter road behaviour, and a rule
+    // that pre-heats on the motorway is a legitimate one.
+    @SupportedOn(SWI68, SWI165)
+    SET_CLIMATE_POWER(
+        R.string.act_climate_power, ActionGroup.CLIMATE,
+        ValueSpec.BOOL, "SET_CLIMATE_POWER", currentKey = SnapshotKeys.KEY_CLIMATE_ON
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_CABIN_TEMP(
+        R.string.act_cabin_temp, ActionGroup.CLIMATE,
+        number(VehicleEnums.CABIN_TEMP_MIN, VehicleEnums.CABIN_TEMP_MAX, R.string.unit_celsius),
+        "SET_CABIN_TEMP", currentKey = SnapshotKeys.KEY_TEMPERATURE_SET
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_AC(
+        R.string.act_ac, ActionGroup.CLIMATE,
+        ValueSpec.BOOL, "SET_AC", currentKey = SnapshotKeys.KEY_AC_ON
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_CLIMATE_AUTO(
+        R.string.act_climate_auto, ActionGroup.CLIMATE,
+        ValueSpec.BOOL, "SET_CLIMATE_AUTO", currentKey = SnapshotKeys.KEY_HVAC_AUTO
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_RECIRCULATION(
+        R.string.act_recirc, ActionGroup.CLIMATE,
+        ValueSpec.BOOL, "SET_RECIRCULATION", currentKey = SnapshotKeys.KEY_RECIRC
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_FAN_LEVEL(
+        R.string.act_fan_level, ActionGroup.CLIMATE,
+        number(0, VehicleEnums.FAN_LEVEL_MAX), "SET_FAN_LEVEL", currentKey = SnapshotKeys.KEY_FAN_SPEED
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_FRONT_DEFROST(
+        R.string.act_front_defrost, ActionGroup.CLIMATE,
+        ValueSpec.BOOL, "SET_FRONT_DEFROST"
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_REAR_DEFROST(
+        R.string.act_rear_defrost, ActionGroup.CLIMATE,
+        ValueSpec.BOOL, "SET_REAR_DEFROST"
+    ),
+
+    /**
+     * Moves all four windows to a position, 0 closed to 100 open.
+     *
+     * Not gated by the standstill threshold: the vehicle enforces its own speed limit on
+     * glass, and duplicating it here would refuse the case the action exists for — closing
+     * the windows when it starts raining. A write the car declines is reported in the
+     * history rather than hidden.
+     */
+    @SupportedOn(SWI68, SWI165)
+    SET_WINDOWS(
+        R.string.act_windows, ActionGroup.CLIMATE,
+        number(0, 100, R.string.unit_percent), "SET_WINDOWS",
+        currentKey = SnapshotKeys.KEY_WINDOW_PERCENT
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_DOOR_LOCK(
+        R.string.act_door_lock, ActionGroup.CLIMATE,
+        ValueSpec.BOOL, "SET_DOOR_LOCK", currentKey = SnapshotKeys.KEY_DOORS_LOCKED
+    ),
+
+    // ── Energy (vendor service — com.evsuite.hardware.saic.SaicCharging) ─────────
+    @SupportedOn(SWI68, SWI165)
+    SET_CHARGE_LIMIT(
+        R.string.act_charge_limit, ActionGroup.ENERGY,
+        number(VehicleEnums.CHARGE_LIMIT_MIN, VehicleEnums.CHARGE_LIMIT_MAX, R.string.unit_percent),
+        "SET_CHARGE_LIMIT", currentKey = SnapshotKeys.KEY_CHARGE_LIMIT
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_CHARGING_ENABLED(
+        R.string.act_charging_enabled, ActionGroup.ENERGY,
+        ValueSpec.BOOL, "SET_CHARGING_ENABLED"
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_CHARGE_SCHEDULE(
+        R.string.act_charge_schedule, ActionGroup.ENERGY,
+        ValueSpec.BOOL, "SET_CHARGE_SCHEDULE"
+    ),
+    /**
+     * The scheduled charging window. A range rather than two actions: start and stop are
+     * four separate vehicle signals, and setting only half of them leaves the car with a
+     * window nobody intended.
+     */
+    @SupportedOn(SWI68, SWI165)
+    SET_CHARGE_WINDOW(
+        R.string.act_charge_window, ActionGroup.ENERGY,
+        ValueSpec(ValueKind.TIME_RANGE), "SET_CHARGE_WINDOW"
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_BATTERY_PREHEAT(
+        R.string.act_battery_preheat, ActionGroup.ENERGY,
+        ValueSpec.BOOL, "SET_BATTERY_PREHEAT"
+    ),
+
+    // ── Audio ────────────────────────────────────────────────────────────────
+    // Everything below the media volume goes through the SAIC `caradapter` audio helper,
+    // which EVHardware binds only on the A9 platform (SWI69 / SWI131 / SWI132). These
+    // entries used to be annotated SWI133 + SWI132, read off `hasAudioControl()` — but that
+    // predicate describes the door-volume feature, a different thing. The effect was an
+    // action offered on SWI133, where the helper is never bound and the write silently
+    // returns false, and hidden on SWI69 / SWI131, where it works.
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_MEDIA_VOLUME(
+        R.string.act_media_volume, ActionGroup.AUDIO,
+        ValueSpec.dynamicNumber(0, VehicleEnums.MEDIA_VOLUME_FALLBACK_MAX),
+        "SET_MEDIA_VOLUME", currentKey = SnapshotKeys.KEY_MEDIA_VOLUME
+    ),
+    @SupportedOn(SWI69, SWI131, SWI132)
+    SET_AUDIO_BALANCE(
+        R.string.act_balance, ActionGroup.AUDIO,
+        number(VehicleEnums.AUDIO_LEVEL_MIN, VehicleEnums.AUDIO_LEVEL_MAX),
+        "SET_AUDIO_BALANCE"
+    ),
+    @SupportedOn(SWI69, SWI131, SWI132)
+    SET_AUDIO_FADER(
+        R.string.act_fader, ActionGroup.AUDIO,
+        number(VehicleEnums.AUDIO_LEVEL_MIN, VehicleEnums.AUDIO_LEVEL_MAX),
+        "SET_AUDIO_FADER"
+    ),
+    @SupportedOn(SWI69, SWI131, SWI132)
+    SET_TONE_CONTROL(
+        R.string.act_tone, ActionGroup.AUDIO,
+        number(VehicleEnums.AUDIO_LEVEL_MIN, VehicleEnums.AUDIO_LEVEL_MAX),
+        "SET_TONE_CONTROL"
+    ),
+    @SupportedOn(SWI69, SWI131, SWI132)
+    SET_BOSE_SOUND_TYPE(
+        R.string.act_bose, ActionGroup.AUDIO,
+        number(VehicleEnums.AUDIO_TYPE_MIN, VehicleEnums.AUDIO_TYPE_MAX),
+        "SET_BOSE_SOUND_TYPE"
+    ),
+    @SupportedOn(SWI69, SWI131, SWI132)
+    SET_3D_EFFECT(
+        R.string.act_3d, ActionGroup.AUDIO,
+        number(VehicleEnums.AUDIO_TYPE_MIN, VehicleEnums.AUDIO_TYPE_MAX),
+        "SET_3D_EFFECT"
+    ),
+    @SupportedOn(SWI69, SWI131, SWI132)
+    SET_SPEED_VOLUME(
+        R.string.act_speed_volume, ActionGroup.AUDIO,
+        number(VehicleEnums.AUDIO_TYPE_MIN, VehicleEnums.AUDIO_TYPE_MAX),
+        "SET_SPEED_VOLUME"
+    ),
+
+    /**
+     * Makes radio the current audio source, resuming the last station.
+     *
+     * Nothing to configure: `srcPlayRadio` takes no argument, and it resumes the last
+     * station. [TUNE_RADIO] is the one to use when the station matters.
+     *
+     * It resumes rather than opening the radio screen: a rule firing at ignition wants the
+     * sound, not a screen thrown in front of the driver.
+     *
+     * Vendor service, so it carries firmware support like any other vehicle entry — the
+     * radio is not an ordinary Android app that could be launched instead.
+     */
+    @SupportedOn(SWI68, SWI165)
+    PLAY_RADIO(
+        R.string.act_play_radio, ActionGroup.AUDIO,
+        ValueSpec.NONE, "PLAY_RADIO"
+    ),
+
+    /**
+     * Tunes a station and makes the radio the current source.
+     *
+     * A free-text frequency rather than a band picker plus a slider: the driver knows their
+     * station as "103.5", and an FM slider covering 87.5–108.0 in 50 kHz steps is 410
+     * positions to drag past on a touchscreen. The text is parsed leniently — "103.5",
+     * "FM 103.5", "103,5", "1080 AM" all land — and a value that parses to nothing is
+     * reported as unsupported with what was typed, so the history names the typo.
+     *
+     * Bands are AM (522–1620 kHz, 9 kHz steps) and FM (87.5–108.0 MHz, 50 kHz steps), from
+     * `RadioConstants.AM_RANGE` / `FM_RANGE`. DAB is out: `tuneDab` takes a service and
+     * ensemble id, not a frequency, so there is nothing here for a driver to type.
+     */
+    @SupportedOn(SWI68, SWI165)
+    TUNE_RADIO(
+        R.string.act_tune_radio, ActionGroup.AUDIO,
+        ValueSpec(ValueKind.TEXT, hintRes = R.string.value_radio_hint), "TUNE_RADIO"
+    ),
+
+    // ── ADAS (gated) ─────────────────────────────────────────────────────────
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_AEB_ENABLED(
+        R.string.act_aeb, ActionGroup.ADAS,
+        ValueSpec.BOOL, "SET_AEB_ENABLED", gated = true, currentKey = SnapshotKeys.KEY_AEB_ENABLED
+    ),
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_AEB_MODE(
+        R.string.act_aeb_mode, ActionGroup.ADAS,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.AEB_MODES),
+        "SET_AEB_MODE", gated = true, currentKey = SnapshotKeys.KEY_AEB_MODE
+    ),
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_AEB_SENSITIVITY(
+        R.string.act_aeb_sensitivity, ActionGroup.ADAS,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.SENSITIVITIES),
+        "SET_AEB_SENSITIVITY", gated = true, currentKey = SnapshotKeys.KEY_AEB_SENSITIVITY
+    ),
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_ELK_MODE(
+        R.string.act_elk_mode, ActionGroup.ADAS,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.ELK_MODES),
+        "SET_ELK_MODE", gated = true, currentKey = SnapshotKeys.KEY_ELK_MODE
+    ),
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_ELK_SENSITIVITY(
+        R.string.act_elk_sensitivity, ActionGroup.ADAS,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.SENSITIVITIES),
+        "SET_ELK_SENSITIVITY", gated = true, currentKey = SnapshotKeys.KEY_ELK_SENSITIVITY
+    ),
+    @SupportedOn(SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_ACC_TJA_MODE(
+        R.string.act_acc_tja, ActionGroup.ADAS,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.ACC_TJA_MODES),
+        "SET_ACC_TJA_MODE", gated = true, currentKey = SnapshotKeys.KEY_ACC_TJA_MODE
+    ),
+    @SupportedOn(SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_LIMITER_MODE(
+        R.string.act_limiter, ActionGroup.ADAS,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.LIMITER_MODES),
+        "SET_LIMITER_MODE", gated = true, currentKey = SnapshotKeys.KEY_LIMITER_MODE
+    ),
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_TSR(
+        R.string.act_tsr, ActionGroup.ADAS,
+        ValueSpec.BOOL, "SET_TSR", gated = true, currentKey = SnapshotKeys.KEY_TSR
+    ),
+    @SupportedOn(SWI133, SWI132)
+    SET_OVERSPEED_ALARM(
+        R.string.act_overspeed, ActionGroup.ADAS,
+        ValueSpec.BOOL, "SET_OVERSPEED_ALARM", gated = true, currentKey = SnapshotKeys.KEY_OVERSPEED_ALARM
+    ),
+    @SupportedOn(SWI133, SWI132)
+    SET_SPEED_LIMIT_TONE(
+        R.string.act_speed_limit_tone, ActionGroup.ADAS,
+        ValueSpec.BOOL, "SET_SPEED_LIMIT_TONE", gated = true, currentKey = SnapshotKeys.KEY_SPEED_LIMIT_TONE
+    ),
+    @SupportedOn(SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_SOUND_WARNING(
+        R.string.act_sound_warning, ActionGroup.ADAS,
+        ValueSpec.BOOL, "SET_SOUND_WARNING", gated = true, currentKey = SnapshotKeys.KEY_SOUND_WARNING
+    ),
+    @SupportedOn(SWI132)
+    SET_LAS_WARNING_SOUND(
+        R.string.act_las_sound, ActionGroup.ADAS,
+        ValueSpec.BOOL, "SET_LAS_WARNING_SOUND"
+    ),
+    @SupportedOn(SWI132)
+    SET_LAS_WARNING_VIBRATION(
+        R.string.act_las_vibration, ActionGroup.ADAS,
+        ValueSpec.BOOL, "SET_LAS_WARNING_VIBRATION"
+    ),
+
+    // ── System (local, no vehicle access, firmware-independent) ──────────────
+    LAUNCH_APP(
+        R.string.act_launch_app, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.APP), bridgeAction = null
+    ),
+    SHOW_NOTIFICATION(
+        R.string.act_notify, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.TEXT), bridgeAction = null
+    ),
+    /**
+     * Speaks the text through the platform TTS engine. Local like the two above: nothing
+     * is written to the vehicle, so no firmware annotation and no bridge action.
+     */
+    SPEAK_TEXT(
+        R.string.act_speak, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.TEXT), bridgeAction = null
+    ),
+    /**
+     * Hands a destination to whatever navigation app the head unit has, through the standard
+     * `geo:` intent. Local and firmware-independent: no vendor service is involved, and the
+     * MG4's navigation is not part of the SAIC vehicle SDK.
+     *
+     * [Action.text] is an address or "latitude,longitude".
+     */
+    NAVIGATE_TO(
+        R.string.act_navigate, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.DESTINATION), bridgeAction = null
+    ),
+    /**
+     * Puts a yes/no question on screen and stops the rule there when the answer is no.
+     *
+     * The only action whose result decides whether the rest of the rule runs. That is the
+     * point of it: a rule that opens the windows or unlocks the doors on arrival is right
+     * most of the time and wrong the once, and the driver is the only one who knows which
+     * this is. Placed first, it turns an automatic rule into a proposed one.
+     *
+     * [Action.text] is the question. No answer within the prompt's own timeout counts as
+     * no — the rest of the rule needs a deliberate yes, not a driver who walked away.
+     */
+    ASK_CONFIRM(
+        R.string.act_ask_confirm, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.TEXT, hintRes = R.string.act_ask_confirm_hint), bridgeAction = null
+    ),
+    /**
+     * Calls an HTTP(S) endpoint. [Action.flag] carries the verb — false for GET, true for
+     * POST — and [Action.payload] is the POST body, ignored for GET.
+     */
+    WEBHOOK(
+        R.string.act_webhook, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.WEBHOOK), bridgeAction = null
+    ),
+
+    /**
+     * Waits, in seconds, before the rule's next action runs.
+     *
+     * A rule's actions are executed one after the other, so a rule that switches the climate
+     * on and then sets the fan level asks for the second value while the car is still acting
+     * on the first — and the vehicle answers from the state it had. This is the pause between
+     * the two, placed by the user where they know one write needs to land before the next.
+     *
+     * Bounded to a minute: the wait holds the cycle thread, and a rule that pauses longer
+     * than the ignition transition it reacts to is a rule whose later actions may never run.
+     */
+    DELAY(
+        R.string.act_delay, ActionGroup.SYSTEM,
+        number(1, 60, R.string.unit_second), bridgeAction = null
+    ),
+
+    /**
+     * Calls a number through the car's own hands-free stack.
+     *
+     * A vehicle action despite looking like a phone one: the head unit has no SIM and no
+     * dialer, so the call is placed by the vendor Bluetooth service on the paired handset.
+     * `ACTION_CALL` would find nothing to handle it.
+     */
+    @SupportedOn(SWI68, SWI165)
+    CALL_NUMBER(
+        R.string.act_call, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.CONTACT), "CALL_NUMBER"
+    ),
+    /**
+     * Kept only so rules saved by releases that exposed a separate contact action still load.
+     * New rules use [CALL_NUMBER], whose editor accepts either a number or a contact.
+     */
+    @Deprecated("Compatibility alias for saved rules; use CALL_NUMBER")
+    @SupportedOn(SWI68, SWI165)
+    CALL_CONTACT(
+        R.string.act_call_contact, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.CONTACT), "CALL_CONTACT"
+    );
+
+    companion object {
+        @Suppress("DEPRECATION")
+        fun byGroup(): Map<ActionGroup, List<ActionType>> =
+            entries.filterNot { it == CALL_CONTACT }.groupBy { it.group }
+    }
+}
