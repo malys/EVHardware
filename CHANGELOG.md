@@ -4,7 +4,28 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-08-15
+
+### ⚠️ Breaking
+
+- Renamed from MG4Hardware to **EVHardware**, and the package from `com.mg4.hardware` to
+  **`com.evsuite.hardware`**. Every import has to be updated; there is no compatibility
+  alias.
+- `VehicleWriteGate.decide` no longer takes `allowUpToKmh` or `parked`. The gate is fixed at
+  a readable 0 km/h, with no caller threshold and no park rescue, so callers that passed
+  either argument must drop it. Consumers using `decideNow()` or `decide(speed)` are
+  unaffected.
+
+### Added
+
+- `FirmwareInfo.generationOf` as a pure parser, and `isDetectedGenerationSupported`, so an
+  unforced unknown firmware fails closed.
+- Catalogue entry `ASK_CONFIRM`, with its localised strings and firmware-matrix row.
+
+### Changed
+
+- Consolidated the four copies of this library that had drifted apart while it was vendored
+  into EVProfile, EVTasker and EVABRPUploader.
 
 ## [0.3.0] - 2026-08-10
 
