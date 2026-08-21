@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-08-21
+
+### Fixed
+
+- `SaicClimate.outsideTempCelsius` no longer returns the vendor's error value as a
+  temperature. `AirConditionBinder.getOutCarTemp` answers `TEMPERATURE_ERROR_CONST`
+  (-10000f) for a signal it holds no value for, which is not a reading; it now maps to
+  `null`, same rule as every other getter here. A caller that stored it would have had
+  every "below N degrees" comparison come out true.
+
 ## [1.0.0] - 2026-08-15
 
 ### ⚠️ Breaking
