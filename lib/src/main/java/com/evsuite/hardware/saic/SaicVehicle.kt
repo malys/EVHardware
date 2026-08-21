@@ -86,6 +86,9 @@ object SaicClimate {
     private const val TX_GET_FRONT_DEFROST = 92
     private const val TX_GET_BACK_DEFROST = 93
 
+    /** `AirConditionBinder.TEMPERATURE_ERROR_CONST`: the signal is not available. */
+    private const val TEMP_ERROR = -10000f
+
     /** Loop mode: 0 = fresh air, 1 = recirculation (`openLoopInner` / `openLoopOutside`). */
     const val LOOP_OUTSIDE = 0
     const val LOOP_INNER = 1
@@ -139,7 +142,9 @@ object SaicClimate {
     fun passengerTemp(): Int? = level(TX_GET_PSG_TEMP)
     fun frontDefrostOn(): Boolean? = flag(TX_GET_FRONT_DEFROST)
     fun rearDefrostOn(): Boolean? = flag(TX_GET_BACK_DEFROST)
-    fun outsideTempCelsius(): Float? = SaicAidl.callFloat(binder(), DESCRIPTOR, TX_GET_OUT_CAR_TEMP)
+    /** The service answers [TEMP_ERROR] for a reading it holds no value for, not an error. */
+    fun outsideTempCelsius(): Float? =
+        SaicAidl.callFloat(binder(), DESCRIPTOR, TX_GET_OUT_CAR_TEMP)?.takeIf { it != TEMP_ERROR }
 
     private fun level(code: Int): Int? =
         SaicAidl.callInt(binder(), DESCRIPTOR, code)?.takeIf { it >= 0 }
