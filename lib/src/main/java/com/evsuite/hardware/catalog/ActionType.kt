@@ -312,7 +312,7 @@ enum class ActionType(
     ),
 
     /**
-     * Tunes a station and makes the radio the current source.
+     * Tunes a station, leaving the audio source alone — [PLAY_RADIO] is what starts playback.
      *
      * A free-text frequency rather than a band picker plus a slider: the driver knows their
      * station as "103.5", and an FM slider covering 87.5–108.0 in 50 kHz steps is 410

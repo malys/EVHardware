@@ -42,11 +42,14 @@ object SaicRadio {
     fun openScreen(): Boolean =
         SaicAidl.callBoolean(service.binder(), DESCRIPTOR, TX_START_ACTIVITY) ?: false
 
-    /** Tunes a frequency in kHz (FM 87500–108000) and makes radio the source. */
-    fun tune(band: Int, frequencyKhz: Int): Boolean {
-        if (!SaicAidl.callVoid(service.binder(), DESCRIPTOR, TX_TUNE, band, frequencyKhz)) return false
-        return play()
-    }
+    /**
+     * Tunes a frequency in kHz (FM 87500–108000), without touching the audio source.
+     *
+     * Tuning and playing are kept apart because a caller may want the station set without
+     * the radio taking over what is currently playing; [play] is the explicit second step.
+     */
+    fun tune(band: Int, frequencyKhz: Int): Boolean =
+        SaicAidl.callVoid(service.binder(), DESCRIPTOR, TX_TUNE, band, frequencyKhz)
 }
 
 /**

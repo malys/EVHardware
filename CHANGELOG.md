@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-22
+
+### Changed
+
+- `SaicRadio.tune` no longer starts playback. It used to call `srcPlayRadio` after setting
+  the frequency, which made the radio the current audio source every time a station was
+  tuned, so a caller that wanted the station changed silently had no way to ask for it.
+  Tuning and playing are now two calls: `tune` sets the frequency, `play` switches the
+  source. Callers that relied on the combined behaviour must call `play` themselves.
+
 ## [1.0.1] - 2026-08-21
 
 ### Fixed
