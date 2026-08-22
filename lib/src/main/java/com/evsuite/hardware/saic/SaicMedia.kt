@@ -18,6 +18,7 @@ object SaicRadio {
     private const val TX_TUNE = 8
     private const val TX_START_ACTIVITY = 26
     private const val TX_SRC_PLAY = 27
+    private const val TX_SRC_PAUSE = 28
 
     /** `RadioType`: 1 = AM, 2 = FM, 4 = DAB. */
     const val BAND_AM = 1
@@ -43,13 +44,28 @@ object SaicRadio {
         SaicAidl.callBoolean(service.binder(), DESCRIPTOR, TX_START_ACTIVITY) ?: false
 
     /**
-     * Tunes a frequency in kHz (FM 87500–108000), without touching the audio source.
+     * Silences the radio and marks it stopped — `srcPauseRadio`, the counterpart of [play].
      *
-     * Tuning and playing are kept apart because a caller may want the station set without
-     * the radio taking over what is currently playing; [play] is the explicit second step.
+     * It mutes the tuner rather than handing the audio focus back: the vendor service only
+     * abandons focus when it loses it, so whatever was playing before the radio took over
+     * does not resume on its own. Silence is the most this service offers.
      */
-    fun tune(band: Int, frequencyKhz: Int): Boolean =
-        SaicAidl.callVoid(service.binder(), DESCRIPTOR, TX_TUNE, band, frequencyKhz)
+    fun pause(): Boolean = SaicAidl.callVoid(service.binder(), DESCRIPTOR, TX_SRC_PAUSE)
+
+    /**
+     * Tunes a frequency in kHz (FM 87500–108000), playing it or leaving it silent.
+     *
+     * [andPlay] is not optional decoration on top of the tune: `tune` itself calls
+     * `AudioController.requestMuted(false)` inside the vendor service, which requests the
+     * audio focus and unmutes the tuner, so the radio starts playing whether or not anyone
+     * asked it to. A caller that wants the station set without the sound has to undo that,
+     * which is why the choice is made here rather than left to a second call the caller can
+     * forget: `andPlay = false` pauses the radio again as soon as it is tuned.
+     */
+    fun tune(band: Int, frequencyKhz: Int, andPlay: Boolean): Boolean {
+        if (!SaicAidl.callVoid(service.binder(), DESCRIPTOR, TX_TUNE, band, frequencyKhz)) return false
+        return if (andPlay) play() else pause()
+    }
 }
 
 /**

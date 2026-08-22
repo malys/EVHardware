@@ -4,6 +4,29 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-22
+
+### Added
+
+- `SaicRadio.pause`, the vendor service's `srcPauseRadio` — the counterpart of `play`. It
+  mutes the tuner and marks the radio stopped; it does not hand the audio focus back, which
+  the vendor service only does when it loses it.
+
+### Changed
+
+- `SaicRadio.tune` takes an `andPlay` flag and is responsible for the outcome. 1.1.0 removed
+  the `srcPlayRadio` call and assumed that was enough to tune in silence; it is not. The
+  vendor's `tune` calls `AudioController.requestMuted(false)` itself, which requests the
+  audio focus and unmutes the tuner, so changing station always starts the radio. Not
+  playing is therefore something that has to be undone after the fact: `andPlay = false`
+  pauses the radio as soon as it is tuned. Callers must pass the flag — there is no default.
+
+### Known limitation
+
+- Tuning with `andPlay = false` leaves the radio holding the audio focus, silent. Whatever
+  was playing before does not resume: the vendor service exposes no way to give the focus
+  back for AM/FM, only for DAB scanning.
+
 ## [1.1.0] - 2026-08-22
 
 ### Changed
