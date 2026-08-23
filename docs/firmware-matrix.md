@@ -60,6 +60,7 @@
 | SPEAK_TEXT | — | — | — | — | — | — |
 | NAVIGATE_TO | — | — | — | — | — | — |
 | ASK_CONFIRM | — | — | — | — | — | — |
+| SEND_SMS | — | — | — | — | — | — |
 | WEBHOOK | — | — | — | — | — | — |
 | DELAY | — | — | — | — | — | — |
 | APPLY_PROFILE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

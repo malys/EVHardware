@@ -36,11 +36,26 @@ class CatalogConsistencyTest {
     }
 
     @Test
-    fun `la demande de confirmation porte sa question et rien d autre`() {
+    fun `le sms porte un destinataire et un message`() {
+        // Le destinataire est un numéro (ou un contact du répertoire PBAP) et le message est
+        // du texte libre : un seul contrôle ne pourrait pas porter les deux.
+        assertEquals(ValueKind.SMS, ActionType.SEND_SMS.spec.kind)
+        assertTrue(ActionType.SEND_SMS.spec.hintRes != 0)
+        assertFalse("le SMS n'écrit rien dans le véhicule", ActionType.SEND_SMS.gated)
+    }
+
+    @Test
+    fun `la demande de confirmation porte sa question et son delai`() {
         // Le texte EST la question posée au conducteur ; un exemple est indispensable, la
-        // formulation par défaut d'un champ vide n'apprend rien.
-        assertEquals(ValueKind.TEXT, ActionType.ASK_CONFIRM.spec.kind)
+        // formulation par défaut d'un champ vide n'apprend rien. Le nombre est l'attente en
+        // secondes, bornée pour qu'une question reste lisible sans bloquer le cycle.
+        assertEquals(ValueKind.CONFIRM, ActionType.ASK_CONFIRM.spec.kind)
         assertTrue(ActionType.ASK_CONFIRM.spec.hintRes != 0)
+        assertTrue(ActionType.ASK_CONFIRM.spec.min > 0)
+        assertTrue(ActionType.ASK_CONFIRM.spec.max > ActionType.ASK_CONFIRM.spec.min)
+        // Le défaut des règles enregistrées sans délai doit rester dans les bornes offertes.
+        assertTrue(ActionType.ASK_CONFIRM_DEFAULT_SECONDS in
+            ActionType.ASK_CONFIRM.spec.min..ActionType.ASK_CONFIRM.spec.max)
         assertFalse("la question ne touche pas le véhicule", ActionType.ASK_CONFIRM.gated)
     }
 
@@ -51,7 +66,7 @@ class CatalogConsistencyTest {
         val localOnly = setOf(
             ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION, ActionType.SPEAK_TEXT,
             ActionType.NAVIGATE_TO, ActionType.WEBHOOK, ActionType.ASK_CONFIRM,
-            ActionType.DELAY
+            ActionType.DELAY, ActionType.SEND_SMS
         )
 
         ActionType.entries.filterNot { it in localOnly }.forEach { type ->
@@ -64,7 +79,7 @@ class CatalogConsistencyTest {
         listOf(
             ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION, ActionType.SPEAK_TEXT,
             ActionType.NAVIGATE_TO, ActionType.WEBHOOK, ActionType.ASK_CONFIRM,
-            ActionType.DELAY
+            ActionType.DELAY, ActionType.SEND_SMS
         ).forEach { type ->
             assertTrue(
                 "${type.name} ne touche pas le véhicule et ne doit pas avoir de bridgeAction",

@@ -38,7 +38,10 @@ class FirmwareSupportTest {
         ActionType.NAVIGATE_TO,
         ActionType.WEBHOOK,
         ActionType.ASK_CONFIRM,
-        ActionType.DELAY
+        ActionType.DELAY,
+        // Le SMS part par le profil Bluetooth MAP, pas par un service SAIC : rien à router
+        // par génération de firmware. Sa disponibilité se lit au bind, pas dans la matrice.
+        ActionType.SEND_SMS
     )
 
     @Test

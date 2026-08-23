@@ -4,6 +4,27 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-23
+
+### Added
+
+- `ActionType.SEND_SMS`: send a text message through the paired phone, with `ValueKind.SMS`
+  (recipient in `text`, contact label in `displayName`, message in `payload`). No
+  `@SupportedOn`: the message leaves over the Bluetooth Message Access Profile, not over a
+  SAIC service, so nothing is routed per firmware generation — availability is a bind, read at
+  runtime. Verified against the head unit's own APKs: `IBtCall` carries twenty-six
+  transactions and none of them is a message, while the system settings service manages a
+  "MAP Client" profile (18, UUIDs MAP/MNS/MAS).
+- `ValueKind.CONFIRM`: a yes/no question plus the seconds it waits for an answer. The editor
+  draws one control per kind, so the wait had to become part of the kind rather than a
+  special case for one action.
+
+### Changed
+
+- `ActionType.ASK_CONFIRM` now carries `ValueKind.CONFIRM` (5–60 s) instead of plain text.
+  `Action.number` is the wait; `0` — every rule saved before the field existed — means
+  `ActionType.ASK_CONFIRM_DEFAULT_SECONDS` (10), not the bottom of the range.
+
 ## [1.2.0] - 2026-08-22
 
 ### Added

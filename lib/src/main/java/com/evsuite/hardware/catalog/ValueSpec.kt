@@ -43,6 +43,24 @@ enum class ValueKind {
     /** Webhook URL plus an optional POST body. */
     WEBHOOK,
     /**
+     * A recipient and a message: the number in `text`, the contact it was picked from in
+     * `displayName`, and the message itself in the field a webhook body already uses.
+     *
+     * Two controls rather than one, and no new model field — a message has an addressee, and
+     * it is the same phone-book field [CONTACT] offers, so a number can still be typed where
+     * no contact exists.
+     */
+    SMS,
+    /**
+     * A yes/no question in `text`, and how long it waits for an answer in `number` seconds.
+     *
+     * The wait belongs to the rule, not to the app: a question asked before the doors unlock
+     * is answered at once or not at all, while one asked at the end of a drive has to survive
+     * the driver looking away. `0` — every rule saved before the field existed — means the
+     * default wait.
+     */
+    CONFIRM,
+    /**
      * A point and a radius: `text` holds "latitude,longitude", `number` the radius in
      * metres. Two controls rather than one, but no new model field — the flat union in
      * `Condition` already has both.

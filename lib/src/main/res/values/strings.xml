@@ -162,6 +162,8 @@
     <string name="act_ask_confirm_hint">e.g. Open the windows?</string>
     <string name="act_webhook">Call webhook</string>
     <string name="act_call">Call</string>
+    <string name="act_send_sms">Send a text message</string>
+    <string name="act_send_sms_hint">e.g. On my way</string>
     <string name="act_call_contact">Call a contact</string>
     <string name="cond_window_position">Window opening</string>
     <string name="cond_doors_locked">Doors locked</string>

@@ -162,6 +162,8 @@
     <string name="act_ask_confirm_hint">ex. : ouvrir les vitres ?</string>
     <string name="act_webhook">Appeler un webhook</string>
     <string name="act_call">Appeler</string>
+    <string name="act_send_sms">Envoyer un SMS</string>
+    <string name="act_send_sms_hint">ex. : j’arrive</string>
     <string name="act_call_contact">Appeler un contact</string>
     <string name="cond_window_position">Ouverture des vitres</string>
     <string name="cond_doors_locked">Portes verrouillées</string>

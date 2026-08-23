@@ -439,12 +439,40 @@ enum class ActionType(
      * most of the time and wrong the once, and the driver is the only one who knows which
      * this is. Placed first, it turns an automatic rule into a proposed one.
      *
-     * [Action.text] is the question. No answer within the prompt's own timeout counts as
-     * no — the rest of the rule needs a deliberate yes, not a driver who walked away.
+     * `Action.text` is the question and `Action.number` how many seconds it waits. No answer
+     * within that time counts as no — the rest of the rule needs a deliberate yes, not a
+     * driver who walked away. `0` means [ASK_CONFIRM_DEFAULT_SECONDS]: rules saved before the
+     * wait was configurable carry no value, and the field they never set must not read as an
+     * instant refusal.
      */
     ASK_CONFIRM(
         R.string.act_ask_confirm, ActionGroup.SYSTEM,
-        ValueSpec(ValueKind.TEXT, hintRes = R.string.act_ask_confirm_hint), bridgeAction = null
+        ValueSpec(
+            ValueKind.CONFIRM,
+            min = 5, max = 60,
+            unitRes = R.string.unit_second, hintRes = R.string.act_ask_confirm_hint
+        ),
+        bridgeAction = null
+    ),
+    /**
+     * Sends a text message through the paired phone.
+     *
+     * Same reasoning as [CALL_NUMBER], one profile further out: the head unit has no SIM, so
+     * there is nothing here to send from. The vendor hands-free service does not help either
+     * — its `IBtCall` interface is calls only, with no message transaction to address — so
+     * the message goes out over the Bluetooth Message Access Profile, which the car's own
+     * Bluetooth settings manage as "MAP Client". Whether that profile is up is a bind, not a
+     * table: the action reports itself unsupported on a car or a phone that does not carry it.
+     *
+     * `Action.text` is the number, `Action.displayName` the contact it was picked from, and
+     * `Action.payload` the message.
+     *
+     * Not standstill-gated, for the reason a call is not: it writes nothing to the vehicle,
+     * and the message was written when the rule was, not at the wheel.
+     */
+    SEND_SMS(
+        R.string.act_send_sms, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.SMS, hintRes = R.string.act_send_sms_hint), bridgeAction = null
     ),
     /**
      * Calls an HTTP(S) endpoint. [Action.flag] carries the verb — false for GET, true for
@@ -498,5 +526,14 @@ enum class ActionType(
         @Suppress("DEPRECATION")
         fun byGroup(): Map<ActionGroup, List<ActionType>> =
             entries.filterNot { it == CALL_CONTACT }.groupBy { it.group }
+
+        /**
+         * The wait [ASK_CONFIRM] uses when its action carries none.
+         *
+         * The spec's own floor (5 s) is not zero: a question that closes before it can be
+         * read is a refusal dressed as a choice. Its ceiling (60 s) holds a rule's cycle for
+         * at most a minute, the same order as the delay budget the engine already enforces.
+         */
+        const val ASK_CONFIRM_DEFAULT_SECONDS = 10
     }
 }
