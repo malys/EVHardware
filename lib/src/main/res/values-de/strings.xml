@@ -167,4 +167,19 @@
     <string name="charging_plugged_idle">Angeschlossen, lädt nicht</string>
     <string name="charging_done">Ladung abgeschlossen</string>
     <string name="charging_fault">Ladefehler</string>
+    <string name="cond_media_playing">Medienwiedergabe läuft</string>
+    <string name="cond_wifi_ssid">WLAN-Netz</string>
+    <string name="cond_wifi_ssid_hint">z. B. Zuhause</string>
+    <string name="cond_in_call">Anruf läuft</string>
+    <string name="cond_drive_duration">Fahrtdauer</string>
+    <string name="cond_random_chance">Zufallschance</string>
+    <string name="unit_minute">Min</string>
+    <string name="act_enable_rule">Regel aktivieren</string>
+    <string name="act_disable_rule">Regel deaktivieren</string>
+    <string name="act_media_control">Mediensteuerung</string>
+    <string name="media_play_pause">Wiedergabe / Pause</string>
+    <string name="media_next">Nächster Titel</string>
+    <string name="media_previous">Vorheriger Titel</string>
+    <string name="act_set_bluetooth">Bluetooth</string>
+    <string name="act_set_wifi">WLAN</string>
 </resources>

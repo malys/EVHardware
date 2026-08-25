@@ -29,7 +29,13 @@ class FirmwareSupportTest {
         ConditionType.DATE,
         ConditionType.FIRMWARE_GEN,
         ConditionType.LOCATION_WITHIN,
-        ConditionType.PHYSICAL_BUTTON
+        ConditionType.PHYSICAL_BUTTON,
+        // Lus dans Android, pas dans la voiture : rien à router par génération.
+        ConditionType.MEDIA_PLAYING,
+        ConditionType.WIFI_SSID,
+        ConditionType.IN_CALL,
+        ConditionType.DRIVE_DURATION,
+        ConditionType.RANDOM_CHANCE
     )
     private val firmwareIndependentActions = setOf(
         ActionType.LAUNCH_APP,
@@ -41,7 +47,13 @@ class FirmwareSupportTest {
         ActionType.DELAY,
         // Le SMS part par le profil Bluetooth MAP, pas par un service SAIC : rien à router
         // par génération de firmware. Sa disponibilité se lit au bind, pas dans la matrice.
-        ActionType.SEND_SMS
+        ActionType.SEND_SMS,
+        // Règles, touche média et radios du poste : rien de tout cela ne passe par la voiture.
+        ActionType.ENABLE_RULE,
+        ActionType.DISABLE_RULE,
+        ActionType.MEDIA_CONTROL,
+        ActionType.SET_BLUETOOTH,
+        ActionType.SET_WIFI
     )
 
     @Test

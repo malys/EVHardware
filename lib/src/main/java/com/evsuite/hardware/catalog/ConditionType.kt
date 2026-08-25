@@ -119,6 +119,58 @@ enum class ConditionType(
         ValueSpec(ValueKind.PHYSICAL_BUTTON), SnapshotKeys.KEY_PHYSICAL_BUTTON_EVENT,
         eventDriven = true
     ),
+    /** Something is coming out of the speakers, whichever app is playing it. */
+    MEDIA_PLAYING(
+        R.string.cond_media_playing, ConditionGroup.CONTEXT,
+        ValueSpec.BOOL, SnapshotKeys.KEY_MEDIA_PLAYING
+    ),
+    /**
+     * The network the head unit is joined to, by name.
+     *
+     * The one context signal that says "the car is at a place it knows" without a satellite:
+     * a home network answers the instant the car is on the drive, where a GPS fix does not.
+     * Unreadable — radio off, or the platform declining to name it — leaves the condition
+     * unavailable rather than saying "some other network".
+     */
+    WIFI_SSID(
+        R.string.cond_wifi_ssid, ConditionGroup.CONTEXT,
+        ValueSpec(ValueKind.TEXT, hintRes = R.string.cond_wifi_ssid_hint),
+        SnapshotKeys.KEY_WIFI_SSID
+    ),
+    /**
+     * A call is in progress through the car.
+     *
+     * "In a call", not "ringing": what this reads is the audio route the head unit has taken,
+     * which a ringing phone has not taken yet. A rule that must not talk over a call is served
+     * by it; one that wants to react to an incoming call is not, and nothing here pretends
+     * otherwise.
+     */
+    IN_CALL(
+        R.string.cond_in_call, ConditionGroup.CONTEXT,
+        ValueSpec.BOOL, SnapshotKeys.KEY_IN_CALL
+    ),
+    /**
+     * Minutes since the ignition came on.
+     *
+     * Counted from the transition the service already listens for, so it costs no poll. It is
+     * unreadable until that transition has been seen — a rule cycle that starts on a car
+     * already running does not know when the drive began, and must not answer 0.
+     */
+    DRIVE_DURATION(
+        R.string.cond_drive_duration, ConditionGroup.CONTEXT,
+        number(0, 600, R.string.unit_minute), SnapshotKeys.KEY_DRIVE_MINUTES, comparable = true
+    ),
+    /**
+     * Matches with the given probability, in percent.
+     *
+     * Reads nothing, so it has no snapshot key: it is drawn at evaluation time. It exists for
+     * the rules whose point is not to be the same every day — one greeting in five, a
+     * different radio station now and then.
+     */
+    RANDOM_CHANCE(
+        R.string.cond_random_chance, ConditionGroup.CONTEXT,
+        number(1, 100, R.string.unit_percent), snapshotKey = null
+    ),
 
     // ── Environment ──────────────────────────────────────────────────────────
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)

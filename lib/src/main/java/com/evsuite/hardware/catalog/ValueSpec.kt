@@ -34,6 +34,13 @@ enum class ValueKind {
     DATE,
     /** EVProfile driving profile, identified by id. */
     PROFILE,
+    /**
+     * Another of the user's own rules, identified by id.
+     *
+     * Not [APP] with a rule id in it: the chooser has to list rules, and a rule that names a
+     * rule which no longer exists must be reported as such rather than silently doing nothing.
+     */
+    RULE,
     /** Installed application, identified by package name. */
     APP,
     /** Phone-book entry; the rule stores the selected number, not a mutable contact id. */

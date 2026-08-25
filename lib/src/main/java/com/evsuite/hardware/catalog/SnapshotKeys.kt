@@ -101,6 +101,16 @@ object SnapshotKeys {
     const val KEY_CHARGE_WINDOW_STOP  = "chargeWindowStop"
     const val KEY_BATTERY_PREHEAT  = "batteryPreheat"
 
+    // ── Platform context (no vehicle involved) ───────────────────────────────
+    // Read from Android, not from the car, so they carry no firmware annotation. Absent
+    // still means unreadable: a head unit whose audio state cannot be read leaves the
+    // media condition unavailable rather than claiming silence.
+    const val KEY_MEDIA_PLAYING    = "mediaPlaying"
+    const val KEY_WIFI_SSID        = "wifiSsid"
+    const val KEY_IN_CALL          = "inCall"
+    /** Minutes since the ignition came on, absent before the first transition is seen. */
+    const val KEY_DRIVE_MINUTES    = "driveMinutes"
+
     // ── AOSP door status (SWI133) ────────────────────────────────────────────
     /** True while either front door reads as open. Absent where the property is unreadable. */
     const val KEY_FRONT_DOOR_OPEN  = "frontDoorOpen"

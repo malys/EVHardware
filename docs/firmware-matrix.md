@@ -14,6 +14,11 @@
 | FIRMWARE_GEN | — | — | — | — | — | — |
 | LOCATION_WITHIN | — | — | — | — | — | — |
 | PHYSICAL_BUTTON | — | — | — | — | — | — |
+| MEDIA_PLAYING | — | — | — | — | — | — |
+| WIFI_SSID | — | — | — | — | — | — |
+| IN_CALL | — | — | — | — | — | — |
+| DRIVE_DURATION | — | — | — | — | — | — |
+| RANDOM_CHANCE | — | — | — | — | — | — |
 | OUTSIDE_TEMP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IGNITION_STATE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IN_PARK | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -71,6 +76,11 @@
 | NAVIGATE_TO | — | — | — | — | — | — |
 | ASK_CONFIRM | — | — | — | — | — | — |
 | SEND_SMS | — | — | — | — | — | — |
+| ENABLE_RULE | — | — | — | — | — | — |
+| DISABLE_RULE | — | — | — | — | — | — |
+| MEDIA_CONTROL | — | — | — | — | — | — |
+| SET_BLUETOOTH | — | — | — | — | — | — |
+| SET_WIFI | — | — | — | — | — | — |
 | WEBHOOK | — | — | — | — | — | — |
 | DELAY | — | — | — | — | — | — |
 | APPLY_PROFILE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

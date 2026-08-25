@@ -189,4 +189,19 @@
     <string name="charging_plugged_idle">Plugged in, not charging</string>
     <string name="charging_done">Charge complete</string>
     <string name="charging_fault">Charging fault</string>
+    <string name="cond_media_playing">Media playing</string>
+    <string name="cond_wifi_ssid">Wi-Fi network</string>
+    <string name="cond_wifi_ssid_hint">e.g. Home</string>
+    <string name="cond_in_call">Call in progress</string>
+    <string name="cond_drive_duration">Drive duration</string>
+    <string name="cond_random_chance">Random chance</string>
+    <string name="unit_minute">min</string>
+    <string name="act_enable_rule">Enable a rule</string>
+    <string name="act_disable_rule">Disable a rule</string>
+    <string name="act_media_control">Media control</string>
+    <string name="media_play_pause">Play / pause</string>
+    <string name="media_next">Next track</string>
+    <string name="media_previous">Previous track</string>
+    <string name="act_set_bluetooth">Bluetooth</string>
+    <string name="act_set_wifi">Wi-Fi</string>
 </resources>

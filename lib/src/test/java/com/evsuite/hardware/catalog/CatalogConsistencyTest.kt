@@ -66,7 +66,9 @@ class CatalogConsistencyTest {
         val localOnly = setOf(
             ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION, ActionType.SPEAK_TEXT,
             ActionType.NAVIGATE_TO, ActionType.WEBHOOK, ActionType.ASK_CONFIRM,
-            ActionType.DELAY, ActionType.SEND_SMS
+            ActionType.DELAY, ActionType.SEND_SMS,
+            ActionType.ENABLE_RULE, ActionType.DISABLE_RULE, ActionType.MEDIA_CONTROL,
+            ActionType.SET_BLUETOOTH, ActionType.SET_WIFI
         )
 
         ActionType.entries.filterNot { it in localOnly }.forEach { type ->
@@ -79,7 +81,9 @@ class CatalogConsistencyTest {
         listOf(
             ActionType.LAUNCH_APP, ActionType.SHOW_NOTIFICATION, ActionType.SPEAK_TEXT,
             ActionType.NAVIGATE_TO, ActionType.WEBHOOK, ActionType.ASK_CONFIRM,
-            ActionType.DELAY, ActionType.SEND_SMS
+            ActionType.DELAY, ActionType.SEND_SMS,
+            ActionType.ENABLE_RULE, ActionType.DISABLE_RULE, ActionType.MEDIA_CONTROL,
+            ActionType.SET_BLUETOOTH, ActionType.SET_WIFI
         ).forEach { type ->
             assertTrue(
                 "${type.name} ne touche pas le véhicule et ne doit pas avoir de bridgeAction",
@@ -133,7 +137,9 @@ class CatalogConsistencyTest {
             ConditionType.TIME_OF_DAY,
             ConditionType.DAY_OF_WEEK,
             ConditionType.DATE,
-            ConditionType.LOCATION_WITHIN
+            ConditionType.LOCATION_WITHIN,
+            // Tiré au sort à l'évaluation : il n'y a rien à lire.
+            ConditionType.RANDOM_CHANCE
         )
 
         ConditionType.entries.filterNot { it in localOnly }.forEach { type ->
@@ -221,6 +227,26 @@ class CatalogConsistencyTest {
                 "${action.name} must open on what ${condition.name} reads",
                 condition.snapshotKey, action.currentKey
             )
+        }
+    }
+
+    @Test
+    fun `the media commands are the platform key codes`() {
+        // The runner passes them straight to the media key dispatch: a value invented here
+        // would send a different key, and the mistake would look like an app bug.
+        assertEquals(android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, MediaCommand.PLAY_PAUSE)
+        assertEquals(android.view.KeyEvent.KEYCODE_MEDIA_NEXT, MediaCommand.NEXT)
+        assertEquals(android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS, MediaCommand.PREVIOUS)
+        assertEquals(MediaCommand.OPTIONS.size, MediaCommand.OPTIONS.map { it.value }.toSet().size)
+    }
+
+    @Test
+    fun `rule chaining names a rule and touches nothing else`() {
+        // The pair has to stay symmetric: an editor offering "enable" with a rule chooser and
+        // "disable" with a text field would store two different things in the same field.
+        listOf(ActionType.ENABLE_RULE, ActionType.DISABLE_RULE).forEach {
+            assertEquals(ValueKind.RULE, it.spec.kind)
+            assertFalse("${it.name} writes nothing to the vehicle", it.gated)
         }
     }
 

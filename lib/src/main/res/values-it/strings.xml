@@ -167,4 +167,19 @@
     <string name="charging_plugged_idle">Collegato, non in ricarica</string>
     <string name="charging_done">Ricarica completata</string>
     <string name="charging_fault">Guasto di ricarica</string>
+    <string name="cond_media_playing">Riproduzione in corso</string>
+    <string name="cond_wifi_ssid">Rete Wi-Fi</string>
+    <string name="cond_wifi_ssid_hint">es. Casa</string>
+    <string name="cond_in_call">Chiamata in corso</string>
+    <string name="cond_drive_duration">Durata del viaggio</string>
+    <string name="cond_random_chance">Probabilità casuale</string>
+    <string name="unit_minute">min</string>
+    <string name="act_enable_rule">Attiva una regola</string>
+    <string name="act_disable_rule">Disattiva una regola</string>
+    <string name="act_media_control">Controllo multimediale</string>
+    <string name="media_play_pause">Riproduci / pausa</string>
+    <string name="media_next">Brano successivo</string>
+    <string name="media_previous">Brano precedente</string>
+    <string name="act_set_bluetooth">Bluetooth</string>
+    <string name="act_set_wifi">Wi-Fi</string>
 </resources>

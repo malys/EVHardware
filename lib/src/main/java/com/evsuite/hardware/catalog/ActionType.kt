@@ -493,6 +493,55 @@ enum class ActionType(
         ValueSpec(ValueKind.SMS, hintRes = R.string.act_send_sms_hint), bridgeAction = null
     ),
     /**
+     * Turns another of the user's rules on, or off.
+     *
+     * The cheapest thing in the catalogue that changes what rules can express: a rule that
+     * only applies during a trip is one rule enabling a second at departure and disabling it
+     * on arrival, with no state to store and nothing new to evaluate. `Action.text` is the
+     * target rule's id, and a rule that no longer exists is reported as unsupported — never
+     * silently skipped, because a chain whose middle link vanished is exactly what a user
+     * needs told.
+     *
+     * A rule cannot disable itself into a state it can never leave: the switch is the same one
+     * the rule list shows, so the user can always put it back.
+     */
+    ENABLE_RULE(
+        R.string.act_enable_rule, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.RULE), bridgeAction = null
+    ),
+    DISABLE_RULE(
+        R.string.act_disable_rule, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.RULE), bridgeAction = null
+    ),
+    /**
+     * Play/pause, next or previous, sent as the media key the head unit's own steering
+     * controls send.
+     *
+     * A media key rather than a media session: the key reaches whatever app currently holds
+     * audio focus, exactly as the wheel button does, and needs no notification-listener
+     * access to any of them. What it cannot do is address one app while another is playing —
+     * which is not what a rule wants anyway.
+     */
+    MEDIA_CONTROL(
+        R.string.act_media_control, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.ENUM, options = MediaCommand.OPTIONS), bridgeAction = null
+    ),
+    /**
+     * The head unit's own radios.
+     *
+     * Turning Bluetooth off ends the hands-free link, and with it every Bluetooth condition —
+     * a rule that switches it off and then asks which phone is on board gets "unreadable",
+     * which is the truth.
+     */
+    SET_BLUETOOTH(
+        R.string.act_set_bluetooth, ActionGroup.SYSTEM,
+        ValueSpec.BOOL, bridgeAction = null
+    ),
+    SET_WIFI(
+        R.string.act_set_wifi, ActionGroup.SYSTEM,
+        ValueSpec.BOOL, bridgeAction = null
+    ),
+    /**
      * Calls an HTTP(S) endpoint. [Action.flag] carries the verb — false for GET, true for
      * POST — and [Action.payload] is the POST body, ignored for GET.
      */
@@ -554,4 +603,23 @@ enum class ActionType(
          */
         const val ASK_CONFIRM_DEFAULT_SECONDS = 10
     }
+}
+
+/**
+ * What [ActionType.MEDIA_CONTROL] sends.
+ *
+ * The values are the platform's own media key codes, so the runner has nothing to translate
+ * and a wrong constant cannot become a different key by accident. Only the three a driver
+ * asks a rule for: stop and rewind are the wheel's job, not a rule's.
+ */
+object MediaCommand {
+    const val PLAY_PAUSE = 85
+    const val NEXT = 87
+    const val PREVIOUS = 88
+
+    val OPTIONS = listOf(
+        EnumOption(PLAY_PAUSE, R.string.media_play_pause),
+        EnumOption(NEXT, R.string.media_next),
+        EnumOption(PREVIOUS, R.string.media_previous)
+    )
 }

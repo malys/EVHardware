@@ -8,6 +8,15 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Context entries that read Android rather than the car, so they carry no firmware
+  annotation: `ConditionType.MEDIA_PLAYING`, `WIFI_SSID`, `IN_CALL`, `DRIVE_DURATION`,
+  `RANDOM_CHANCE`. `IN_CALL` is "a call is routed through the car", not "the phone is
+  ringing" — the difference is stated rather than papered over.
+- `ActionType.ENABLE_RULE` / `DISABLE_RULE` with `ValueKind.RULE`: a rule can now switch
+  another on or off, which is what turns a catalogue of one-shot rules into chains.
+- `ActionType.MEDIA_CONTROL` (`MediaCommand`, the platform's own media key codes) and
+  `SET_BLUETOOTH` / `SET_WIFI`.
+
 - Climate readings that had a vendor getter and no catalogue entry: `ConditionType.ECON_MODE`,
   `PASSENGER_TEMP`, `FRONT_DEFROST`, `REAR_DEFROST`. The last two also become the `currentKey`
   of the defroster actions, which until now opened on a state nothing could read back.

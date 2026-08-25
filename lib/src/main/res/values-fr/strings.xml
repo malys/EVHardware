@@ -189,4 +189,19 @@
     <string name="charging_plugged_idle">Branché, pas de charge</string>
     <string name="charging_done">Charge terminée</string>
     <string name="charging_fault">Défaut de charge</string>
+    <string name="cond_media_playing">Lecture en cours</string>
+    <string name="cond_wifi_ssid">Réseau Wi-Fi</string>
+    <string name="cond_wifi_ssid_hint">ex. Maison</string>
+    <string name="cond_in_call">Appel en cours</string>
+    <string name="cond_drive_duration">Durée du trajet</string>
+    <string name="cond_random_chance">Chance aléatoire</string>
+    <string name="unit_minute">min</string>
+    <string name="act_enable_rule">Activer une règle</string>
+    <string name="act_disable_rule">Désactiver une règle</string>
+    <string name="act_media_control">Contrôle média</string>
+    <string name="media_play_pause">Lecture / pause</string>
+    <string name="media_next">Piste suivante</string>
+    <string name="media_previous">Piste précédente</string>
+    <string name="act_set_bluetooth">Bluetooth</string>
+    <string name="act_set_wifi">Wi-Fi</string>
 </resources>
