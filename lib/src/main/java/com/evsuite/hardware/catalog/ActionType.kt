@@ -47,9 +47,10 @@ enum class ActionGroup(@StringRes val labelRes: Int) {
  * confirmed, so writing them would have been a guess. The vendor calls
  * are the ones the car's own HVAC and charging screens make.
  *
- * Window and door-lock writes go through `vehiclecontrol` on the same hub. They are not
- * standstill-gated: the vehicle enforces its own speed limit on glass and locks, and
- * duplicating it would refuse the case the action exists for. The electric tailgate stays
+ * Window and door-lock writes go through `vehiclecontrol` on the same hub. The glass is
+ * gated in one direction only ([gatedWhenOpening]): closing the windows is the case those
+ * actions exist for and must not be refused for moving, while opening them at speed is a
+ * hazard and takes the standstill gate like any other write. The electric tailgate stays
  * out — the launcher defines its OPEN and CLOSE as the same value, so it is a pulse whose
  * direction depends on state this cannot read.
  *
@@ -73,7 +74,21 @@ enum class ActionType(
      * that starts where the screen already is makes the rule an edit of the present state,
      * which is what the user is thinking about. Null where nothing reads it back.
      */
-    val currentKey: String? = null
+    val currentKey: String? = null,
+    /**
+     * Gated only in the direction that opens something.
+     *
+     * The glass is the one family where the two directions are not the same act. Closing a
+     * window is what a rule about rain on the motorway exists to do, and refusing it at speed
+     * would refuse exactly the case it was written for. Opening one at speed is a hazard, and
+     * that half goes through the standstill gate like any other write.
+     *
+     * [gated] stays false for these: the gate does not apply to the action, it applies to the
+     * value. The executor compares the target with what the car reports and gates the write
+     * only when it would open glass — and gates it too when the current position cannot be
+     * read, because an unknown direction is not a safe one.
+     */
+    val gatedWhenOpening: Boolean = false
 ) {
 
     // ── Profile ──────────────────────────────────────────────────────────────
@@ -211,48 +226,57 @@ enum class ActionType(
     /**
      * Moves all four windows to a position, 0 closed to 100 open.
      *
-     * Not gated by the standstill threshold: the vehicle enforces its own speed limit on
-     * glass, and duplicating it here would refuse the case the action exists for — closing
-     * the windows when it starts raining. A write the car declines is reported in the
-     * history rather than hidden.
+     * Gated in one direction only — see [gatedWhenOpening]. Closing is the case the action
+     * exists for: a rule shutting the windows when it starts raining on the motorway must not
+     * be refused for moving. Opening glass at speed is a different act and takes the gate.
+     *
+     * Which direction a write is depends on the *least*-open window, not the widest: moving
+     * every window to 40 % opens whichever of them sits below 40.
+     *
+     * A write the car itself declines is reported in the history rather than hidden.
      */
     @SupportedOn(SWI68, SWI165)
     SET_WINDOWS(
         R.string.act_windows, ActionGroup.CLIMATE,
         number(0, 100, R.string.unit_percent), "SET_WINDOWS",
-        currentKey = SnapshotKeys.KEY_WINDOW_PERCENT
+        currentKey = SnapshotKeys.KEY_WINDOW_PERCENT,
+        gatedWhenOpening = true
     ),
     /**
      * One window, 0 closed to 100 open — the counterpart of [SET_WINDOWS].
      *
      * Both are worth having. Closing the glass is one gesture and belongs in one action that
      * cannot leave three shut and one open; venting the driver's window alone cannot be
-     * written with an all-or-nothing call. Ungated for the same reason as [SET_WINDOWS]: the
-     * vehicle applies its own speed limit to the glass.
+     * written with an all-or-nothing call. Gated in the opening direction like [SET_WINDOWS],
+     * and against this window's own position rather than the set's.
      */
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_DRIVER(
         R.string.act_window_driver, ActionGroup.CLIMATE,
         number(0, 100, R.string.unit_percent), "SET_WINDOW_DRIVER",
-        currentKey = SnapshotKeys.KEY_WINDOW_DRIVER
+        currentKey = SnapshotKeys.KEY_WINDOW_DRIVER,
+        gatedWhenOpening = true
     ),
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_PASSENGER(
         R.string.act_window_passenger, ActionGroup.CLIMATE,
         number(0, 100, R.string.unit_percent), "SET_WINDOW_PASSENGER",
-        currentKey = SnapshotKeys.KEY_WINDOW_PASSENGER
+        currentKey = SnapshotKeys.KEY_WINDOW_PASSENGER,
+        gatedWhenOpening = true
     ),
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_REAR_LEFT(
         R.string.act_window_rear_left, ActionGroup.CLIMATE,
         number(0, 100, R.string.unit_percent), "SET_WINDOW_REAR_LEFT",
-        currentKey = SnapshotKeys.KEY_WINDOW_REAR_LEFT
+        currentKey = SnapshotKeys.KEY_WINDOW_REAR_LEFT,
+        gatedWhenOpening = true
     ),
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_REAR_RIGHT(
         R.string.act_window_rear_right, ActionGroup.CLIMATE,
         number(0, 100, R.string.unit_percent), "SET_WINDOW_REAR_RIGHT",
-        currentKey = SnapshotKeys.KEY_WINDOW_REAR_RIGHT
+        currentKey = SnapshotKeys.KEY_WINDOW_REAR_RIGHT,
+        gatedWhenOpening = true
     ),
     @SupportedOn(SWI68, SWI165)
     SET_DOOR_LOCK(

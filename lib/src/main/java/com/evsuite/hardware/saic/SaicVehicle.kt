@@ -328,6 +328,20 @@ object SaicVehicleControl {
             ?.takeIf { it >= 0 }
 
     /**
+     * The least-open window, in percent — the one a write to *all* of them is measured against.
+     *
+     * Moving every window to 40 % opens whichever is currently below 40, so the narrowest is
+     * what decides whether the write opens glass at all. [widestWindowPercent] answers the
+     * opposite question, "is anything open", and both are needed.
+     */
+    fun narrowestWindowPercent(): Int? =
+        WINDOW_READS.mapNotNull { code -> SaicAidl.callFloat(binder(), DESCRIPTOR, code) }
+            .takeIf { it.size == WINDOW_READS.size }
+            ?.min()
+            ?.toInt()
+            ?.takeIf { it >= 0 }
+
+    /**
      * One window's position in percent, 0 closed to 100 open. Null when it does not answer.
      */
     fun windowPercent(window: Window): Int? =

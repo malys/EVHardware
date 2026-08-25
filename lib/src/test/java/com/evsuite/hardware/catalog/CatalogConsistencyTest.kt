@@ -292,6 +292,29 @@ class CatalogConsistencyTest {
     }
 
     @Test
+    fun `the glass is gated in the opening direction only`() {
+        // Closing is the case these exist for — rain on the motorway — and gating the action
+        // outright would refuse exactly that. Opening at speed is the half that takes the gate.
+        val glass = listOf(
+            ActionType.SET_WINDOWS, ActionType.SET_WINDOW_DRIVER, ActionType.SET_WINDOW_PASSENGER,
+            ActionType.SET_WINDOW_REAR_LEFT, ActionType.SET_WINDOW_REAR_RIGHT
+        )
+        glass.forEach {
+            assertTrue("${it.name} must gate the opening direction", it.gatedWhenOpening)
+            assertFalse("${it.name} must not be gated outright: closing is its point", it.gated)
+            // The direction is a comparison against what the car reports, so the action has
+            // to name the reading it is compared with.
+            assertNotNull("${it.name} needs a current position to compare against", it.currentKey)
+        }
+
+        // Nothing else claims directional gating: it is a property of glass, not a general
+        // escape from the standstill gate.
+        ActionType.entries.filterNot { it in glass }.forEach {
+            assertFalse("${it.name} must not claim directional gating", it.gatedWhenOpening)
+        }
+    }
+
+    @Test
     fun `les enumerations ont des options`() {
         // Une ENUM sans option produit une liste déroulante vide : l'utilisateur ne peut
         // rien choisir et la règle reste inutilisable.
