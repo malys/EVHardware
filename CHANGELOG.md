@@ -16,7 +16,6 @@ All notable changes to this project are documented here. Format follows
   another on or off, which is what turns a catalogue of one-shot rules into chains.
 - `ActionType.MEDIA_CONTROL` (`MediaCommand`, the platform's own media key codes) and
   `SET_BLUETOOTH` / `SET_WIFI`.
-
 - Climate readings that had a vendor getter and no catalogue entry: `ConditionType.ECON_MODE`,
   `PASSENGER_TEMP`, `FRONT_DEFROST`, `REAR_DEFROST`. The last two also become the `currentKey`
   of the defroster actions, which until now opened on a state nothing could read back.
