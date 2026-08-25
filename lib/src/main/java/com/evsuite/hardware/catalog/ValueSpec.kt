@@ -20,6 +20,14 @@ enum class ValueKind {
     BT_DEVICE,
     /** Start → end time range. */
     TIME_RANGE,
+    /**
+     * One time of day, stored as minutes since midnight in `number`.
+     *
+     * Not a [NUMBER] with a 0…1439 range: the charging window the car answers is a clock
+     * time, and a slider asking for "1 380" is unanswerable at the wheel. The editor draws
+     * the same picker [TIME_RANGE] uses, minus the second half.
+     */
+    TIME,
     /** Day-of-week selection. */
     DAYS,
     /** One exact local calendar date, stored as ISO-8601 (yyyy-MM-dd). */

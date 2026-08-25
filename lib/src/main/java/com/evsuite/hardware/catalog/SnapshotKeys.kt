@@ -82,4 +82,26 @@ object SnapshotKeys {
     /** Widest-open window, 0–100 %. Replaces the unverified AOSP window read where it answers. */
     const val KEY_WINDOW_PERCENT   = "windowPct"
     const val KEY_DOORS_LOCKED     = "doorsLocked"
+    const val KEY_ECON             = "econOn"
+    const val KEY_PASSENGER_TEMP   = "passengerTempC"
+    const val KEY_FRONT_DEFROST    = "frontDefrost"
+    const val KEY_REAR_DEFROST     = "rearDefrost"
+    /**
+     * The vendor charging state, kept as its own number next to [KEY_CHARGING].
+     *
+     * [KEY_CHARGING] is a boolean and has to stay one — every rule already written against it
+     * reads it as such. But "plugged in" and "charging" are not the same state, and the
+     * boolean cannot tell a driver which of the two the car is in. This is the state itself,
+     * so a rule can ask.
+     */
+    const val KEY_CHARGING_STATUS  = "chargingStatus"
+    const val KEY_CHARGE_SCHEDULE  = "chargeScheduleOn"
+    /** Scheduled charging window, minutes since midnight. */
+    const val KEY_CHARGE_WINDOW_START = "chargeWindowStart"
+    const val KEY_CHARGE_WINDOW_STOP  = "chargeWindowStop"
+    const val KEY_BATTERY_PREHEAT  = "batteryPreheat"
+
+    // ── AOSP door status (SWI133) ────────────────────────────────────────────
+    /** True while either front door reads as open. Absent where the property is unreadable. */
+    const val KEY_FRONT_DOOR_OPEN  = "frontDoorOpen"
 }

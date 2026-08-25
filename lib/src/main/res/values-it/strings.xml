@@ -149,4 +149,22 @@
     <string name="act_door_lock">Blocco porte</string>
     <string name="act_delay">Attendi</string>
     <string name="unit_second">s</string>
+    <string name="cond_charging_status">Stato di ricarica</string>
+    <string name="cond_charge_schedule">Ricarica programmata attiva</string>
+    <string name="cond_charge_window_start">La ricarica inizia alle</string>
+    <string name="cond_charge_window_stop">La ricarica termina alle</string>
+    <string name="cond_battery_preheat">Preriscaldamento batteria attivo</string>
+    <string name="cond_passenger_temp">Temperatura passeggero</string>
+    <string name="cond_econ">Modalità ECON attiva</string>
+    <string name="cond_front_defrost">Sbrinatore parabrezza attivo</string>
+    <string name="cond_rear_defrost">Sbrinatore lunotto attivo</string>
+    <string name="cond_front_door_open">Porta anteriore aperta</string>
+    <string name="act_passenger_temp">Temperatura passeggero</string>
+    <string name="act_econ">Modalità ECON</string>
+    <string name="charging_unplugged">Scollegato</string>
+    <string name="charging_ac">In ricarica (CA)</string>
+    <string name="charging_dc">In ricarica (CC)</string>
+    <string name="charging_plugged_idle">Collegato, non in ricarica</string>
+    <string name="charging_done">Ricarica completata</string>
+    <string name="charging_fault">Guasto di ricarica</string>
 </resources>

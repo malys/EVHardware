@@ -171,4 +171,22 @@
     <string name="act_door_lock">Verrouillage des portes</string>
     <string name="act_delay">Attendre</string>
     <string name="unit_second">s</string>
+    <string name="cond_charging_status">État de charge</string>
+    <string name="cond_charge_schedule">Charge programmée active</string>
+    <string name="cond_charge_window_start">Début de charge à</string>
+    <string name="cond_charge_window_stop">Fin de charge à</string>
+    <string name="cond_battery_preheat">Préchauffage batterie actif</string>
+    <string name="cond_passenger_temp">Température passager</string>
+    <string name="cond_econ">Mode ECON actif</string>
+    <string name="cond_front_defrost">Dégivrage pare-brise actif</string>
+    <string name="cond_rear_defrost">Dégivrage lunette arrière actif</string>
+    <string name="cond_front_door_open">Porte avant ouverte</string>
+    <string name="act_passenger_temp">Température passager</string>
+    <string name="act_econ">Mode ECON</string>
+    <string name="charging_unplugged">Débranché</string>
+    <string name="charging_ac">Charge (AC)</string>
+    <string name="charging_dc">Charge (DC)</string>
+    <string name="charging_plugged_idle">Branché, pas de charge</string>
+    <string name="charging_done">Charge terminée</string>
+    <string name="charging_fault">Défaut de charge</string>
 </resources>

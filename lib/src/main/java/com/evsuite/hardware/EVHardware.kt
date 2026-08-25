@@ -3469,6 +3469,26 @@ object EVHardware {
         AppLogger.i(TAG, "  DoorVolumeWatcher: trigger disabled")
     }
 
+    /**
+     * True while either front door is open, null when neither area answers.
+     *
+     * Reads the same property the volume-drop watcher polls, and needs no watcher running:
+     * [init] connects the Car API on any firmware carrying the door feature, whether or not
+     * the volume drop itself is enabled. Null rather than false where nothing answers — a
+     * rule must not read "unreadable" as "shut".
+     */
+    fun frontDoorOpenOrNull(): Boolean? {
+        if (!hasDoorVolumeFeature()) return null
+        var answered = false
+        var open = false
+        for (area in DOOR_FRONT_AREAS) {
+            val value = readDoorOpen(area) ?: continue
+            answered = true
+            if (value == 1) open = true
+        }
+        return if (answered) open else null
+    }
+
     /** Diagnostic button probe: logs the volume + door states at click time. */
     fun runDoorVolumeDiag() {
         AppLogger.i(VOL_TAG, "── DIAG (bouton Diagnostic) ──")

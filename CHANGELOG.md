@@ -4,6 +4,34 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-08-25
+
+### Added
+
+- Climate readings that had a vendor getter and no catalogue entry: `ConditionType.ECON_MODE`,
+  `PASSENGER_TEMP`, `FRONT_DEFROST`, `REAR_DEFROST`. The last two also become the `currentKey`
+  of the defroster actions, which until now opened on a state nothing could read back.
+- `ActionType.SET_ECON` and `ActionType.SET_PASSENGER_TEMP`. The passenger target is a second
+  action rather than a zone argument on `SET_CABIN_TEMP`: a zone would have made every rule
+  saved before it carry a value it never chose.
+- Charging schedule readings: `ConditionType.CHARGE_SCHEDULE_ENABLED`, `CHARGE_WINDOW_START`,
+  `CHARGE_WINDOW_STOP`, `BATTERY_PREHEAT` — the read side of actions that could already write
+  them.
+- `ConditionType.CHARGING_STATUS`, the charging state itself. `CHARGING` stays a boolean and
+  keeps its meaning; the state is what can say "plugged in but not charging", which a boolean
+  cannot.
+- `ConditionType.FRONT_DOOR_OPEN` (SWI133), reading the door status the volume-drop watcher
+  already polls, through the new `EVHardware.frontDoorOpenOrNull()`. Front doors only — the
+  rear ones are not claimed rather than guessed at.
+- `ValueKind.TIME`: one time of day, minutes since midnight. The charging window's ends are
+  clock times, and a 0–1439 slider is unanswerable at the wheel.
+
+### Fixed
+
+- `VehicleEnums.CHARGING_ACTIVE_STATES` names the states in which current actually flows into
+  the battery. Consumers filling `KEY_CHARGING` derived it from `chargingStatus != 0`, which
+  made a finished charge, a stopped one and a charging fault all report as charging.
+
 ## [1.3.0] - 2026-08-23
 
 ### Added
@@ -12,9 +40,9 @@ All notable changes to this project are documented here. Format follows
   (recipient in `text`, contact label in `displayName`, message in `payload`). No
   `@SupportedOn`: the message leaves over the Bluetooth Message Access Profile, not over a
   SAIC service, so nothing is routed per firmware generation — availability is a bind, read at
-  runtime. Verified against the head unit's own APKs: `IBtCall` carries twenty-six
-  transactions and none of them is a message, while the system settings service manages a
-  "MAP Client" profile (18, UUIDs MAP/MNS/MAS).
+  runtime. The vendor Bluetooth call interface exposes no message transaction, so the
+  message cannot travel that way; the head unit's Bluetooth stack does expose a MAP client
+  profile at runtime, and that is the route taken.
 - `ValueKind.CONFIRM`: a yes/no question plus the seconds it waits for an answer. The editor
   draws one control per kind, so the wait had to become part of the kind rather than a
   special case for one action.

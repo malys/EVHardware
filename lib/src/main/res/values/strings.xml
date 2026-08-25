@@ -171,4 +171,22 @@
     <string name="act_door_lock">Door locks</string>
     <string name="act_delay">Wait</string>
     <string name="unit_second">s</string>
+    <string name="cond_charging_status">Charging state</string>
+    <string name="cond_charge_schedule">Scheduled charging on</string>
+    <string name="cond_charge_window_start">Charging starts at</string>
+    <string name="cond_charge_window_stop">Charging stops at</string>
+    <string name="cond_battery_preheat">Battery pre-heating on</string>
+    <string name="cond_passenger_temp">Passenger temperature</string>
+    <string name="cond_econ">ECON mode on</string>
+    <string name="cond_front_defrost">Windscreen defroster on</string>
+    <string name="cond_rear_defrost">Rear window defroster on</string>
+    <string name="cond_front_door_open">Front door open</string>
+    <string name="act_passenger_temp">Passenger temperature</string>
+    <string name="act_econ">ECON mode</string>
+    <string name="charging_unplugged">Unplugged</string>
+    <string name="charging_ac">Charging (AC)</string>
+    <string name="charging_dc">Charging (DC)</string>
+    <string name="charging_plugged_idle">Plugged in, not charging</string>
+    <string name="charging_done">Charge complete</string>
+    <string name="charging_fault">Charging fault</string>
 </resources>

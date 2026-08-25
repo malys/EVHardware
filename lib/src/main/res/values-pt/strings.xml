@@ -149,4 +149,22 @@
     <string name="act_door_lock">Trancamento das portas</string>
     <string name="act_delay">Esperar</string>
     <string name="unit_second">s</string>
+    <string name="cond_charging_status">Estado de carregamento</string>
+    <string name="cond_charge_schedule">Carregamento programado ativo</string>
+    <string name="cond_charge_window_start">Carregamento começa às</string>
+    <string name="cond_charge_window_stop">Carregamento termina às</string>
+    <string name="cond_battery_preheat">Pré-aquecimento da bateria ativo</string>
+    <string name="cond_passenger_temp">Temperatura do passageiro</string>
+    <string name="cond_econ">Modo ECON ativo</string>
+    <string name="cond_front_defrost">Desembaciador dianteiro ativo</string>
+    <string name="cond_rear_defrost">Desembaciador traseiro ativo</string>
+    <string name="cond_front_door_open">Porta dianteira aberta</string>
+    <string name="act_passenger_temp">Temperatura do passageiro</string>
+    <string name="act_econ">Modo ECON</string>
+    <string name="charging_unplugged">Desligado</string>
+    <string name="charging_ac">A carregar (CA)</string>
+    <string name="charging_dc">A carregar (CC)</string>
+    <string name="charging_plugged_idle">Ligado, sem carregar</string>
+    <string name="charging_done">Carga concluída</string>
+    <string name="charging_fault">Falha de carregamento</string>
 </resources>

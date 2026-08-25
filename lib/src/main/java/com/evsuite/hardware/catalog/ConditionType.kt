@@ -182,6 +182,47 @@ enum class ConditionType(
         number(0, 100, R.string.unit_percent),
         SnapshotKeys.KEY_CHARGE_LIMIT, comparable = true
     ),
+    /**
+     * The charging state itself, where [CHARGING] is only "current is flowing".
+     *
+     * The two answer different questions and both are worth asking: a rule that pre-heats the
+     * cabin wants "charging", while a rule that warns before the driver walks away wants
+     * "plugged in but not charging" — a state the boolean cannot name.
+     */
+    @SupportedOn(SWI68, SWI165)
+    CHARGING_STATUS(
+        R.string.cond_charging_status, ConditionGroup.ENERGY,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.CHARGING_STATUSES),
+        SnapshotKeys.KEY_CHARGING_STATUS
+    ),
+    @SupportedOn(SWI68, SWI165)
+    CHARGE_SCHEDULE_ENABLED(
+        R.string.cond_charge_schedule, ConditionGroup.ENERGY,
+        ValueSpec.BOOL, SnapshotKeys.KEY_CHARGE_SCHEDULE
+    ),
+    /**
+     * The scheduled window's two ends, read back from the car.
+     *
+     * Two conditions rather than the one range [ActionType.SET_CHARGE_WINDOW] writes: the
+     * write has to move both ends together or the car is left with a window nobody intended,
+     * while a rule reading them asks about one end at a time ("charging starts after
+     * midnight"). Comparable, so "before" and "after" are available and not only equality.
+     */
+    @SupportedOn(SWI68, SWI165)
+    CHARGE_WINDOW_START(
+        R.string.cond_charge_window_start, ConditionGroup.ENERGY,
+        ValueSpec(ValueKind.TIME), SnapshotKeys.KEY_CHARGE_WINDOW_START, comparable = true
+    ),
+    @SupportedOn(SWI68, SWI165)
+    CHARGE_WINDOW_STOP(
+        R.string.cond_charge_window_stop, ConditionGroup.ENERGY,
+        ValueSpec(ValueKind.TIME), SnapshotKeys.KEY_CHARGE_WINDOW_STOP, comparable = true
+    ),
+    @SupportedOn(SWI68, SWI165)
+    BATTERY_PREHEAT(
+        R.string.cond_battery_preheat, ConditionGroup.ENERGY,
+        ValueSpec.BOOL, SnapshotKeys.KEY_BATTERY_PREHEAT
+    ),
 
     // ── Climate + windows (read only, unverified on MG4 — see EVHardware) ────
     /**
@@ -221,6 +262,34 @@ enum class ConditionType(
         number(VehicleEnums.CABIN_TEMP_MIN, VehicleEnums.CABIN_TEMP_MAX, R.string.unit_celsius),
         SnapshotKeys.KEY_TEMPERATURE_SET, comparable = true
     ),
+    /**
+     * The passenger side's own target, where [TEMPERATURE_SET] is the driver's.
+     *
+     * The two are the same number until dual zone is on, which is exactly when a rule needs
+     * to tell them apart — and there is no readable "dual zone" flag, so the honest way to
+     * ask is to compare the two targets.
+     */
+    @SupportedOn(SWI68, SWI165)
+    PASSENGER_TEMP(
+        R.string.cond_passenger_temp, ConditionGroup.CLIMATE,
+        number(VehicleEnums.CABIN_TEMP_MIN, VehicleEnums.CABIN_TEMP_MAX, R.string.unit_celsius),
+        SnapshotKeys.KEY_PASSENGER_TEMP, comparable = true
+    ),
+    @SupportedOn(SWI68, SWI165)
+    ECON_MODE(
+        R.string.cond_econ, ConditionGroup.CLIMATE,
+        ValueSpec.BOOL, SnapshotKeys.KEY_ECON
+    ),
+    @SupportedOn(SWI68, SWI165)
+    FRONT_DEFROST(
+        R.string.cond_front_defrost, ConditionGroup.CLIMATE,
+        ValueSpec.BOOL, SnapshotKeys.KEY_FRONT_DEFROST
+    ),
+    @SupportedOn(SWI68, SWI165)
+    REAR_DEFROST(
+        R.string.cond_rear_defrost, ConditionGroup.CLIMATE,
+        ValueSpec.BOOL, SnapshotKeys.KEY_REAR_DEFROST
+    ),
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
     WINDOW_OPEN(
         R.string.cond_window_open, ConditionGroup.CLIMATE,
@@ -241,6 +310,19 @@ enum class ConditionType(
     DOORS_LOCKED(
         R.string.cond_doors_locked, ConditionGroup.CONTEXT,
         ValueSpec.BOOL, SnapshotKeys.KEY_DOORS_LOCKED
+    ),
+    /**
+     * Either front door standing open.
+     *
+     * Front doors only, and only where the door status property answers: those are the two
+     * the library reads today, for the volume-drop feature. The rear doors are not claimed
+     * here rather than guessed at, and a firmware that does not answer leaves the condition
+     * UNAVAILABLE instead of reporting the doors shut.
+     */
+    @SupportedOn(SWI133)
+    FRONT_DOOR_OPEN(
+        R.string.cond_front_door_open, ConditionGroup.CONTEXT,
+        ValueSpec.BOOL, SnapshotKeys.KEY_FRONT_DOOR_OPEN
     ),
 
     // ── Comfort ──────────────────────────────────────────────────────────────

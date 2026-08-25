@@ -159,10 +159,28 @@ enum class ActionType(
         number(VehicleEnums.CABIN_TEMP_MIN, VehicleEnums.CABIN_TEMP_MAX, R.string.unit_celsius),
         "SET_CABIN_TEMP", currentKey = SnapshotKeys.KEY_TEMPERATURE_SET
     ),
+    /**
+     * The passenger side's target, where [SET_CABIN_TEMP] is the driver's.
+     *
+     * A second action rather than a zone argument on the first: the driver's target is the
+     * one every existing rule sets, and giving it a zone would have made every saved rule
+     * carry a value it never chose.
+     */
+    @SupportedOn(SWI68, SWI165)
+    SET_PASSENGER_TEMP(
+        R.string.act_passenger_temp, ActionGroup.CLIMATE,
+        number(VehicleEnums.CABIN_TEMP_MIN, VehicleEnums.CABIN_TEMP_MAX, R.string.unit_celsius),
+        "SET_PASSENGER_TEMP", currentKey = SnapshotKeys.KEY_PASSENGER_TEMP
+    ),
     @SupportedOn(SWI68, SWI165)
     SET_AC(
         R.string.act_ac, ActionGroup.CLIMATE,
         ValueSpec.BOOL, "SET_AC", currentKey = SnapshotKeys.KEY_AC_ON
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_ECON(
+        R.string.act_econ, ActionGroup.CLIMATE,
+        ValueSpec.BOOL, "SET_ECON", currentKey = SnapshotKeys.KEY_ECON
     ),
     @SupportedOn(SWI68, SWI165)
     SET_CLIMATE_AUTO(
@@ -182,12 +200,12 @@ enum class ActionType(
     @SupportedOn(SWI68, SWI165)
     SET_FRONT_DEFROST(
         R.string.act_front_defrost, ActionGroup.CLIMATE,
-        ValueSpec.BOOL, "SET_FRONT_DEFROST"
+        ValueSpec.BOOL, "SET_FRONT_DEFROST", currentKey = SnapshotKeys.KEY_FRONT_DEFROST
     ),
     @SupportedOn(SWI68, SWI165)
     SET_REAR_DEFROST(
         R.string.act_rear_defrost, ActionGroup.CLIMATE,
-        ValueSpec.BOOL, "SET_REAR_DEFROST"
+        ValueSpec.BOOL, "SET_REAR_DEFROST", currentKey = SnapshotKeys.KEY_REAR_DEFROST
     ),
 
     /**
@@ -225,7 +243,7 @@ enum class ActionType(
     @SupportedOn(SWI68, SWI165)
     SET_CHARGE_SCHEDULE(
         R.string.act_charge_schedule, ActionGroup.ENERGY,
-        ValueSpec.BOOL, "SET_CHARGE_SCHEDULE"
+        ValueSpec.BOOL, "SET_CHARGE_SCHEDULE", currentKey = SnapshotKeys.KEY_CHARGE_SCHEDULE
     ),
     /**
      * The scheduled charging window. A range rather than two actions: start and stop are
@@ -240,7 +258,7 @@ enum class ActionType(
     @SupportedOn(SWI68, SWI165)
     SET_BATTERY_PREHEAT(
         R.string.act_battery_preheat, ActionGroup.ENERGY,
-        ValueSpec.BOOL, "SET_BATTERY_PREHEAT"
+        ValueSpec.BOOL, "SET_BATTERY_PREHEAT", currentKey = SnapshotKeys.KEY_BATTERY_PREHEAT
     ),
 
     // ── Audio ────────────────────────────────────────────────────────────────

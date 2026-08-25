@@ -150,6 +150,81 @@ class CatalogConsistencyTest {
     }
 
     @Test
+    fun `charging state and the charging flag answer different questions`() {
+        // The boolean cannot name "plugged in but not charging", which is the state a rule
+        // warning a departing driver is about — so the two must not share a snapshot key.
+        assertEquals(ValueKind.ENUM, ConditionType.CHARGING_STATUS.spec.kind)
+        assertFalse(
+            "the state and the flag must stay separate readings",
+            ConditionType.CHARGING_STATUS.snapshotKey == ConditionType.CHARGING.snapshotKey
+        )
+    }
+
+    @Test
+    fun `only the flowing states count as charging`() {
+        // `status != 0` was the old derivation, and it made a finished charge, a stopped one
+        // and a fault all read as "charging". Whatever else the set gains, those three stay out.
+        listOf(
+            VehicleEnums.CHARGING_UNPLUGGED,
+            VehicleEnums.CHARGING_DONE,
+            VehicleEnums.CHARGING_FAULT,
+            VehicleEnums.CHARGING_PLUGGED_IDLE
+        ).forEach {
+            assertFalse("$it must not read as charging", it in VehicleEnums.CHARGING_ACTIVE_STATES)
+        }
+        assertTrue(VehicleEnums.CHARGING_AC in VehicleEnums.CHARGING_ACTIVE_STATES)
+        assertTrue(VehicleEnums.CHARGING_DC in VehicleEnums.CHARGING_ACTIVE_STATES)
+        // Every named state must be offered in the picker, or a rule cannot select it.
+        val offered = VehicleEnums.CHARGING_STATUSES.map { it.value }.toSet()
+        assertTrue(VehicleEnums.CHARGING_ACTIVE_STATES.all { it in offered })
+    }
+
+    @Test
+    fun `the charge window ends are clock times`() {
+        // Minutes since midnight behind a 0…1439 slider is unanswerable at the wheel; the
+        // window's two ends are clock times and get the time control.
+        listOf(ConditionType.CHARGE_WINDOW_START, ConditionType.CHARGE_WINDOW_STOP).forEach {
+            assertEquals(ValueKind.TIME, it.spec.kind)
+            assertTrue("${it.name} must offer before/after", it.comparable)
+        }
+        // The write moves both ends at once — a half-set window is one nobody intended.
+        assertEquals(ValueKind.TIME_RANGE, ActionType.SET_CHARGE_WINDOW.spec.kind)
+    }
+
+    @Test
+    fun `the two cabin zones are separate entries`() {
+        // Adding a zone argument to the driver's target would have made every rule saved
+        // before it carry a zone it never chose.
+        assertFalse(
+            ActionType.SET_CABIN_TEMP.currentKey == ActionType.SET_PASSENGER_TEMP.currentKey
+        )
+        assertEquals(SnapshotKeys.KEY_PASSENGER_TEMP, ConditionType.PASSENGER_TEMP.snapshotKey)
+        assertEquals(
+            ActionType.SET_PASSENGER_TEMP.spec.min, ConditionType.PASSENGER_TEMP.spec.min
+        )
+        assertEquals(
+            ActionType.SET_PASSENGER_TEMP.spec.max, ConditionType.PASSENGER_TEMP.spec.max
+        )
+    }
+
+    @Test
+    fun `a settable climate switch is readable back`() {
+        // The editor opens a control on the value the car reports. A switch the catalogue can
+        // set but never read leaves the rule author guessing at the present state.
+        mapOf(
+            ActionType.SET_ECON to ConditionType.ECON_MODE,
+            ActionType.SET_FRONT_DEFROST to ConditionType.FRONT_DEFROST,
+            ActionType.SET_REAR_DEFROST to ConditionType.REAR_DEFROST,
+            ActionType.SET_PASSENGER_TEMP to ConditionType.PASSENGER_TEMP
+        ).forEach { (action, condition) ->
+            assertEquals(
+                "${action.name} must open on what ${condition.name} reads",
+                condition.snapshotKey, action.currentKey
+            )
+        }
+    }
+
+    @Test
     fun `les enumerations ont des options`() {
         // Une ENUM sans option produit une liste déroulante vide : l'utilisateur ne peut
         // rien choisir et la règle reste inutilisable.

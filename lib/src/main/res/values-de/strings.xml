@@ -149,4 +149,22 @@
     <string name="act_door_lock">Türverriegelung</string>
     <string name="act_delay">Warten</string>
     <string name="unit_second">s</string>
+    <string name="cond_charging_status">Ladezustand</string>
+    <string name="cond_charge_schedule">Ladezeitplan aktiv</string>
+    <string name="cond_charge_window_start">Ladebeginn um</string>
+    <string name="cond_charge_window_stop">Ladeende um</string>
+    <string name="cond_battery_preheat">Batterievorheizung aktiv</string>
+    <string name="cond_passenger_temp">Temperatur Beifahrer</string>
+    <string name="cond_econ">ECON-Modus aktiv</string>
+    <string name="cond_front_defrost">Frontscheibenheizung aktiv</string>
+    <string name="cond_rear_defrost">Heckscheibenheizung aktiv</string>
+    <string name="cond_front_door_open">Vordertür offen</string>
+    <string name="act_passenger_temp">Temperatur Beifahrer</string>
+    <string name="act_econ">ECON-Modus</string>
+    <string name="charging_unplugged">Nicht angeschlossen</string>
+    <string name="charging_ac">Laden (AC)</string>
+    <string name="charging_dc">Laden (DC)</string>
+    <string name="charging_plugged_idle">Angeschlossen, lädt nicht</string>
+    <string name="charging_done">Ladung abgeschlossen</string>
+    <string name="charging_fault">Ladefehler</string>
 </resources>

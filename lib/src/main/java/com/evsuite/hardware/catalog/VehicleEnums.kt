@@ -101,4 +101,43 @@ object VehicleEnums {
     /** Charge limit the vehicle accepts, in percent. */
     const val CHARGE_LIMIT_MIN = 40
     const val CHARGE_LIMIT_MAX = 100
+
+    /**
+     * The charging states the vendor service reports, as the car's own charging screen
+     * groups them.
+     *
+     * Only the states a rule can act on are named. The service answers others — bookkeeping
+     * values a driver has no rule for — and a condition comparing against one of those simply
+     * does not match, which is the honest outcome for a state the catalogue does not claim.
+     *
+     * [CHARGING_UNPLUGGED] is why this exists as a number rather than as the boolean
+     * [SnapshotKeys.KEY_CHARGING]: a cable plugged in with charging stopped is neither
+     * "charging" nor "unplugged", and the boolean has to pick one.
+     */
+    const val CHARGING_UNPLUGGED = 0
+    const val CHARGING_AC        = 1
+    const val CHARGING_DONE      = 2
+    const val CHARGING_FAULT     = 4
+    const val CHARGING_PLUGGED_IDLE = 7
+    const val CHARGING_DC        = 10
+
+    val CHARGING_STATUSES = listOf(
+        EnumOption(CHARGING_UNPLUGGED, R.string.charging_unplugged),
+        EnumOption(CHARGING_AC, R.string.charging_ac),
+        EnumOption(CHARGING_DC, R.string.charging_dc),
+        EnumOption(CHARGING_PLUGGED_IDLE, R.string.charging_plugged_idle),
+        EnumOption(CHARGING_DONE, R.string.charging_done),
+        EnumOption(CHARGING_FAULT, R.string.charging_fault)
+    )
+
+    /**
+     * The states in which current is actually flowing into the battery.
+     *
+     * What [SnapshotKeys.KEY_CHARGING] means, and the reason it is derived from this set
+     * rather than from `status != 0`: a cable plugged in with charging stopped
+     * ([CHARGING_PLUGGED_IDLE]), a finished charge ([CHARGING_DONE]) and a fault
+     * ([CHARGING_FAULT]) are all non-zero, and all three would make a "when charging" rule
+     * fire on a car that is not charging.
+     */
+    val CHARGING_ACTIVE_STATES = setOf(CHARGING_AC, CHARGING_DC)
 }
