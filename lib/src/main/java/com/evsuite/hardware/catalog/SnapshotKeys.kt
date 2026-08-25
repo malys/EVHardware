@@ -100,6 +100,27 @@ object SnapshotKeys {
     const val KEY_CHARGE_WINDOW_START = "chargeWindowStart"
     const val KEY_CHARGE_WINDOW_STOP  = "chargeWindowStop"
     const val KEY_BATTERY_PREHEAT  = "batteryPreheat"
+    /** Remaining range in kilometres, as the cluster shows it. */
+    const val KEY_RANGE_KM         = "rangeKm"
+    /**
+     * Each window's own position, 0–100 %.
+     *
+     * Alongside [KEY_WINDOW_PERCENT], not instead of it: the widest-open window is the one
+     * number a "close the windows" rule wants, and these four are what a rule about one
+     * window needs.
+     */
+    const val KEY_WINDOW_DRIVER     = "windowDriverPct"
+    const val KEY_WINDOW_PASSENGER  = "windowPassengerPct"
+    const val KEY_WINDOW_REAR_LEFT  = "windowRearLeftPct"
+    const val KEY_WINDOW_REAR_RIGHT = "windowRearRightPct"
+
+    // ── Head-unit app services (bind, not firmware routing) ──────────────────
+    // The navigation adapter and the weather service belong to the head unit's own apps, not
+    // to the vehicle SDK, so nothing routes them per generation: they answer or they do not.
+    /** Odometer in kilometres. */
+    const val KEY_ODOMETER_KM      = "odometerKm"
+    /** The weather service's own description of the conditions where the car is. */
+    const val KEY_WEATHER_TEXT     = "weatherText"
 
     // ── Platform context (no vehicle involved) ───────────────────────────────
     // Read from Android, not from the car, so they carry no firmware annotation. Absent

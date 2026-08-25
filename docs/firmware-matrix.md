@@ -19,6 +19,8 @@
 | IN_CALL | — | — | — | — | — | — |
 | DRIVE_DURATION | — | — | — | — | — | — |
 | RANDOM_CHANCE | — | — | — | — | — | — |
+| WEATHER_NOW | — | — | — | — | — | — |
+| ODOMETER | — | — | — | — | — | — |
 | OUTSIDE_TEMP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IGNITION_STATE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IN_PARK | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -33,6 +35,7 @@
 | CHARGE_SCHEDULE_ENABLED | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | CHARGE_WINDOW_START | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | CHARGE_WINDOW_STOP | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| RANGE_ESTIMATE | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | BATTERY_PREHEAT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | CLIMATE_ON | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | AC_ON | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -46,6 +49,10 @@
 | REAR_DEFROST | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | WINDOW_OPEN | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | WINDOW_POSITION | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| WINDOW_DRIVER | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| WINDOW_PASSENGER | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| WINDOW_REAR_LEFT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| WINDOW_REAR_RIGHT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | DOORS_LOCKED | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | FRONT_DOOR_OPEN | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | SEAT_HEAT_LEFT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -104,6 +111,10 @@
 | SET_FRONT_DEFROST | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_REAR_DEFROST | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_WINDOWS | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_WINDOW_DRIVER | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_WINDOW_PASSENGER | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_WINDOW_REAR_LEFT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_WINDOW_REAR_RIGHT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_DOOR_LOCK | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_CHARGE_LIMIT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_CHARGING_ENABLED | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |

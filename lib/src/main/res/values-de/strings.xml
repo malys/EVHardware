@@ -182,4 +182,17 @@
     <string name="media_previous">Vorheriger Titel</string>
     <string name="act_set_bluetooth">Bluetooth</string>
     <string name="act_set_wifi">WLAN</string>
+    <string name="unit_km">km</string>
+    <string name="cond_range">Restreichweite</string>
+    <string name="cond_window_driver">Fensteröffnung Fahrer</string>
+    <string name="cond_window_passenger">Fensteröffnung Beifahrer</string>
+    <string name="cond_window_rear_left">Fensteröffnung hinten links</string>
+    <string name="cond_window_rear_right">Fensteröffnung hinten rechts</string>
+    <string name="act_window_driver">Fenster Fahrer</string>
+    <string name="act_window_passenger">Fenster Beifahrer</string>
+    <string name="act_window_rear_left">Fenster hinten links</string>
+    <string name="act_window_rear_right">Fenster hinten rechts</string>
+    <string name="cond_odometer">Kilometerstand</string>
+    <string name="cond_weather">Wetter</string>
+    <string name="cond_weather_hint">z. B. Regen</string>
 </resources>

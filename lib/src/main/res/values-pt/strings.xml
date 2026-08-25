@@ -182,4 +182,17 @@
     <string name="media_previous">Faixa anterior</string>
     <string name="act_set_bluetooth">Bluetooth</string>
     <string name="act_set_wifi">Wi-Fi</string>
+    <string name="unit_km">km</string>
+    <string name="cond_range">Autonomia restante</string>
+    <string name="cond_window_driver">Abertura do vidro do condutor</string>
+    <string name="cond_window_passenger">Abertura do vidro do passageiro</string>
+    <string name="cond_window_rear_left">Abertura do vidro traseiro esquerdo</string>
+    <string name="cond_window_rear_right">Abertura do vidro traseiro direito</string>
+    <string name="act_window_driver">Vidro do condutor</string>
+    <string name="act_window_passenger">Vidro do passageiro</string>
+    <string name="act_window_rear_left">Vidro traseiro esquerdo</string>
+    <string name="act_window_rear_right">Vidro traseiro direito</string>
+    <string name="cond_odometer">Conta-quilómetros</string>
+    <string name="cond_weather">Meteorologia</string>
+    <string name="cond_weather_hint">p. ex. chuva</string>
 </resources>

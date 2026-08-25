@@ -35,7 +35,12 @@ class FirmwareSupportTest {
         ConditionType.WIFI_SSID,
         ConditionType.IN_CALL,
         ConditionType.DRIVE_DURATION,
-        ConditionType.RANDOM_CHANCE
+        ConditionType.RANDOM_CHANCE,
+        // Services des applications du poste (adaptateur de navigation, météo) : ce ne sont
+        // pas des services du SDK véhicule, rien ne les route par génération. Ils répondent
+        // ou non, comme le SMS.
+        ConditionType.ODOMETER,
+        ConditionType.WEATHER_NOW
     )
     private val firmwareIndependentActions = setOf(
         ActionType.LAUNCH_APP,

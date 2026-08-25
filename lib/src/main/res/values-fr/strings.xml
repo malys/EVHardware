@@ -204,4 +204,17 @@
     <string name="media_previous">Piste précédente</string>
     <string name="act_set_bluetooth">Bluetooth</string>
     <string name="act_set_wifi">Wi-Fi</string>
+    <string name="unit_km">km</string>
+    <string name="cond_range">Autonomie restante</string>
+    <string name="cond_window_driver">Ouverture vitre conducteur</string>
+    <string name="cond_window_passenger">Ouverture vitre passager</string>
+    <string name="cond_window_rear_left">Ouverture vitre arrière gauche</string>
+    <string name="cond_window_rear_right">Ouverture vitre arrière droite</string>
+    <string name="act_window_driver">Vitre conducteur</string>
+    <string name="act_window_passenger">Vitre passager</string>
+    <string name="act_window_rear_left">Vitre arrière gauche</string>
+    <string name="act_window_rear_right">Vitre arrière droite</string>
+    <string name="cond_odometer">Compteur kilométrique</string>
+    <string name="cond_weather">Météo</string>
+    <string name="cond_weather_hint">ex. pluie</string>
 </resources>

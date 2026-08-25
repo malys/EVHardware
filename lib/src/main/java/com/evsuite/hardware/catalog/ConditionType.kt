@@ -180,6 +180,25 @@ enum class ConditionType(
         SnapshotKeys.KEY_OUTSIDE_TEMP, comparable = true
     ),
 
+    /**
+     * What the head unit's weather service says the sky is doing where the car is.
+     *
+     * Matched as a fragment, not as the whole phrase: the service answers "Light rain",
+     * "Heavy rain" and "Rain showers", and a rule about rain wants all three. So "rain" is
+     * the useful thing to type, and it is compared without regard to case.
+     *
+     * The phrase comes back in the head unit's language, so a rule written on a French car
+     * asks about "pluie". That is the provider's wording, not a vocabulary this library owns,
+     * which is why the value is free text rather than a list to choose from.
+     *
+     * Like [ODOMETER], no firmware annotation: it is an app service, available or not.
+     */
+    WEATHER_NOW(
+        R.string.cond_weather, ConditionGroup.ENVIRONMENT,
+        ValueSpec(ValueKind.TEXT, hintRes = R.string.cond_weather_hint),
+        SnapshotKeys.KEY_WEATHER_TEXT
+    ),
+
     // ── Driving ──────────────────────────────────────────────────────────────
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
     IGNITION_STATE(
@@ -209,6 +228,17 @@ enum class ConditionType(
         R.string.cond_regen, ConditionGroup.DRIVING,
         ValueSpec(ValueKind.ENUM, options = VehicleEnums.REGEN_LEVELS),
         SnapshotKeys.KEY_REGEN_LEVEL
+    ),
+    /**
+     * The odometer, in kilometres.
+     *
+     * No firmware annotation, and it is not an oversight: this comes from the head unit's
+     * navigation adapter, an app service rather than part of the vehicle SDK, so nothing
+     * routes it per generation — it answers or it does not, exactly like the message action.
+     */
+    ODOMETER(
+        R.string.cond_odometer, ConditionGroup.DRIVING,
+        number(0, 500_000, R.string.unit_km), SnapshotKeys.KEY_ODOMETER_KM, comparable = true
     ),
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
     ENERGY_SAVING(
@@ -269,6 +299,18 @@ enum class ConditionType(
     CHARGE_WINDOW_STOP(
         R.string.cond_charge_window_stop, ConditionGroup.ENERGY,
         ValueSpec(ValueKind.TIME), SnapshotKeys.KEY_CHARGE_WINDOW_STOP, comparable = true
+    ),
+    /**
+     * Remaining range, in kilometres.
+     *
+     * The cluster's own number rather than a percentage turned into distance: a rule that
+     * diverts to a charger is about distance, and battery percentage does not answer it on a
+     * cold motorway.
+     */
+    @SupportedOn(SWI68, SWI165)
+    RANGE_ESTIMATE(
+        R.string.cond_range, ConditionGroup.ENERGY,
+        number(0, 600, R.string.unit_km), SnapshotKeys.KEY_RANGE_KM, comparable = true
     ),
     @SupportedOn(SWI68, SWI165)
     BATTERY_PREHEAT(
@@ -357,6 +399,37 @@ enum class ConditionType(
         R.string.cond_window_position, ConditionGroup.CLIMATE,
         number(0, 100, R.string.unit_percent),
         SnapshotKeys.KEY_WINDOW_PERCENT, comparable = true
+    ),
+    /**
+     * One window's own opening, where [WINDOW_POSITION] is the widest of the four.
+     *
+     * Four entries rather than one with a chooser: the same shape [SEAT_HEAT_LEFT] and
+     * [SEAT_HEAT_RIGHT] already use, and it keeps the editor free of a control that would
+     * exist for this one family.
+     */
+    @SupportedOn(SWI68, SWI165)
+    WINDOW_DRIVER(
+        R.string.cond_window_driver, ConditionGroup.CLIMATE,
+        number(0, 100, R.string.unit_percent),
+        SnapshotKeys.KEY_WINDOW_DRIVER, comparable = true
+    ),
+    @SupportedOn(SWI68, SWI165)
+    WINDOW_PASSENGER(
+        R.string.cond_window_passenger, ConditionGroup.CLIMATE,
+        number(0, 100, R.string.unit_percent),
+        SnapshotKeys.KEY_WINDOW_PASSENGER, comparable = true
+    ),
+    @SupportedOn(SWI68, SWI165)
+    WINDOW_REAR_LEFT(
+        R.string.cond_window_rear_left, ConditionGroup.CLIMATE,
+        number(0, 100, R.string.unit_percent),
+        SnapshotKeys.KEY_WINDOW_REAR_LEFT, comparable = true
+    ),
+    @SupportedOn(SWI68, SWI165)
+    WINDOW_REAR_RIGHT(
+        R.string.cond_window_rear_right, ConditionGroup.CLIMATE,
+        number(0, 100, R.string.unit_percent),
+        SnapshotKeys.KEY_WINDOW_REAR_RIGHT, comparable = true
     ),
     @SupportedOn(SWI68, SWI165)
     DOORS_LOCKED(

@@ -140,6 +140,9 @@ object SaicAidl {
                     is Boolean -> data.writeInt(if (arg) 1 else 0)
                     is Float -> data.writeFloat(arg)
                     is String -> data.writeString(arg)
+                    is Double -> data.writeDouble(arg)
+                    // A callback binder, for the one service here that answers asynchronously.
+                    is IBinder -> data.writeStrongBinder(arg)
                     else -> error("unsupported AIDL argument: $arg")
                 }
             }

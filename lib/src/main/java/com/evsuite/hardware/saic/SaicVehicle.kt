@@ -167,6 +167,7 @@ object SaicCharging {
     private const val DESCRIPTOR = "com.saicmotor.sdk.vehiclesettings.IVehicleChargingService"
 
     private const val TX_GET_SOC = 3
+    private const val TX_GET_ENDURANCE_KM = 4
     private const val TX_GET_CHARGING_STATUS = 9
     private const val TX_GET_CLOSE_SOC = 13
     private const val TX_SET_CLOSE_SOC = 14
@@ -192,6 +193,15 @@ object SaicCharging {
     /** State of charge in percent. */
     fun stateOfChargePercent(): Float? =
         SaicAidl.callFloat(binder(), DESCRIPTOR, TX_GET_SOC)?.takeIf { it >= 0f }
+
+    /**
+     * Remaining range in kilometres — the number on the car's own cluster, not a calculation.
+     *
+     * The service answers -1 for a range it holds no value for, and clamps its own signal
+     * against a maximum before answering, so an implausible reading never reaches here as a
+     * number. `read` already drops the negative.
+     */
+    fun rangeKm(): Int? = read(TX_GET_ENDURANCE_KM)
 
     fun chargingStatus(): Int? = read(TX_GET_CHARGING_STATUS)
 
@@ -284,14 +294,23 @@ object SaicVehicleControl {
     const val WINDOW_CLOSED = 0
     const val WINDOW_OPEN = 100
 
-    private val WINDOW_READS = listOf(
-        TX_GET_DRIVER_WINDOW, TX_GET_PASSENGER_WINDOW,
-        TX_GET_LEFT_REAR_WINDOW, TX_GET_RIGHT_REAR_WINDOW
-    )
-    private val WINDOW_WRITES = listOf(
-        TX_SET_DRIVER_WINDOW, TX_SET_PASSENGER_WINDOW,
-        TX_SET_LEFT_REAR_WINDOW, TX_SET_RIGHT_REAR_WINDOW
-    )
+    /**
+     * The four windows, each with the pair of codes that reads and moves it.
+     *
+     * `setAllWindows` was here first and stays: closing the glass is one gesture, and asking
+     * a caller to make four calls for it would let three succeed and one be forgotten. This
+     * is the other half — a rule that vents the driver's window alone cannot be written with
+     * an all-or-nothing call.
+     */
+    enum class Window(internal val readCode: Int, internal val writeCode: Int) {
+        DRIVER(TX_GET_DRIVER_WINDOW, TX_SET_DRIVER_WINDOW),
+        PASSENGER(TX_GET_PASSENGER_WINDOW, TX_SET_PASSENGER_WINDOW),
+        REAR_LEFT(TX_GET_LEFT_REAR_WINDOW, TX_SET_LEFT_REAR_WINDOW),
+        REAR_RIGHT(TX_GET_RIGHT_REAR_WINDOW, TX_SET_RIGHT_REAR_WINDOW)
+    }
+
+    private val WINDOW_READS = Window.entries.map { it.readCode }
+    private val WINDOW_WRITES = Window.entries.map { it.writeCode }
 
     val isAvailable: Boolean get() = binder() != null
 
@@ -307,6 +326,22 @@ object SaicVehicleControl {
             ?.max()
             ?.toInt()
             ?.takeIf { it >= 0 }
+
+    /**
+     * One window's position in percent, 0 closed to 100 open. Null when it does not answer.
+     */
+    fun windowPercent(window: Window): Int? =
+        SaicAidl.callFloat(binder(), DESCRIPTOR, window.readCode)?.toInt()?.takeIf { it >= 0 }
+
+    /**
+     * Moves one window. Same absence of a standstill gate as [setAllWindows], and for the
+     * same reason: the vehicle applies its own speed limit to the glass.
+     */
+    fun setWindow(window: Window, percent: Int): Boolean =
+        SaicAidl.callVoid(
+            binder(), DESCRIPTOR, window.writeCode,
+            percent.coerceIn(WINDOW_CLOSED, WINDOW_OPEN).toFloat()
+        )
 
     /** Each window individually, for the diagnostic — this is what confirms the scale. */
     fun windowPercents(): List<Float?> =

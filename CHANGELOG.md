@@ -4,6 +4,31 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-08-25
+
+### Added
+
+- Per-window control. `SaicVehicleControl.Window` names the four windows and
+  `windowPercent` / `setWindow` address one at a time, alongside the group read and
+  `setAllWindows` — which stay, because closing the glass is one gesture that must not be
+  able to leave three shut and one open. Catalogue: `ConditionType.WINDOW_DRIVER`,
+  `WINDOW_PASSENGER`, `WINDOW_REAR_LEFT`, `WINDOW_REAR_RIGHT` and the four matching actions.
+- `SaicCharging.rangeKm` and `ConditionType.RANGE_ESTIMATE` — the cluster's own remaining
+  range. A rule that diverts to a charger is about distance, which a battery percentage does
+  not answer on a cold motorway.
+- `SaicNav`, the head unit's navigation adapter, and `ConditionType.ODOMETER`. Trip distance
+  is deliberately absent: remaining distance and time only arrive as callbacks into that
+  service from the running navigation app, so reading them is a subscription, not a getter.
+- `SaicWeather` and `ConditionType.WEATHER_NOW` — the weather service the head unit's own map
+  stack queries, asked for the car's position. The only asynchronous service here: the answer
+  arrives on a callback binder and is awaited with a bounded wait, so a slow query comes back
+  unreadable instead of holding a rule cycle open.
+- `SaicAidl` now marshals `Double` and `IBinder` arguments, for that callback.
+
+Neither `ODOMETER` nor `WEATHER_NOW` carries `@SupportedOn`: they come from the head unit's
+own applications rather than from the vehicle SDK, so nothing routes them per generation —
+they answer or they do not, the same as the message action.
+
 ## [1.4.0] - 2026-08-25
 
 ### Added

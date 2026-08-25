@@ -251,6 +251,47 @@ class CatalogConsistencyTest {
     }
 
     @Test
+    fun `each window is readable and settable, and the group read stays`() {
+        // The all-windows action is not replaced by the four: closing the glass is one
+        // gesture, and splitting it would let three succeed and one be forgotten.
+        assertNotNull(ActionType.SET_WINDOWS.bridgeAction)
+        assertEquals(SnapshotKeys.KEY_WINDOW_PERCENT, ConditionType.WINDOW_POSITION.snapshotKey)
+
+        mapOf(
+            ActionType.SET_WINDOW_DRIVER to ConditionType.WINDOW_DRIVER,
+            ActionType.SET_WINDOW_PASSENGER to ConditionType.WINDOW_PASSENGER,
+            ActionType.SET_WINDOW_REAR_LEFT to ConditionType.WINDOW_REAR_LEFT,
+            ActionType.SET_WINDOW_REAR_RIGHT to ConditionType.WINDOW_REAR_RIGHT
+        ).forEach { (action, condition) ->
+            assertEquals(condition.snapshotKey, action.currentKey)
+            assertFalse("${action.name} is not standstill-gated: the car limits the glass", action.gated)
+            assertEquals(0, action.spec.min)
+            assertEquals(100, action.spec.max)
+        }
+
+        // Four windows, four distinct keys — a copy-paste that reused one would make two
+        // windows report each other's position.
+        val keys = listOf(
+            ConditionType.WINDOW_DRIVER, ConditionType.WINDOW_PASSENGER,
+            ConditionType.WINDOW_REAR_LEFT, ConditionType.WINDOW_REAR_RIGHT
+        ).map { it.snapshotKey }
+        assertEquals(4, keys.toSet().size)
+        assertFalse(SnapshotKeys.KEY_WINDOW_PERCENT in keys)
+    }
+
+    @Test
+    fun `the head-unit app services are read-only and unrouted`() {
+        // They belong to the head unit's own apps, not to the vehicle SDK, so there is no
+        // generation to route them by and nothing to write back.
+        listOf(ConditionType.ODOMETER, ConditionType.WEATHER_NOW).forEach {
+            assertNotNull("${it.name} must read a snapshot key", it.snapshotKey)
+        }
+        assertEquals(ValueKind.TEXT, ConditionType.WEATHER_NOW.spec.kind)
+        assertTrue("the weather value needs an example", ConditionType.WEATHER_NOW.spec.hintRes != 0)
+        assertTrue("a rule asks for more or fewer kilometres", ConditionType.ODOMETER.comparable)
+    }
+
+    @Test
     fun `les enumerations ont des options`() {
         // Une ENUM sans option produit une liste déroulante vide : l'utilisateur ne peut
         // rien choisir et la règle reste inutilisable.

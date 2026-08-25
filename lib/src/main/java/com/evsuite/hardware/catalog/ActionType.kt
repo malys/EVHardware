@@ -222,6 +222,38 @@ enum class ActionType(
         number(0, 100, R.string.unit_percent), "SET_WINDOWS",
         currentKey = SnapshotKeys.KEY_WINDOW_PERCENT
     ),
+    /**
+     * One window, 0 closed to 100 open — the counterpart of [SET_WINDOWS].
+     *
+     * Both are worth having. Closing the glass is one gesture and belongs in one action that
+     * cannot leave three shut and one open; venting the driver's window alone cannot be
+     * written with an all-or-nothing call. Ungated for the same reason as [SET_WINDOWS]: the
+     * vehicle applies its own speed limit to the glass.
+     */
+    @SupportedOn(SWI68, SWI165)
+    SET_WINDOW_DRIVER(
+        R.string.act_window_driver, ActionGroup.CLIMATE,
+        number(0, 100, R.string.unit_percent), "SET_WINDOW_DRIVER",
+        currentKey = SnapshotKeys.KEY_WINDOW_DRIVER
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_WINDOW_PASSENGER(
+        R.string.act_window_passenger, ActionGroup.CLIMATE,
+        number(0, 100, R.string.unit_percent), "SET_WINDOW_PASSENGER",
+        currentKey = SnapshotKeys.KEY_WINDOW_PASSENGER
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_WINDOW_REAR_LEFT(
+        R.string.act_window_rear_left, ActionGroup.CLIMATE,
+        number(0, 100, R.string.unit_percent), "SET_WINDOW_REAR_LEFT",
+        currentKey = SnapshotKeys.KEY_WINDOW_REAR_LEFT
+    ),
+    @SupportedOn(SWI68, SWI165)
+    SET_WINDOW_REAR_RIGHT(
+        R.string.act_window_rear_right, ActionGroup.CLIMATE,
+        number(0, 100, R.string.unit_percent), "SET_WINDOW_REAR_RIGHT",
+        currentKey = SnapshotKeys.KEY_WINDOW_REAR_RIGHT
+    ),
     @SupportedOn(SWI68, SWI165)
     SET_DOOR_LOCK(
         R.string.act_door_lock, ActionGroup.CLIMATE,
