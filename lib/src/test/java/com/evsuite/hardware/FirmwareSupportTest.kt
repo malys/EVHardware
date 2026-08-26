@@ -40,10 +40,7 @@ class FirmwareSupportTest {
         // pas des services du SDK véhicule, rien ne les route par génération. Ils répondent
         // ou non, comme le SMS.
         ConditionType.ODOMETER,
-        ConditionType.WEATHER_NOW,
-        ConditionType.WEATHER_TOMORROW,
-        ConditionType.TEMP_MAX_TODAY,
-        ConditionType.TEMP_MIN_TOMORROW
+        ConditionType.WEATHER_NOW
     )
     private val firmwareIndependentActions = setOf(
         ActionType.LAUNCH_APP,

@@ -252,16 +252,27 @@ object SaicCharging {
 /**
  * Windows and door locks, through the same hub as climate and charging.
  *
- * Positions are a **percentage, 0 closed to 100 open**. The scale is not documented in the
- * SDK, but the launcher writes `TAILGATE_LOCK_ON = 100.0f` on the same float signal family
- * and the service rounds rear-door status to two decimals of a 0–100 value
- * (`VehicleControlBinder.isInvalidRearDoorSts`). What makes it safe to act on: the service
- * validates every value against its own maximum and **silently drops anything out of
- * range** — a wrong scale means the window does not move, not that it moves unexpectedly.
+ * **Reading and writing the glass are two different scales, and this is the whole story of
+ * the feature.** The service validates every value against a maximum of its own and silently
+ * drops anything above it, and the two maxima are not the same:
  *
- * No standstill gate here. The vehicle enforces its own speed limit on glass and locks, and
- * duplicating it in the app would refuse the legitimate case — closing the windows when it
- * starts raining on the motorway. A write the car declines is reported, not hidden.
+ *   • reading — `max_vehicle_window_get = 100`: a position in percent, 0 closed to 100 open.
+ *   • writing — `max_vehicle_window_set = 7`: a three-bit command, not a position. A write
+ *     of 100 is above the maximum, so `VehicleControlBinder.setDriveWindow` drops it without
+ *     touching the property and without answering anything. The binder call still succeeds:
+ *     the method returns void, so "accepted" and "ignored" look identical from here.
+ *
+ * That is why glass writes scaled as a percentage reported success and moved nothing. The
+ * same shape holds elsewhere in the service — the tailgate is `get = 100`, `set = 1` — so a
+ * status range and a command range simply are not the same thing on this interface.
+ *
+ * **What the seven commands mean is not known.** No head-unit application writes this
+ * property: the settings, HVAC, launcher, system UI and telematics APKs all carry the SDK
+ * and none of them calls the setter, so the firmware offers no example to read the values
+ * off. Until one is identified, the command is passed through as the caller gave it and
+ * anything outside 0–7 is refused here rather than sent to be dropped — a refusal in the
+ * history is the honest report, and the value that moves the glass is then one experiment
+ * away rather than hidden behind a scale that cannot work.
  *
  * The electric tailgate is deliberately absent: the launcher defines OPEN and CLOSE as the
  * same value (1.0f), so it is a pulse whose direction depends on state this cannot read.
@@ -291,8 +302,14 @@ object SaicVehicleControl {
     private const val DOOR_LOCKED = 1
     private const val DOOR_UNLOCKED = 2
 
-    const val WINDOW_CLOSED = 0
-    const val WINDOW_OPEN = 100
+    /** Position read, in percent — `max_vehicle_window_get` in the service's own resources. */
+    const val WINDOW_POSITION_MAX = 100
+
+    /**
+     * The largest command the service will pass on — `max_vehicle_window_set`. Anything
+     * above it is dropped there in silence, which is why it is enforced here instead.
+     */
+    const val WINDOW_COMMAND_MAX = 7
 
     /**
      * The four windows, each with the pair of codes that reads and moves it.
@@ -328,42 +345,35 @@ object SaicVehicleControl {
             ?.takeIf { it >= 0 }
 
     /**
-     * The least-open window, in percent — the one a write to *all* of them is measured against.
-     *
-     * Moving every window to 40 % opens whichever is currently below 40, so the narrowest is
-     * what decides whether the write opens glass at all. [widestWindowPercent] answers the
-     * opposite question, "is anything open", and both are needed.
-     */
-    fun narrowestWindowPercent(): Int? =
-        WINDOW_READS.mapNotNull { code -> SaicAidl.callFloat(binder(), DESCRIPTOR, code) }
-            .takeIf { it.size == WINDOW_READS.size }
-            ?.min()
-            ?.toInt()
-            ?.takeIf { it >= 0 }
-
-    /**
      * One window's position in percent, 0 closed to 100 open. Null when it does not answer.
      */
     fun windowPercent(window: Window): Int? =
         SaicAidl.callFloat(binder(), DESCRIPTOR, window.readCode)?.toInt()?.takeIf { it >= 0 }
 
     /**
-     * Moves one window. Same absence of a standstill gate as [setAllWindows], and for the
-     * same reason: the vehicle applies its own speed limit to the glass.
+     * Sends one glass command to one window.
+     *
+     * [command] is a command in `0..`[WINDOW_COMMAND_MAX], **not** a position — see the class
+     * KDoc. A value outside that range is refused here and returns false: the service would
+     * accept the call and drop the value, which is indistinguishable from having moved.
      */
-    fun setWindow(window: Window, percent: Int): Boolean =
-        SaicAidl.callVoid(
-            binder(), DESCRIPTOR, window.writeCode,
-            percent.coerceIn(WINDOW_CLOSED, WINDOW_OPEN).toFloat()
-        )
+    fun setWindow(window: Window, command: Int): Boolean {
+        if (command !in 0..WINDOW_COMMAND_MAX) return false
+        return SaicAidl.callVoid(binder(), DESCRIPTOR, window.writeCode, command.toFloat())
+    }
 
     /** Each window individually, for the diagnostic — this is what confirms the scale. */
     fun windowPercents(): List<Float?> =
         WINDOW_READS.map { code -> SaicAidl.callFloat(binder(), DESCRIPTOR, code) }
 
-    /** Moves all four windows. @return true when every one of them was accepted. */
-    fun setAllWindows(percent: Int): Boolean {
-        val value = percent.coerceIn(WINDOW_CLOSED, WINDOW_OPEN).toFloat()
+    /**
+     * Sends the same glass command to all four windows.
+     *
+     * @return true when every one of them was accepted.
+     */
+    fun setAllWindows(command: Int): Boolean {
+        if (command !in 0..WINDOW_COMMAND_MAX) return false
+        val value = command.toFloat()
         // Every window attempted even if one refuses: three closed beats none closed, and
         // the caller still learns that it was not complete.
         return WINDOW_WRITES.map { code -> SaicAidl.callVoid(binder(), DESCRIPTOR, code, value) }
@@ -371,9 +381,19 @@ object SaicVehicleControl {
     }
 
     fun doorsLocked(): Boolean? =
-        SaicAidl.callInt(binder(), DESCRIPTOR, TX_GET_DOOR_LOCK)
+        doorLockState()
             ?.takeIf { it == DOOR_LOCKED || it == DOOR_UNLOCKED }
             ?.let { it == DOOR_LOCKED }
+
+    /**
+     * The raw lock state, for the diagnostic only.
+     *
+     * The service answers a status in `0..7` (`max_vehicle_lock_get`) of which only 1 and 2
+     * are named, so [doorsLocked] discards everything else. Reporting "unreadable" without
+     * saying what actually came back is what makes that a dead end: the number is what tells
+     * whether the state is simply unnamed here or the read is not answering at all.
+     */
+    fun doorLockState(): Int? = SaicAidl.callInt(binder(), DESCRIPTOR, TX_GET_DOOR_LOCK)
 
     fun setDoorsLocked(locked: Boolean): Boolean =
         SaicAidl.callVoid(

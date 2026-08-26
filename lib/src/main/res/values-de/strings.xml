@@ -13,6 +13,7 @@
     <string name="unit_celsius">°C</string>
     <string name="unit_kmh">km/h</string>
     <string name="unit_percent">%</string>
+    <string name="unit_command">Bef.</string>
     <string name="drive_eco">Eco</string>
     <string name="drive_normal">Normal</string>
     <string name="drive_sport">Sport</string>
@@ -195,7 +196,4 @@
     <string name="cond_odometer">Kilometerstand</string>
     <string name="cond_weather">Wetter</string>
     <string name="cond_weather_hint">z. B. Regen</string>
-    <string name="cond_weather_tomorrow">Wetter morgen</string>
-    <string name="cond_temp_max_today">Höchstwert heute</string>
-    <string name="cond_temp_min_tomorrow">Tiefstwert morgen</string>
 </resources>

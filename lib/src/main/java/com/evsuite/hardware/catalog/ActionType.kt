@@ -12,6 +12,7 @@ import com.evsuite.hardware.FirmwareGen.SWI165
 import com.evsuite.hardware.FirmwareGen.SWI68
 import com.evsuite.hardware.FirmwareGen.SWI69
 import com.evsuite.hardware.catalog.ValueSpec.Companion.number
+import com.evsuite.hardware.saic.SaicVehicleControl.WINDOW_COMMAND_MAX
 
 /** Grouping in the action picker. */
 enum class ActionGroup(@StringRes val labelRes: Int) {
@@ -47,12 +48,14 @@ enum class ActionGroup(@StringRes val labelRes: Int) {
  * confirmed, so writing them would have been a guess. The vendor calls
  * are the ones the car's own HVAC and charging screens make.
  *
- * Window and door-lock writes go through `vehiclecontrol` on the same hub. The glass is
- * gated in one direction only ([gatedWhenOpening]): closing the windows is the case those
- * actions exist for and must not be refused for moving, while opening them at speed is a
- * hazard and takes the standstill gate like any other write. The electric tailgate stays
- * out — the launcher defines its OPEN and CLOSE as the same value, so it is a pulse whose
- * direction depends on state this cannot read.
+ * Window and door-lock writes go through `vehiclecontrol` on the same hub. The glass carries
+ * a **command** in 0..7, not a position: the service reads back a percentage but accepts
+ * nothing above 7 on the way in, and drops what it does not accept without saying so (see
+ * `SaicVehicleControl`). Which command moves which way is not established by anything on the
+ * firmware, so every glass write takes the standstill gate — an unknown direction cannot be
+ * the one that is safe at speed. The electric tailgate stays out — the launcher defines its
+ * OPEN and CLOSE as the same value, so it is a pulse whose direction depends on state this
+ * cannot read.
  *
  * Also deliberately absent:
  *   • `VEHICLE_POWER_OFF` — cutting the vehicle must stay an explicit human gesture.
@@ -74,21 +77,7 @@ enum class ActionType(
      * that starts where the screen already is makes the rule an edit of the present state,
      * which is what the user is thinking about. Null where nothing reads it back.
      */
-    val currentKey: String? = null,
-    /**
-     * Gated only in the direction that opens something.
-     *
-     * The glass is the one family where the two directions are not the same act. Closing a
-     * window is what a rule about rain on the motorway exists to do, and refusing it at speed
-     * would refuse exactly the case it was written for. Opening one at speed is a hazard, and
-     * that half goes through the standstill gate like any other write.
-     *
-     * [gated] stays false for these: the gate does not apply to the action, it applies to the
-     * value. The executor compares the target with what the car reports and gates the write
-     * only when it would open glass — and gates it too when the current position cannot be
-     * read, because an unknown direction is not a safe one.
-     */
-    val gatedWhenOpening: Boolean = false
+    val currentKey: String? = null
 ) {
 
     // ── Profile ──────────────────────────────────────────────────────────────
@@ -224,59 +213,59 @@ enum class ActionType(
     ),
 
     /**
-     * Moves all four windows to a position, 0 closed to 100 open.
+     * Sends one glass command to all four windows.
      *
-     * Gated in one direction only — see [gatedWhenOpening]. Closing is the case the action
-     * exists for: a rule shutting the windows when it starts raining on the motorway must not
-     * be refused for moving. Opening glass at speed is a different act and takes the gate.
+     * **The value is a command in 0..7, not a position.** The service accepts nothing above 7
+     * and drops what it will not accept in silence, so the percentage this used to carry was
+     * discarded on every write above 7 while the history said the action had been applied.
+     * The reading stays a percentage — [SnapshotKeys.KEY_WINDOW_PERCENT] is what the car
+     * reports back — which is what makes a command identifiable: send one, read the position.
      *
-     * Which direction a write is depends on the *least*-open window, not the widest: moving
-     * every window to 40 % opens whichever of them sits below 40.
-     *
-     * A write the car itself declines is reported in the history rather than hidden.
+     * Which command opens and which closes is not written down anywhere on the firmware and
+     * no head-unit application sends one, so the whole action is standstill-gated: a write
+     * whose direction is unknown is not a write to allow at speed.
      */
     @SupportedOn(SWI68, SWI165)
     SET_WINDOWS(
         R.string.act_windows, ActionGroup.CLIMATE,
-        number(0, 100, R.string.unit_percent), "SET_WINDOWS",
-        currentKey = SnapshotKeys.KEY_WINDOW_PERCENT,
-        gatedWhenOpening = true
+        number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOWS",
+        currentKey = null,
+        gated = true
     ),
     /**
-     * One window, 0 closed to 100 open — the counterpart of [SET_WINDOWS].
+     * One window's glass command — the counterpart of [SET_WINDOWS], same 0..7 scale.
      *
-     * Both are worth having. Closing the glass is one gesture and belongs in one action that
-     * cannot leave three shut and one open; venting the driver's window alone cannot be
-     * written with an all-or-nothing call. Gated in the opening direction like [SET_WINDOWS],
-     * and against this window's own position rather than the set's.
+     * Both are worth having. Commanding the glass as one gesture belongs in one action that
+     * cannot leave three answered and one forgotten; addressing the driver's window alone
+     * cannot be written with an all-or-nothing call.
      */
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_DRIVER(
         R.string.act_window_driver, ActionGroup.CLIMATE,
-        number(0, 100, R.string.unit_percent), "SET_WINDOW_DRIVER",
-        currentKey = SnapshotKeys.KEY_WINDOW_DRIVER,
-        gatedWhenOpening = true
+        number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOW_DRIVER",
+        currentKey = null,
+        gated = true
     ),
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_PASSENGER(
         R.string.act_window_passenger, ActionGroup.CLIMATE,
-        number(0, 100, R.string.unit_percent), "SET_WINDOW_PASSENGER",
-        currentKey = SnapshotKeys.KEY_WINDOW_PASSENGER,
-        gatedWhenOpening = true
+        number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOW_PASSENGER",
+        currentKey = null,
+        gated = true
     ),
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_REAR_LEFT(
         R.string.act_window_rear_left, ActionGroup.CLIMATE,
-        number(0, 100, R.string.unit_percent), "SET_WINDOW_REAR_LEFT",
-        currentKey = SnapshotKeys.KEY_WINDOW_REAR_LEFT,
-        gatedWhenOpening = true
+        number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOW_REAR_LEFT",
+        currentKey = null,
+        gated = true
     ),
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_REAR_RIGHT(
         R.string.act_window_rear_right, ActionGroup.CLIMATE,
-        number(0, 100, R.string.unit_percent), "SET_WINDOW_REAR_RIGHT",
-        currentKey = SnapshotKeys.KEY_WINDOW_REAR_RIGHT,
-        gatedWhenOpening = true
+        number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOW_REAR_RIGHT",
+        currentKey = null,
+        gated = true
     ),
     @SupportedOn(SWI68, SWI165)
     SET_DOOR_LOCK(

@@ -4,6 +4,48 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-08-26
+
+### Fixed
+
+- **Glass writes never moved a window.** `IVehicleControlService` validates a window write
+  against `max_vehicle_window_set = 7` and drops anything above it without an error — the
+  setter returns void, so a dropped write and an applied one are indistinguishable from the
+  caller. The library was sending a position in percent, so every write above 7 was
+  discarded while the history recorded it as applied. Reading is unchanged and stays a
+  percentage (`max_vehicle_window_get = 100`): the two directions are not the same scale.
+  `setWindow` / `setAllWindows` now take a **command in 0..7** and refuse anything else
+  rather than hand it over to be dropped. Which command opens and which closes is not
+  written down on the firmware and no head-unit application sends one, so the mapping is
+  still open — a command sent and a position read back is what identifies it.
+- **Current weather always came back unreadable.** The `ICallBack.onResult` parcel carries
+  the nullable `Result` argument behind a presence flag, and the decoder started at the
+  object's first field instead. Every field then landed in the previous one's place, the
+  payload tag no longer matched, and an answer that had arrived was reported as "cannot
+  tell". The flag is read now, and a null `Result` is a null reading.
+
+### Changed
+
+- Glass actions are standstill-gated outright, and `ActionType.gatedWhenOpening` is gone
+  with the directional gate it fed. That gate compared the target against the position, and
+  the target is no longer a position: with the direction of a command unknown, the safe
+  reading of an unknown direction is that it is not one to allow at speed.
+- `SaicVehicleControl.doorLockState()` exposes the raw lock status for the diagnostic. The
+  service answers `0..7` and only 1 and 2 are named, so `doorsLocked()` still discards the
+  rest — but "unreadable" without the number left no way to tell an unnamed state from a
+  read that never answered.
+
+### Removed
+
+- The daily forecast — `WEATHER_TOMORROW`, `TEMP_MAX_TODAY`, `TEMP_MIN_TOMORROW` and
+  `SaicWeather.forecastAt`. `ISaicService` declares seven transactions on this firmware and
+  none of them answers a forecast; the `WeatherFuture` parcelable its `Result` can carry is
+  never filled by anything in the map service. The transaction 1.5.0 called does not exist,
+  which is what the `transact returned false` in the log was. The head unit's own weather
+  application fetches the outlook itself with credentials that are not reachable from here
+  and broadcasts only current conditions, so there is no second source either. Three
+  conditions that could never be readable are worse than none.
+
 ## [1.5.0] - 2026-08-25
 
 ### Added

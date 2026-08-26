@@ -13,6 +13,7 @@
     <string name="unit_celsius">°C</string>
     <string name="unit_kmh">km/h</string>
     <string name="unit_percent">%</string>
+    <string name="unit_command">cmd</string>
     <string name="drive_eco">Eco</string>
     <string name="drive_normal">Normal</string>
     <string name="drive_sport">Sport</string>
@@ -195,7 +196,4 @@
     <string name="cond_odometer">Conta-quilómetros</string>
     <string name="cond_weather">Meteorologia</string>
     <string name="cond_weather_hint">p. ex. chuva</string>
-    <string name="cond_weather_tomorrow">Meteorologia amanhã</string>
-    <string name="cond_temp_max_today">Máxima de hoje</string>
-    <string name="cond_temp_min_tomorrow">Mínima de amanhã</string>
 </resources>

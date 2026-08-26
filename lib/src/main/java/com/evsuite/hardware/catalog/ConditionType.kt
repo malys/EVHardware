@@ -199,36 +199,6 @@ enum class ConditionType(
         SnapshotKeys.KEY_WEATHER_TEXT
     ),
 
-    /**
-     * What the outlook says about tomorrow, matched as a fragment like [WEATHER_NOW].
-     *
-     * **Tomorrow, not later today.** The service answers one entry per day, so this is the
-     * finest grain there is: a rule that wants to shut the windows before a shower cannot be
-     * written from it, and a rule that reminds the driver the night before can.
-     */
-    WEATHER_TOMORROW(
-        R.string.cond_weather_tomorrow, ConditionGroup.ENVIRONMENT,
-        ValueSpec(ValueKind.TEXT, hintRes = R.string.cond_weather_hint),
-        SnapshotKeys.KEY_WEATHER_TOMORROW
-    ),
-    /** Today's forecast high — for a rule that decides before the heat arrives. */
-    TEMP_MAX_TODAY(
-        R.string.cond_temp_max_today, ConditionGroup.ENVIRONMENT,
-        number(-30, 50, R.string.unit_celsius),
-        SnapshotKeys.KEY_TEMP_MAX_TODAY, comparable = true
-    ),
-    /**
-     * Tomorrow's forecast low.
-     *
-     * The one a departure rule wants: whether to pre-heat tomorrow morning is decided tonight,
-     * and [OUTSIDE_TEMP] only knows what the air is doing now.
-     */
-    TEMP_MIN_TOMORROW(
-        R.string.cond_temp_min_tomorrow, ConditionGroup.ENVIRONMENT,
-        number(-30, 50, R.string.unit_celsius),
-        SnapshotKeys.KEY_TEMP_MIN_TOMORROW, comparable = true
-    ),
-
     // ── Driving ──────────────────────────────────────────────────────────────
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
     IGNITION_STATE(

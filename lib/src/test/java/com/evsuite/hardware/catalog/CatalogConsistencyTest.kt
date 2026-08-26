@@ -3,9 +3,11 @@ package com.evsuite.hardware.catalog
 import com.evsuite.hardware.catalog.ActionType
 import com.evsuite.hardware.catalog.ConditionType
 import com.evsuite.hardware.catalog.ValueKind
+import com.evsuite.hardware.saic.SaicVehicleControl
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -257,16 +259,17 @@ class CatalogConsistencyTest {
         assertNotNull(ActionType.SET_WINDOWS.bridgeAction)
         assertEquals(SnapshotKeys.KEY_WINDOW_PERCENT, ConditionType.WINDOW_POSITION.snapshotKey)
 
-        mapOf(
-            ActionType.SET_WINDOW_DRIVER to ConditionType.WINDOW_DRIVER,
-            ActionType.SET_WINDOW_PASSENGER to ConditionType.WINDOW_PASSENGER,
-            ActionType.SET_WINDOW_REAR_LEFT to ConditionType.WINDOW_REAR_LEFT,
-            ActionType.SET_WINDOW_REAR_RIGHT to ConditionType.WINDOW_REAR_RIGHT
-        ).forEach { (action, condition) ->
-            assertEquals(condition.snapshotKey, action.currentKey)
-            assertFalse("${action.name} is not standstill-gated: the car limits the glass", action.gated)
-            assertEquals(0, action.spec.min)
-            assertEquals(100, action.spec.max)
+        // One action per window, one condition per window: the write is a command and the
+        // read is a position, so they are not two ends of the same scale — see the glass test.
+        listOf(
+            ActionType.SET_WINDOW_DRIVER, ActionType.SET_WINDOW_PASSENGER,
+            ActionType.SET_WINDOW_REAR_LEFT, ActionType.SET_WINDOW_REAR_RIGHT
+        ).forEach { assertNotNull("${it.name} must reach the bridge", it.bridgeAction) }
+        listOf(
+            ConditionType.WINDOW_DRIVER, ConditionType.WINDOW_PASSENGER,
+            ConditionType.WINDOW_REAR_LEFT, ConditionType.WINDOW_REAR_RIGHT
+        ).forEach {
+            assertEquals("${it.name} reads a position in percent", 100, it.spec.max)
         }
 
         // Four windows, four distinct keys — a copy-paste that reused one would make two
@@ -292,49 +295,27 @@ class CatalogConsistencyTest {
     }
 
     @Test
-    fun `the glass is gated in the opening direction only`() {
-        // Closing is the case these exist for — rain on the motorway — and gating the action
-        // outright would refuse exactly that. Opening at speed is the half that takes the gate.
+    fun `every glass write is gated, and carries a command rather than a position`() {
+        // The service takes a command in 0..7 on the way in and answers a percentage on the
+        // way out, so a position-scaled write is dropped in silence. Nothing on the firmware
+        // says which command opens and which closes, and a write whose direction is unknown
+        // is not one to allow at speed.
         val glass = listOf(
             ActionType.SET_WINDOWS, ActionType.SET_WINDOW_DRIVER, ActionType.SET_WINDOW_PASSENGER,
             ActionType.SET_WINDOW_REAR_LEFT, ActionType.SET_WINDOW_REAR_RIGHT
         )
         glass.forEach {
-            assertTrue("${it.name} must gate the opening direction", it.gatedWhenOpening)
-            assertFalse("${it.name} must not be gated outright: closing is its point", it.gated)
-            // The direction is a comparison against what the car reports, so the action has
-            // to name the reading it is compared with.
-            assertNotNull("${it.name} needs a current position to compare against", it.currentKey)
-        }
-
-        // Nothing else claims directional gating: it is a property of glass, not a general
-        // escape from the standstill gate.
-        ActionType.entries.filterNot { it in glass }.forEach {
-            assertFalse("${it.name} must not claim directional gating", it.gatedWhenOpening)
-        }
-    }
-
-    @Test
-    fun `the forecast is offered by the day, never by the hour`() {
-        // The service answers one entry per day. Naming a condition after an hour it cannot
-        // resolve would be a promise the data does not keep.
-        assertEquals(ValueKind.TEXT, ConditionType.WEATHER_TOMORROW.spec.kind)
-        assertTrue(
-            "the forecast phrase needs an example, same as today's",
-            ConditionType.WEATHER_TOMORROW.spec.hintRes != 0
-        )
-        listOf(ConditionType.TEMP_MAX_TODAY, ConditionType.TEMP_MIN_TOMORROW).forEach {
-            assertTrue("${it.name} is asked as more or less", it.comparable)
+            assertTrue("${it.name} must take the standstill gate", it.gated)
             assertEquals(ValueKind.NUMBER, it.spec.kind)
+            assertEquals("${it.name} sends a command, not a percentage", 0, it.spec.min)
+            assertEquals(
+                "${it.name} must not offer a value the service drops",
+                SaicVehicleControl.WINDOW_COMMAND_MAX, it.spec.max
+            )
+            // No current value to open the editor on: the reading is a position and the
+            // control is a command, so seeding one with the other would be a false start.
+            assertNull("${it.name} has no position to preselect", it.currentKey)
         }
-
-        // Four distinct keys off one query — a shared key would make two of them report the
-        // same number.
-        val keys = listOf(
-            ConditionType.WEATHER_NOW, ConditionType.WEATHER_TOMORROW,
-            ConditionType.TEMP_MAX_TODAY, ConditionType.TEMP_MIN_TOMORROW
-        ).map { it.snapshotKey }
-        assertEquals(4, keys.toSet().size)
     }
 
     @Test

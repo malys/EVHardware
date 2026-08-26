@@ -21,6 +21,13 @@ import java.util.concurrent.TimeUnit
  * does not answer in time is a null reading, which the catalogue already treats as
  * "unreadable" rather than as "no rain".
  *
+ * **Current conditions only.** The service declares seven transactions and none of them
+ * answers a forecast: its `WeatherFuture` parcelable is carried by `Result` but nothing on
+ * this firmware ever fills it. The daily outlook the weather app shows is fetched by that app
+ * itself, with credentials that are not reachable from here, and broadcast as
+ * `com.saicmotor.weather` carrying today's temperature and phrase alone. A forecast condition
+ * would therefore be permanently unreadable, so there is none.
+ *
  * Binding contract: `com.saicmotor.mapservice.SaicService` (bind target),
  * `ISaicService` (the queries) and `ICallBack` (the single-method answer).
  */
@@ -34,7 +41,6 @@ object SaicWeather {
     private const val CALLBACK_DESCRIPTOR = "com.saicmotor.mapservice.ICallBack"
 
     private const val TX_QUERY_WEATHER_BY_POSITION = 2
-    private const val TX_QUERY_FORECAST_BY_POSITION = 30
     private const val TX_CALLBACK_ON_RESULT = 1
 
     /**
@@ -43,7 +49,6 @@ object SaicWeather {
      * nothing.
      */
     private const val DATA_OBJECT_WEATHER = "data_object_weather"
-    private const val DATA_OBJECT_WEATHER_FUTURE = "data_object_weather_future"
 
     /**
      * How long a reading may hold the rule cycle.
@@ -53,12 +58,6 @@ object SaicWeather {
      * enough that a cold one simply comes back unreadable.
      */
     private const val TIMEOUT_MS = 2_000L
-
-    /**
-     * A daily outlook is a handful of days. A larger count means the parcel is not what this
-     * expects, and reading on would consume whatever follows it as strings.
-     */
-    private const val MAX_FORECAST_DAYS = 16
 
     private val service = SaicService.byComponent(PACKAGE, CLASS, "weather")
 
@@ -86,25 +85,6 @@ object SaicWeather {
         }
 
     /**
-     * The days ahead, today first.
-     *
-     * **Days, not hours.** The service answers a daily outlook — a phrase and a high/low per
-     * day — so "will it rain tomorrow" is answerable here and "will it rain in three hours" is
-     * not. A rule that wants to close the windows before a shower is not served by this, and
-     * nothing in the catalogue pretends otherwise.
-     *
-     * The position arrives as doubles on this transaction where the current-conditions query
-     * takes strings. That is the interface, not a choice.
-     */
-    fun forecastAt(latitude: Double, longitude: Double, languageCode: String): List<Day>? =
-        query(TX_QUERY_FORECAST_BY_POSITION, ::readForecast) { target, callback ->
-            SaicAidl.callVoid(
-                target, DESCRIPTOR, TX_QUERY_FORECAST_BY_POSITION,
-                longitude, latitude, languageCode, callback
-            )
-        }
-
-    /**
      * One query, made synchronous.
      *
      * The service takes a callback binder and answers on it, so every reading here is a send
@@ -125,7 +105,7 @@ object SaicWeather {
             override fun onTransact(tx: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
                 if (tx != TX_CALLBACK_ON_RESULT) return super.onTransact(tx, data, reply, flags)
                 data.enforceInterface(CALLBACK_DESCRIPTOR)
-                answer = runCatching { decode(data) }
+                answer = runCatching { decodeArgument(data, decode) }
                     .onFailure { AppLogger.d(TAG, "weather#$code: undecodable answer: ${it.message}") }
                     .getOrNull()
                 answered.countDown()
@@ -139,6 +119,18 @@ object SaicWeather {
         if (!send(target, callback)) return null
         return if (answered.await(TIMEOUT_MS, TimeUnit.MILLISECONDS)) answer else null
     }
+
+    /**
+     * The `Result` argument, past the flag that says whether there is one.
+     *
+     * A nullable parcelable argument is written as a presence int and then the object, so the
+     * payload starts one int later than the object's own first field. Reading from the wrong
+     * offset is not an error the parcel reports — every field simply lands in the next one's
+     * place, the type tag no longer matches, and the answer is silently discarded. That is
+     * exactly how a weather reading that arrived was reported as unreadable.
+     */
+    private fun <T> decodeArgument(parcel: Parcel, decode: (Parcel) -> T?): T? =
+        if (parcel.readInt() == 0) null else decode(parcel)
 
     /**
      * `Result`: a code, a message, a tag naming what follows, then the tagged object.
@@ -163,45 +155,6 @@ object SaicWeather {
             temperatureCelsius = toCelsius(temperature, unit),
             city = city.orEmpty()
         )
-    }
-
-    /**
-     * The daily outlook: an envelope, a place, then the list of days.
-     *
-     * The nine strings before the list are the place and the provider's headline — read past
-     * rather than skipped, because a parcel has no field names and the only way to reach the
-     * list is to consume exactly what precedes it.
-     */
-    private fun readForecast(parcel: Parcel): List<Day>? {
-        if (!openPayload(parcel, DATA_OBJECT_WEATHER_FUTURE)) return null
-        parcel.readInt()                       // the payload's own code
-        parcel.readString()                    // the nested parcelable's class name
-        repeat(9) { parcel.readString() }      // place, coordinates and headline
-        val days = parcel.readInt()
-        // A negative or absurd count is a parcel that does not hold what this expects; reading
-        // on would consume whatever follows as strings.
-        if (days <= 0 || days > MAX_FORECAST_DAYS) return null
-        return (0 until days).map {
-            val date = parcel.readString().orEmpty()
-            val maxValue = parcel.readString()
-            parcel.readString()                // night icon
-            parcel.readString()                // day icon
-            parcel.readString()                // epoch date
-            val nightPhrase = parcel.readString().orEmpty()
-            val maxUnit = parcel.readString()
-            val minUnit = parcel.readString()
-            parcel.readString()                // max unit type
-            val minValue = parcel.readString()
-            parcel.readString()                // min unit type
-            val dayPhrase = parcel.readString().orEmpty()
-            Day(
-                date = date,
-                dayText = dayPhrase,
-                nightText = nightPhrase,
-                highCelsius = toCelsius(maxValue?.toDoubleOrNull(), maxUnit),
-                lowCelsius = toCelsius(minValue?.toDoubleOrNull(), minUnit)
-            )
-        }
     }
 
     /**
@@ -238,20 +191,6 @@ object SaicWeather {
      * [text] is the provider's own description ("Rain", "Partly cloudy"), which is what a rule
      * compares against; [temperatureCelsius] is null when the answer named no unit.
      */
-    /**
-     * One day of the outlook.
-     *
-     * [dayText] and [nightText] are the provider's phrases, in the language the query asked
-     * for. The temperatures are null when the answer named no unit — see [toCelsius].
-     */
-    data class Day(
-        val date: String,
-        val dayText: String,
-        val nightText: String,
-        val highCelsius: Double?,
-        val lowCelsius: Double?
-    )
-
     data class Reading(
         val text: String,
         val icon: String,
