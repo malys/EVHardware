@@ -195,4 +195,7 @@
     <string name="cond_odometer">Cuentakilómetros</string>
     <string name="cond_weather">Tiempo</string>
     <string name="cond_weather_hint">p. ej. lluvia</string>
+    <string name="cond_weather_tomorrow">Tiempo mañana</string>
+    <string name="cond_temp_max_today">Máxima de hoy</string>
+    <string name="cond_temp_min_tomorrow">Mínima de mañana</string>
 </resources>

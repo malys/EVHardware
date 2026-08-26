@@ -121,6 +121,15 @@ object SnapshotKeys {
     const val KEY_ODOMETER_KM      = "odometerKm"
     /** The weather service's own description of the conditions where the car is. */
     const val KEY_WEATHER_TEXT     = "weatherText"
+    /**
+     * The daily outlook: tomorrow's phrase, today's high and tomorrow's low.
+     *
+     * Days, not hours — the service answers one entry per day, so "rain tomorrow" is a
+     * question it can take and "rain in three hours" is not. All three come from one query.
+     */
+    const val KEY_WEATHER_TOMORROW = "weatherTomorrow"
+    const val KEY_TEMP_MAX_TODAY   = "tempMaxTodayC"
+    const val KEY_TEMP_MIN_TOMORROW = "tempMinTomorrowC"
 
     // ── Platform context (no vehicle involved) ───────────────────────────────
     // Read from Android, not from the car, so they carry no firmware annotation. Absent

@@ -34,6 +34,7 @@ object SaicWeather {
     private const val CALLBACK_DESCRIPTOR = "com.saicmotor.mapservice.ICallBack"
 
     private const val TX_QUERY_WEATHER_BY_POSITION = 2
+    private const val TX_QUERY_FORECAST_BY_POSITION = 30
     private const val TX_CALLBACK_ON_RESULT = 1
 
     /**
@@ -42,6 +43,7 @@ object SaicWeather {
      * nothing.
      */
     private const val DATA_OBJECT_WEATHER = "data_object_weather"
+    private const val DATA_OBJECT_WEATHER_FUTURE = "data_object_weather_future"
 
     /**
      * How long a reading may hold the rule cycle.
@@ -51,6 +53,12 @@ object SaicWeather {
      * enough that a cold one simply comes back unreadable.
      */
     private const val TIMEOUT_MS = 2_000L
+
+    /**
+     * A daily outlook is a handful of days. A larger count means the parcel is not what this
+     * expects, and reading on would consume whatever follows it as strings.
+     */
+    private const val MAX_FORECAST_DAYS = 16
 
     private val service = SaicService.byComponent(PACKAGE, CLASS, "weather")
 
@@ -66,17 +74,59 @@ object SaicWeather {
      * [languageCode] reaches the provider and decides the language of [Reading.text], which is
      * the field a rule compares against — so it is the caller's, not a constant here.
      */
-    fun currentAt(latitude: Double, longitude: Double, languageCode: String): Reading? {
+    fun currentAt(latitude: Double, longitude: Double, languageCode: String): Reading? =
+        // Longitude first, then latitude, and both as strings — the query takes them in that
+        // order, so swapping them would ask about a plausible-looking wrong place rather than
+        // failing outright.
+        query(TX_QUERY_WEATHER_BY_POSITION, ::readCurrent) { target, callback ->
+            SaicAidl.callVoid(
+                target, DESCRIPTOR, TX_QUERY_WEATHER_BY_POSITION,
+                longitude.toString(), latitude.toString(), languageCode, callback
+            )
+        }
+
+    /**
+     * The days ahead, today first.
+     *
+     * **Days, not hours.** The service answers a daily outlook — a phrase and a high/low per
+     * day — so "will it rain tomorrow" is answerable here and "will it rain in three hours" is
+     * not. A rule that wants to close the windows before a shower is not served by this, and
+     * nothing in the catalogue pretends otherwise.
+     *
+     * The position arrives as doubles on this transaction where the current-conditions query
+     * takes strings. That is the interface, not a choice.
+     */
+    fun forecastAt(latitude: Double, longitude: Double, languageCode: String): List<Day>? =
+        query(TX_QUERY_FORECAST_BY_POSITION, ::readForecast) { target, callback ->
+            SaicAidl.callVoid(
+                target, DESCRIPTOR, TX_QUERY_FORECAST_BY_POSITION,
+                longitude, latitude, languageCode, callback
+            )
+        }
+
+    /**
+     * One query, made synchronous.
+     *
+     * The service takes a callback binder and answers on it, so every reading here is a send
+     * plus a bounded wait. A binder that never calls back leaves the latch untripped and the
+     * reading null, which the catalogue treats as "cannot tell" — the same as any other
+     * unreadable signal.
+     */
+    private fun <T> query(
+        code: Int,
+        decode: (Parcel) -> T?,
+        send: (IBinder, Binder) -> Boolean
+    ): T? {
         val target = binder() ?: return null
-        var reading: Reading? = null
+        var answer: T? = null
         val answered = CountDownLatch(1)
 
         val callback = object : Binder() {
-            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-                if (code != TX_CALLBACK_ON_RESULT) return super.onTransact(code, data, reply, flags)
+            override fun onTransact(tx: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                if (tx != TX_CALLBACK_ON_RESULT) return super.onTransact(tx, data, reply, flags)
                 data.enforceInterface(CALLBACK_DESCRIPTOR)
-                reading = runCatching { readResult(data) }
-                    .onFailure { AppLogger.d(TAG, "weather: undecodable answer: ${it.message}") }
+                answer = runCatching { decode(data) }
+                    .onFailure { AppLogger.d(TAG, "weather#$code: undecodable answer: ${it.message}") }
                     .getOrNull()
                 answered.countDown()
                 reply?.writeNoException()
@@ -86,15 +136,8 @@ object SaicWeather {
             override fun getInterfaceDescriptor(): String = CALLBACK_DESCRIPTOR
         }
 
-        // Longitude first, then latitude: the query takes them in that order, and both as
-        // strings — swapping them would ask about a plausible-looking wrong place rather
-        // than failing.
-        val sent = SaicAidl.callVoid(
-            target, DESCRIPTOR, TX_QUERY_WEATHER_BY_POSITION,
-            longitude.toString(), latitude.toString(), languageCode, callback
-        )
-        if (!sent) return null
-        return if (answered.await(TIMEOUT_MS, TimeUnit.MILLISECONDS)) reading else null
+        if (!send(target, callback)) return null
+        return if (answered.await(TIMEOUT_MS, TimeUnit.MILLISECONDS)) answer else null
     }
 
     /**
@@ -104,11 +147,8 @@ object SaicWeather {
      * boot classpath — the same reason every transaction here is written out rather than
      * called through an SDK.
      */
-    private fun readResult(parcel: Parcel): Reading? {
-        parcel.readInt()                       // code — the payload's presence is the real answer
-        parcel.readString()                    // message
-        if (parcel.readString() != DATA_OBJECT_WEATHER) return null
-        parcel.readString()                    // the parcelable's own class name
+    private fun readCurrent(parcel: Parcel): Reading? {
+        if (!openPayload(parcel, DATA_OBJECT_WEATHER)) return null
         val text = parcel.readString()
         val icon = parcel.readString()
         parcel.readByte()                      // daytime
@@ -126,14 +166,70 @@ object SaicWeather {
     }
 
     /**
+     * The daily outlook: an envelope, a place, then the list of days.
+     *
+     * The nine strings before the list are the place and the provider's headline — read past
+     * rather than skipped, because a parcel has no field names and the only way to reach the
+     * list is to consume exactly what precedes it.
+     */
+    private fun readForecast(parcel: Parcel): List<Day>? {
+        if (!openPayload(parcel, DATA_OBJECT_WEATHER_FUTURE)) return null
+        parcel.readInt()                       // the payload's own code
+        parcel.readString()                    // the nested parcelable's class name
+        repeat(9) { parcel.readString() }      // place, coordinates and headline
+        val days = parcel.readInt()
+        // A negative or absurd count is a parcel that does not hold what this expects; reading
+        // on would consume whatever follows as strings.
+        if (days <= 0 || days > MAX_FORECAST_DAYS) return null
+        return (0 until days).map {
+            val date = parcel.readString().orEmpty()
+            val maxValue = parcel.readString()
+            parcel.readString()                // night icon
+            parcel.readString()                // day icon
+            parcel.readString()                // epoch date
+            val nightPhrase = parcel.readString().orEmpty()
+            val maxUnit = parcel.readString()
+            val minUnit = parcel.readString()
+            parcel.readString()                // max unit type
+            val minValue = parcel.readString()
+            parcel.readString()                // min unit type
+            val dayPhrase = parcel.readString().orEmpty()
+            Day(
+                date = date,
+                dayText = dayPhrase,
+                nightText = nightPhrase,
+                highCelsius = toCelsius(maxValue?.toDoubleOrNull(), maxUnit),
+                lowCelsius = toCelsius(minValue?.toDoubleOrNull(), minUnit)
+            )
+        }
+    }
+
+    /**
+     * Reads the `Result` envelope and stops unless it holds the expected payload.
+     *
+     * A code, a message, a tag naming what follows, then the tagged object. Another tag is
+     * another shape, and answering from a half-read parcel would be worse than saying nothing.
+     */
+    private fun openPayload(parcel: Parcel, expectedTag: String): Boolean {
+        parcel.readInt()                       // code — the payload's presence is the real answer
+        parcel.readString()                    // message
+        if (parcel.readString() != expectedTag) return false
+        parcel.readString()                    // the parcelable's own class name
+        return true
+    }
+
+    /**
      * The service answers in whatever unit it was configured with and names it, so the name is
      * what decides. Anything it does not name is left alone rather than assumed Celsius: a
      * Fahrenheit value passed through unconverted would read as a mild summer day in winter.
      */
-    private fun toCelsius(value: Double, unit: String?): Double? = when (unit?.trim()?.uppercase()) {
-        "C", "°C" -> value
-        "F", "°F" -> (value - 32.0) * 5.0 / 9.0
-        else -> null
+    private fun toCelsius(value: Double?, unit: String?): Double? {
+        if (value == null) return null
+        return when (unit?.trim()?.uppercase()) {
+            "C", "°C" -> value
+            "F", "°F" -> (value - 32.0) * 5.0 / 9.0
+            else -> null
+        }
     }
 
     /**
@@ -142,6 +238,20 @@ object SaicWeather {
      * [text] is the provider's own description ("Rain", "Partly cloudy"), which is what a rule
      * compares against; [temperatureCelsius] is null when the answer named no unit.
      */
+    /**
+     * One day of the outlook.
+     *
+     * [dayText] and [nightText] are the provider's phrases, in the language the query asked
+     * for. The temperatures are null when the answer named no unit — see [toCelsius].
+     */
+    data class Day(
+        val date: String,
+        val dayText: String,
+        val nightText: String,
+        val highCelsius: Double?,
+        val lowCelsius: Double?
+    )
+
     data class Reading(
         val text: String,
         val icon: String,

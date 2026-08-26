@@ -20,6 +20,9 @@
 | DRIVE_DURATION | — | — | — | — | — | — |
 | RANDOM_CHANCE | — | — | — | — | — | — |
 | WEATHER_NOW | — | — | — | — | — | — |
+| WEATHER_TOMORROW | — | — | — | — | — | — |
+| TEMP_MAX_TODAY | — | — | — | — | — | — |
+| TEMP_MIN_TOMORROW | — | — | — | — | — | — |
 | ODOMETER | — | — | — | — | — | — |
 | OUTSIDE_TEMP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IGNITION_STATE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

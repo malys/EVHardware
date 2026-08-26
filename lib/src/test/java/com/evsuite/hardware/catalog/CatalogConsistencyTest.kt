@@ -315,6 +315,29 @@ class CatalogConsistencyTest {
     }
 
     @Test
+    fun `the forecast is offered by the day, never by the hour`() {
+        // The service answers one entry per day. Naming a condition after an hour it cannot
+        // resolve would be a promise the data does not keep.
+        assertEquals(ValueKind.TEXT, ConditionType.WEATHER_TOMORROW.spec.kind)
+        assertTrue(
+            "the forecast phrase needs an example, same as today's",
+            ConditionType.WEATHER_TOMORROW.spec.hintRes != 0
+        )
+        listOf(ConditionType.TEMP_MAX_TODAY, ConditionType.TEMP_MIN_TOMORROW).forEach {
+            assertTrue("${it.name} is asked as more or less", it.comparable)
+            assertEquals(ValueKind.NUMBER, it.spec.kind)
+        }
+
+        // Four distinct keys off one query — a shared key would make two of them report the
+        // same number.
+        val keys = listOf(
+            ConditionType.WEATHER_NOW, ConditionType.WEATHER_TOMORROW,
+            ConditionType.TEMP_MAX_TODAY, ConditionType.TEMP_MIN_TOMORROW
+        ).map { it.snapshotKey }
+        assertEquals(4, keys.toSet().size)
+    }
+
+    @Test
     fun `les enumerations ont des options`() {
         // Une ENUM sans option produit une liste déroulante vide : l'utilisateur ne peut
         // rien choisir et la règle reste inutilisable.

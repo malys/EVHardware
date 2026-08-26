@@ -19,8 +19,11 @@ All notable changes to this project are documented here. Format follows
 - `SaicNav`, the head unit's navigation adapter, and `ConditionType.ODOMETER`. Trip distance
   is deliberately absent: remaining distance and time only arrive as callbacks into that
   service from the running navigation app, so reading them is a subscription, not a getter.
-- `SaicWeather` and `ConditionType.WEATHER_NOW` — the weather service the head unit's own map
-  stack queries, asked for the car's position. The only asynchronous service here: the answer
+- `SaicWeather` with `ConditionType.WEATHER_NOW`, `WEATHER_TOMORROW`, `TEMP_MAX_TODAY` and
+  `TEMP_MIN_TOMORROW` — the weather service the head unit's own map stack queries, asked for
+  the car's position. The outlook is **daily**: the service answers one entry per day, so
+  "rain tomorrow" is a question it takes and "rain in three hours" is not, and the catalogue
+  offers only what the data supports. The only asynchronous service here: the answer
   arrives on a callback binder and is awaited with a bounded wait, so a slow query comes back
   unreadable instead of holding a rule cycle open.
 - `SaicAidl` now marshals `Double` and `IBinder` arguments, for that callback.

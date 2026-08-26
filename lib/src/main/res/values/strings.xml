@@ -217,4 +217,7 @@
     <string name="cond_odometer">Odometer</string>
     <string name="cond_weather">Weather</string>
     <string name="cond_weather_hint">e.g. rain</string>
+    <string name="cond_weather_tomorrow">Weather tomorrow</string>
+    <string name="cond_temp_max_today">Today\'s high</string>
+    <string name="cond_temp_min_tomorrow">Tomorrow\'s low</string>
 </resources>

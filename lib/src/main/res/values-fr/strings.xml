@@ -217,4 +217,7 @@
     <string name="cond_odometer">Compteur kilométrique</string>
     <string name="cond_weather">Météo</string>
     <string name="cond_weather_hint">ex. pluie</string>
+    <string name="cond_weather_tomorrow">Météo demain</string>
+    <string name="cond_temp_max_today">Maximum aujourd\'hui</string>
+    <string name="cond_temp_min_tomorrow">Minimum demain</string>
 </resources>

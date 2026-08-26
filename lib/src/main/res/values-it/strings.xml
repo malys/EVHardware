@@ -195,4 +195,7 @@
     <string name="cond_odometer">Contachilometri</string>
     <string name="cond_weather">Meteo</string>
     <string name="cond_weather_hint">es. pioggia</string>
+    <string name="cond_weather_tomorrow">Meteo domani</string>
+    <string name="cond_temp_max_today">Massima di oggi</string>
+    <string name="cond_temp_min_tomorrow">Minima di domani</string>
 </resources>
