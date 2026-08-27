@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-08-27
+
 ### Added
 
 - **`SaicMediaPlayer` — next track, previous track and play/pause sent to the source that is
