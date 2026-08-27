@@ -2,6 +2,7 @@ package com.evsuite.hardware.saic
 
 import android.content.Context
 import android.os.IBinder
+import com.evsuite.hardware.A9Climate
 
 /**
  * The vendor vehicle service the head unit's HVAC and charging screens talk to.
@@ -93,55 +94,85 @@ object SaicClimate {
     const val LOOP_OUTSIDE = 0
     const val LOOP_INNER = 1
 
-    val isAvailable: Boolean get() = binder() != null
+    /**
+     * Available when either path answers.
+     *
+     * Two paths, because the vendor hub this object talks to does not exist on the A9
+     * generations, whose climate is reached through `carapi` instead — see [A9Climate]. The
+     * split is made here, once, so nothing above has to know which car it is running on.
+     */
+    val isAvailable: Boolean get() = if (A9Climate.isPlatform) A9Climate.isAvailable else binder() != null
 
     private fun binder(): IBinder? = SaicHub.service(NAME)
 
+    private val a9: Boolean get() = A9Climate.isPlatform
+
     // ── Writes ───────────────────────────────────────────────────────────────
     fun setPower(on: Boolean): Boolean =
-        SaicAidl.callVoid(binder(), DESCRIPTOR, if (on) TX_OPEN_POWER else TX_CLOSE_POWER)
+        if (a9) A9Climate.setPower(on)
+        else SaicAidl.callVoid(binder(), DESCRIPTOR, if (on) TX_OPEN_POWER else TX_CLOSE_POWER)
 
     fun setAc(on: Boolean): Boolean =
-        SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_AC, if (on) 1 else 0)
+        if (a9) A9Climate.setAc(on)
+        else SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_AC, if (on) 1 else 0)
 
     fun setAuto(on: Boolean): Boolean =
-        SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_AUTO, if (on) 1 else 0)
+        if (a9) A9Climate.setAuto(on)
+        else SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_AUTO, if (on) 1 else 0)
 
+    /**
+     * ECON has no counterpart on A9: the HVAC client exposes no such switch, and there is
+     * nothing to substitute — reporting the write as refused is the truth.
+     */
     fun setEcon(on: Boolean): Boolean =
-        SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_ECON, if (on) 1 else 0)
+        if (a9) false
+        else SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_ECON, if (on) 1 else 0)
 
     fun setRecirculation(on: Boolean): Boolean =
-        SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_LOOP_MODE, if (on) LOOP_INNER else LOOP_OUTSIDE)
+        if (a9) A9Climate.setRecirculation(on)
+        else SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_LOOP_MODE, if (on) LOOP_INNER else LOOP_OUTSIDE)
 
     fun setFanLevel(level: Int): Boolean =
-        SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_AIR_VOLUME, level)
+        if (a9) A9Climate.setFanLevel(level)
+        else SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_AIR_VOLUME, level)
 
     /** Driver-side target. The passenger side follows unless dual zone is on. */
     fun setDriverTemp(celsius: Int): Boolean =
-        SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_DRV_TEMP, celsius.coerceIn(TEMP_MIN, TEMP_MAX))
+        if (a9) A9Climate.setDriverTemp(celsius.coerceIn(TEMP_MIN, TEMP_MAX))
+        else SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_DRV_TEMP, celsius.coerceIn(TEMP_MIN, TEMP_MAX))
 
+    /**
+     * The passenger's own target, which the A9 client does not expose separately — its
+     * `setDriverTemperature` is the whole cabin unless dual zone is on, and there is no
+     * honest way to set one side alone.
+     */
     fun setPassengerTemp(celsius: Int): Boolean =
-        SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_PSG_TEMP, celsius.coerceIn(TEMP_MIN, TEMP_MAX))
+        if (a9) false
+        else SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_PSG_TEMP, celsius.coerceIn(TEMP_MIN, TEMP_MAX))
 
     fun setFrontDefrost(on: Boolean): Boolean =
-        SaicAidl.callVoid(binder(), DESCRIPTOR, if (on) TX_OPEN_FRONT_DEFROST else TX_CLOSE_FRONT_DEFROST)
+        if (a9) A9Climate.setFrontDefrost(on)
+        else SaicAidl.callVoid(binder(), DESCRIPTOR, if (on) TX_OPEN_FRONT_DEFROST else TX_CLOSE_FRONT_DEFROST)
 
     fun setRearDefrost(on: Boolean): Boolean =
-        SaicAidl.callVoid(binder(), DESCRIPTOR, if (on) TX_OPEN_BACK_DEFROST else TX_CLOSE_BACK_DEFROST)
+        if (a9) A9Climate.setRearDefrost(on)
+        else SaicAidl.callVoid(binder(), DESCRIPTOR, if (on) TX_OPEN_BACK_DEFROST else TX_CLOSE_BACK_DEFROST)
 
     // ── Reads (null = the service did not answer) ────────────────────────────
     // The service answers -1 for a signal it holds no value for, which is not a state.
-    fun powerOn(): Boolean? = flag(TX_GET_POWER)
-    fun acOn(): Boolean? = flag(TX_GET_AC)
-    fun autoOn(): Boolean? = flag(TX_GET_AUTO)
-    fun econOn(): Boolean? = flag(TX_GET_ECON)
-    fun recirculationOn(): Boolean? = level(TX_GET_LOOP_MODE)?.let { it == LOOP_INNER }
-    fun fanLevel(): Int? = level(TX_GET_AIR_VOLUME)
-    fun fanLevelMax(): Int? = level(TX_GET_MAX_AIR_VOLUME)
-    fun driverTemp(): Int? = level(TX_GET_DRV_TEMP)
-    fun passengerTemp(): Int? = level(TX_GET_PSG_TEMP)
-    fun frontDefrostOn(): Boolean? = flag(TX_GET_FRONT_DEFROST)
-    fun rearDefrostOn(): Boolean? = flag(TX_GET_BACK_DEFROST)
+    fun powerOn(): Boolean? = if (a9) A9Climate.powerOn() else flag(TX_GET_POWER)
+    fun acOn(): Boolean? = if (a9) A9Climate.acOn() else flag(TX_GET_AC)
+    fun autoOn(): Boolean? = if (a9) A9Climate.autoOn() else flag(TX_GET_AUTO)
+    fun econOn(): Boolean? = if (a9) null else flag(TX_GET_ECON)
+    fun recirculationOn(): Boolean? =
+        if (a9) A9Climate.recirculationOn() else level(TX_GET_LOOP_MODE)?.let { it == LOOP_INNER }
+    fun fanLevel(): Int? = if (a9) A9Climate.fanLevel() else level(TX_GET_AIR_VOLUME)
+    /** A9 states no maximum of its own; the catalogue's is the measured one. */
+    fun fanLevelMax(): Int? = if (a9) null else level(TX_GET_MAX_AIR_VOLUME)
+    fun driverTemp(): Int? = if (a9) A9Climate.driverTemp() else level(TX_GET_DRV_TEMP)
+    fun passengerTemp(): Int? = if (a9) null else level(TX_GET_PSG_TEMP)
+    fun frontDefrostOn(): Boolean? = if (a9) A9Climate.frontDefrostOn() else flag(TX_GET_FRONT_DEFROST)
+    fun rearDefrostOn(): Boolean? = if (a9) A9Climate.rearDefrostOn() else flag(TX_GET_BACK_DEFROST)
     /** The service answers [TEMP_ERROR] for a reading it holds no value for, not an error. */
     fun outsideTempCelsius(): Float? =
         SaicAidl.callFloat(binder(), DESCRIPTOR, TX_GET_OUT_CAR_TEMP)?.takeIf { it != TEMP_ERROR }

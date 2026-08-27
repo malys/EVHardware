@@ -52,10 +52,8 @@ class SaicService private constructor(
     fun connect(context: Context) {
         if (isReady || connecting) return
         connecting = true
-        val intent = if (className != null) {
-            Intent().setComponent(ComponentName(packageName, className))
-        } else {
-            Intent(action).setPackage(packageName)
+        val intent = (if (action != null) Intent(action) else Intent()).apply {
+            if (className != null) setClassName(packageName, className) else setPackage(packageName)
         }
         val bound = runCatching {
             context.applicationContext.bindService(intent, connection, Context.BIND_AUTO_CREATE)
@@ -88,6 +86,22 @@ class SaicService private constructor(
          */
         fun byComponent(packageName: String, className: String, tag: String) =
             SaicService(packageName, null, className, tag)
+
+        /**
+         * For one component publishing several interfaces, each behind its own action — the
+         * media service, where the action selects which player answers.
+         *
+         * Both halves are needed: the action alone would leave the platform to resolve the
+         * component, and this service exports several; the component alone would bind but
+         * hand back whichever interface the service returns for a null action, which is not
+         * the one asked for.
+         */
+        fun byActionAndComponent(
+            packageName: String,
+            action: String,
+            className: String,
+            tag: String,
+        ) = SaicService(packageName, action, className, tag)
     }
 }
 
@@ -121,6 +135,21 @@ object SaicAidl {
 
     fun callBinder(binder: IBinder?, descriptor: String, code: Int, vararg args: Any?): IBinder? =
         transact(binder, descriptor, code, args) { it.readStrongBinder() }
+
+    /**
+     * For the replies a typed helper cannot cover: a vendor bean, which has to be read field
+     * by field in the order its own `writeToParcel` wrote them.
+     *
+     * Coupling to a vendor class' serialisation is a liability, so it is confined here and to
+     * its callers: a bean that changes shape throws inside [transact] and the call reads as
+     * unanswered, never as a guessed value.
+     */
+    fun <T> callParcel(
+        binder: IBinder?,
+        descriptor: String,
+        code: Int,
+        readReply: (Parcel) -> T,
+    ): T? = transact(binder, descriptor, code, emptyArray(), readReply)
 
     private fun <T> transact(
         binder: IBinder?,

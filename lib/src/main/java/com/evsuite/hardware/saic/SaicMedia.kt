@@ -16,6 +16,9 @@ object SaicRadio {
     private const val DESCRIPTOR = "com.saicmotor.sdk.radio.IRadioAppService"
 
     private const val TX_TUNE = 8
+    private const val TX_NEXT = 13
+    private const val TX_PREVIOUS = 14
+    private const val TX_CURRENT_INFO = 19
     private const val TX_START_ACTIVITY = 26
     private const val TX_SRC_PLAY = 27
     private const val TX_SRC_PAUSE = 28
@@ -66,6 +69,38 @@ object SaicRadio {
         if (!SaicAidl.callVoid(service.binder(), DESCRIPTOR, TX_TUNE, band, frequencyKhz)) return false
         return if (andPlay) play() else pause()
     }
+
+    /**
+     * Steps to the next station of the band the tuner is already on.
+     *
+     * This is the one way to reach a **DAB** station from a rule: [tune] takes a frequency,
+     * and a DAB service is addressed by ensemble and service id, not by one — so there is
+     * nothing for a driver to type. Stepping needs neither, and the tuner's own list is
+     * already the right one.
+     */
+    fun nextStation(): Boolean = SaicAidl.callVoid(service.binder(), DESCRIPTOR, TX_NEXT)
+
+    fun previousStation(): Boolean = SaicAidl.callVoid(service.binder(), DESCRIPTOR, TX_PREVIOUS)
+
+    /**
+     * Is the tuner playing? Null when the question could not be asked.
+     *
+     * `isPlaying()` in the vendor SDK is `getCurrentRadioInfo().getRadioState() == 1`, so the
+     * `RadioBean` has to be unwound in its `writeToParcel` order: enable(byte), name(String),
+     * rds(byte), cover(String), frequency(int), band(int), **state(int)**.
+     *
+     * Worth the coupling because the obvious substitute is wrong: `AudioManager.isMusicActive`
+     * is **false while the radio plays**, its stream not being the music one. A play/pause
+     * shortcut driven by it would send "play" to a radio that is already playing, forever.
+     */
+    fun isPlaying(): Boolean? =
+        SaicAidl.callParcel(service.binder(), DESCRIPTOR, TX_CURRENT_INFO) { reply ->
+            if (reply.readInt() == 0) return@callParcel null   // null bean: nothing to conclude
+            reply.readByte(); reply.readString()               // enable, station name
+            reply.readByte(); reply.readString()               // rds, cover art
+            reply.readInt(); reply.readInt()                   // frequency, band
+            reply.readInt() == 1
+        }
 }
 
 /**

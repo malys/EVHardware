@@ -4,6 +4,87 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`SaicMediaPlayer` — next track, previous track and play/pause sent to the source that is
+  actually playing.** The car publishes a single Android media session
+  (`com.android.bluetooth`), so a media key either reached nothing or reached Bluetooth, woke a
+  phone that was not playing and changed the audio source while the radio was on. The new
+  object asks the vendor service which source owns the audio and commands that source's own
+  player — radio, Bluetooth, USB, online, CarPlay/Android Auto — with **no cascade between
+  sources**: a player that is not playing is never addressed, because it would answer "yes" and
+  start. The A9 generations have no such service and drive the framework's media sessions
+  instead, then allgo's `IRemoteUIService` for projection, then a media key only while
+  something is audible.
+- **`SaicRadio.nextStation()` / `previousStation()` / `isPlaying()`.** Stepping through the
+  tuner's stations is the one radio call that reaches **DAB**: a DAB service is addressed by
+  ensemble and service id, so `tune` has no frequency to take. `isPlaying` unwinds the vendor
+  `RadioBean` because `AudioManager.isMusicActive` is false while the radio plays — its stream
+  is not the music one — which made play/pause answer a playing radio with another "play".
+- **`ActionType.RADIO_NEXT_STATION` / `RADIO_PREV_STATION`** (AUDIO, SWI68/SWI165).
+- **`GlassProbe` — settles on a car what the catalogue could not settle in the project.**
+  Which of the eight window commands opens a window is written down nowhere and the vendor
+  service reports success whatever it is given, so the glass actions ship refused
+  (`writeProven = false`). The probe sends each command with the position read either side of
+  it, in **two passes** — from a closed window a closing command is indistinguishable from an
+  inert one, so the second pass retries exactly those once the glass is open — and stops as
+  soon as both directions are known. Standstill is re-checked before every command, not once
+  at the start, and the glass is put back where it was found or the caller is told it was not.
+- **`GlassEvidence`** records what the probe watched happen and unlocks the five window
+  actions **on that car only**. Evidence is scoped to the firmware generation it was observed
+  on: a command proven on one generation proves nothing about another.
+- **ESC and the drowsiness warning (UDW), on every generation.** Three different routes —
+  VPM properties on SWI133, named methods on SWI68/SWI165, and the carapi client on A9, where
+  ESC is spelled "Eps". ESC on SWI68/SWI165 needed a manager the library did not bind at all:
+  `get/setEspSwitch` live on **VehicleControlManager**, not the settings one, so looking for
+  them on `sVsm` failed without a sound and left ESC inert.
+  Two guards come with the write, both earned on a car: it is a **toggle** driven by a read, so
+  it runs only on an ignition known to be in RUN — getting in while the cluster is dark, the
+  property lies, and aiming at ON from a false OFF disables an ESC that was on, in silence —
+  and only on three agreeing readings, with the result checked afterwards rather than assumed.
+- **`ActionType.SET_ESC`, `SET_DROWSINESS`, `SET_DROWSINESS_SENSITIVITY`** (ADAS, gated).
+  The drowsiness switch is UDW and not the camera-based DMS one: both exist, their labels read
+  alike, and writing the camera one changed nothing visible.
+- **`A9Climate` — climate on SWI69, SWI131 and SWI132.** The vendor hub `SaicClimate` talks
+  to does not exist on those generations, so eight climate actions were marked SWI68/SWI165
+  only on cars whose own HVAC screen works fine. They now go through `carapi`'s
+  `CarHvacClient` (`queryClient(0x7)`), the same door `queryClient(0x8)` already opens for the
+  vehicle-settings client. Several A9 settings are argument-less `switch…()` calls that step to
+  the next state, so aiming at one is read-step-read, bounded — which makes those writes
+  blocking and unfit for the main thread. ECON and the passenger's own target stay off A9: the
+  client exposes neither, and refusing is more honest than writing to the driver's side and
+  calling it the passenger's.
+- **`ActionType.ADJUST_MEDIA_VOLUME` and `EVHardware.adjustMediaVolume(delta)`** — a step
+  rather than a target, for a wheel button or a rule that must not throw away the level the
+  driver chose. Falls back to `AudioManager` when the vendor level is unreadable, and reports
+  either end of the range as done rather than refused.
+- **`PhysicalButtonEventDecoder` reads a double press.** Two releases of the same button
+  within `DOUBLE_TAP_MS` make one `Press.DOUBLE`; a long press breaks the pairing so the
+  release that follows it cannot become half of a double nobody made, and a third press starts
+  over rather than producing a second overlapping double.
+- **`DataUsage`** — what the head unit's connection has carried, today and this month, from
+  Android's own counters. The modem presents as **Ethernet**, and the public
+  `querySummaryForDevice(int, …)` only builds MOBILE and WIFI templates: it answers zero here,
+  which reads exactly like a car that used no data. The hidden `NetworkTemplate` overload
+  answers, with `TrafficStats` since boot as the fallback, and an unreadable counter is null
+  rather than zero.
+- **`ConditionType.DATA_USED_TODAY` / `DATA_USED_MONTH`** (context, in MB).
+- **`ActionType.effectProven`** — `writeProven` answers "has anyone ever seen this work",
+  `effectProven` answers "does it work here". Everything user-facing asks the second.
+
+### Changed
+
+- **An action whose write was never shown to do anything is no longer offered anywhere.**
+  `ActionType.writeProven` separates two questions a single ✅ used to answer at once: whether
+  the firmware carries the property (`@SupportedOn`) and whether writing it changes anything.
+  The five glass actions are the case that forced the distinction — the service accepts a
+  command in `0..7`, no head-unit application sends one, and which command raises a window is
+  written down nowhere, so the write is accepted, dropped, and reported as applied. They ship
+  `writeProven = false` until one command is observed to move a window; the generated firmware
+  matrix marks them ⚠️ and says what the mark means.
+
 ## [1.7.0] - 2026-08-27
 
 ### Added

@@ -534,6 +534,29 @@ enum class ConditionType(
     SOUND_WARNING(
         R.string.cond_sound_warning, ConditionGroup.ADAS,
         ValueSpec.BOOL, SnapshotKeys.KEY_SOUND_WARNING
+    ),
+
+    // ── Connection ───────────────────────────────────────────────────────────
+    /**
+     * Data the head unit has carried, in megabytes — today, and since the first of the month.
+     *
+     * The counters are Android's own, the ones the Settings screen shows, so a rule that stops
+     * a heavy upload late in the month is reading the same number the driver would.
+     *
+     * No `@SupportedOn`: this is the head unit's connection, not a vehicle signal, and it does
+     * not vary by firmware generation. It varies by *permission* instead — without
+     * READ_NETWORK_USAGE_HISTORY there is no reading at all, and the condition reports
+     * unavailable rather than zero, which would read as a car that used no data.
+     */
+    DATA_USED_TODAY(
+        R.string.cond_data_today, ConditionGroup.CONTEXT,
+        number(0, 100_000, R.string.unit_megabyte), SnapshotKeys.KEY_DATA_TODAY_MB,
+        comparable = true
+    ),
+    DATA_USED_MONTH(
+        R.string.cond_data_month, ConditionGroup.CONTEXT,
+        number(0, 100_000, R.string.unit_megabyte), SnapshotKeys.KEY_DATA_MONTH_MB,
+        comparable = true
     );
 
     companion object {

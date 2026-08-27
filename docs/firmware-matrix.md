@@ -21,6 +21,8 @@
 | RANDOM_CHANCE | — | — | — | — | — | — |
 | WEATHER_NOW | — | — | — | — | — | — |
 | ODOMETER | — | — | — | — | — | — |
+| DATA_USED_TODAY | — | — | — | — | — | — |
+| DATA_USED_MONTH | — | — | — | — | — | — |
 | OUTSIDE_TEMP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IGNITION_STATE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IN_PARK | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -100,21 +102,21 @@
 | SET_SEAT_HEAT_RIGHT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_STEERING_HEAT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_SCREEN_BRIGHTNESS | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| SET_CLIMATE_POWER | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SET_CABIN_TEMP | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_CLIMATE_POWER | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SET_CABIN_TEMP | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_PASSENGER_TEMP | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SET_AC | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_AC | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_ECON | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SET_CLIMATE_AUTO | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SET_RECIRCULATION | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SET_FAN_LEVEL | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SET_FRONT_DEFROST | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SET_REAR_DEFROST | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SET_WINDOWS | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SET_WINDOW_DRIVER | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SET_WINDOW_PASSENGER | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SET_WINDOW_REAR_LEFT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SET_WINDOW_REAR_RIGHT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_CLIMATE_AUTO | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SET_RECIRCULATION | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SET_FAN_LEVEL | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SET_FRONT_DEFROST | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SET_REAR_DEFROST | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SET_WINDOWS ⚠️ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_WINDOW_DRIVER ⚠️ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_WINDOW_PASSENGER ⚠️ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_WINDOW_REAR_LEFT ⚠️ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_WINDOW_REAR_RIGHT ⚠️ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_DOOR_LOCK | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_CHARGE_LIMIT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_CHARGING_ENABLED | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -122,6 +124,7 @@
 | SET_CHARGE_WINDOW | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_BATTERY_PREHEAT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_MEDIA_VOLUME | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ADJUST_MEDIA_VOLUME | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_AUDIO_BALANCE | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | SET_AUDIO_FADER | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | SET_TONE_CONTROL | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
@@ -130,9 +133,14 @@
 | SET_SPEED_VOLUME | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | PLAY_RADIO | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | TUNE_RADIO | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| RADIO_NEXT_STATION | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| RADIO_PREV_STATION | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_AEB_ENABLED | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_AEB_MODE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_AEB_SENSITIVITY | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SET_ESC | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SET_DROWSINESS | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SET_DROWSINESS_SENSITIVITY | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_ELK_MODE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_ELK_SENSITIVITY | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_ACC_TJA_MODE | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -145,3 +153,5 @@
 | SET_LAS_WARNING_VIBRATION | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | CALL_NUMBER | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | CALL_CONTACT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+
+⚠️ — the firmware carries the property, but nothing establishes that writing it has any effect (`ActionType.writeProven`). These actions are hidden from the editors and refused by the executors until one is observed to work.
