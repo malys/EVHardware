@@ -18,9 +18,9 @@ implementation of the reflection-based hardware layer, the 0 km/h safety gate, t
 models, and the **condition/action catalogue** — consumed by the EVSuite apps so they do not
 each re-derive it and drift apart.
 
-The design line: **the apps are thin. EVHardware provides the vehicle.** EVTasker, for
-example, is only a rule engine between conditions and actions — both of which are defined
-here.
+The design line: **the apps are thin. EVHardware provides the vehicle.** EVTasker is a rule
+engine between shared conditions and actions; EVChargePilot and EVABRPUploader consume the
+same energy snapshot instead of carrying their own property ids, units and fallback order.
 
 ---
 
@@ -29,7 +29,7 @@ here.
 - [Overview](#overview)
 - [How it works](#how-it-works)
 - [Install](#install)
-- [The EVSuite](#the-mg4-app-suite)
+- [The EVSuite](#the-evsuite)
 - [Building](#building)
 - [Project documents](#project-documents)
 - [Security](#security)
@@ -42,6 +42,8 @@ here.
 | Vehicle access | `EVHardware` — Katman1/4/5 reflection over `android.car` + SAIC SDK, per-firmware routing |
 | Safety | `VehicleWriteGate` (0 km/h, fail-closed) + `@RequiresStandstill` on every gated setter |
 | Vendor services | `saic.*` — the AIDL the head unit's own HVAC, charging, radio, hands-free and TTS apps use |
+| Energy telemetry | `EnergyTelemetryReader`, `EnergySnapshot` — coherent nullable SOC, range, power, temperature, charging, tyre and climate reads |
+| Energy accounting | `EnergyTripAccumulator`, `ChargingSessionMeter`, `EnergyTripHistoryStore` — tested integration and atomic local persistence |
 | Firmware | `FirmwareInfo` (detection + capability helpers), `FirmwareGen` |
 | Models | `DrivingProfile`, `DriveMode`, `RegenLevel`, `ProfileBackup` |
 | Catalogue | `ConditionType`, `ActionType`, `ValueSpec`, `VehicleEnums`, `SnapshotKeys` |
@@ -148,6 +150,7 @@ Part of a small set of projects for the SAIC MG4 (AAOS 9, MT2712), all sharing t
 | [EVProfile](https://github.com/malys/EVProfile) | Drive-profile manager; applies settings at startup; owns the signature-protected TaskerBridge |
 | [EVTasker](https://github.com/malys/EVTasker) | Rule engine — *when* conditions *then* actions — driving the car through EVProfile |
 | [EVABRPUploader](https://github.com/malys/EVABRPUploader) | Live telemetry uploader to A Better Route Planner |
+| [EVChargePilot](https://github.com/malys/EVChargePilot) | Offline live energy dashboard and local trip analyser |
 
 Common toolchain: **AGP 9.1.1 / Gradle 9.3.1 / compileSdk 36 / JDK 17**. Each app consumes
 EVHardware as a git submodule (`EVHardware/lib` as the `:evhardware` subproject).
@@ -160,7 +163,8 @@ EVHardware as a git submodule (`EVHardware/lib` as the `:evhardware` subproject)
 
 JDK 17 (AGP 9.1.1 / Gradle 9.3.1 / compileSdk 36). `android.car` is not on the compile SDK, so all vehicle access is
 reflection — there is nothing to test on an emulator; the JVM tests cover the decision
-logic (gate, firmware annotations, catalogue consistency).
+logic (gate, firmware annotations, catalogue consistency, telemetry validation and energy
+integration).
 
 ### Adding a condition or action
 

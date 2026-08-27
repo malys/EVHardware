@@ -1,7 +1,7 @@
 # AGENTS.md — EVHardware
 
 Shared vehicle-access library for the SAIC MG4 (AAOS 9, MT2712), consumed by EVProfile,
-EVTasker and EVABRPUploader via git submodule + Gradle subproject.
+EVTasker, EVABRPUploader and EVChargePilot via git submodule + Gradle subproject.
 
 EVHardware is the shared vehicle layer for **EVSuite**. The workspace `AGENTS.md` and
 normative workspace `DESIGN.md` apply; this file defines library-specific invariants.
@@ -25,6 +25,9 @@ The apps are thin; the vehicle lives here.
   through `FirmwareInfo`. Any new vehicle call must branch per generation.
 - **Unreadable ≠ a value.** Getters return null / -1 when the layer is not ready or the
   property is absent; callers must treat that as "unknown", never as 0/false.
+- **Energy semantics are shared.** Property ids, units, sign convention, physical validation,
+  fallback order, trip integration and charging-session integration belong in `telemetry/`.
+  Consumers own their UI, sampling cadence and network payload only.
 - **`@SupportedOn` is the source of truth** for `docs/firmware-matrix.md` (generated, never
   hand-edited) and for consumers' runtime filters. A vehicle catalogue entry without it
   fails the tests.

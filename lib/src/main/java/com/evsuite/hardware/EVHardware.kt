@@ -30,6 +30,9 @@ object EVHardware {
 
     private const val TAG = "EV_HW"
 
+    /** How often the Car-service watchdog retries once the initial retry ladder is done. */
+    private const val CAR_WATCHDOG_INTERVAL_MS = 60_000L
+
     // Area IDs
     private const val AREA_GLOBAL = 0x1000000
     private const val AREA_HVAC   = 0x75
@@ -217,6 +220,11 @@ object EVHardware {
     @Volatile private var sCar: Any? = null
     @Volatile private var sCarPropertyManager: Any? = null
     @Volatile private var sCarHvacManager: Any? = null
+    @Volatile private var sCpmGetIntMethod: java.lang.reflect.Method? = null
+    @Volatile private var sCpmGetFloatMethod: java.lang.reflect.Method? = null
+    @Volatile private var sCpmGetBooleanMethod: java.lang.reflect.Method? = null
+    /** Set once the three getters above have been looked up, present or absent. */
+    @Volatile private var sCpmMethodsResolved = false
     @Volatile private var sVehicleBinder: IBinder? = null
     @Volatile private var sVpm: Any? = null          // VehiclePropertyManager instance (SWI133, Katman4)
     @Volatile private var sVpmService: Any? = null   // mIVehiclePropertyService field value (SWI133)
@@ -228,6 +236,7 @@ object EVHardware {
     @Volatile private var sCarGeneral: Any? = null   // CarGeneralClient instance (A9 SWI132/131/69, brightness)
     @Volatile private var sInitialized = false
     @Volatile private var sCarBindAttempted = false
+    @Volatile private var sCarWatchdogArmed = false
     @Volatile var logEnabled = true
 
     @Volatile private var sDriveModeListener: DriveModeListener? = null
@@ -368,6 +377,98 @@ object EVHardware {
     fun getOutsideTempCelsius(): Float? =
         getFloatPropertyCPM(PROP_OUTSIDE_TEMP, AREA_GLOBAL)
             ?: getFloatPropertyCPM(PROP_OUTSIDE_TEMP, 0)
+
+    // Standard AAOS read-only energy signals. Every access is explicitly limited to a
+    // supported firmware generation; UNKNOWN stays null instead of assuming compatibility.
+    private const val PROP_EV_INSTANTANEOUS_CHARGE_RATE = 0x1160030C // mW, + charge / - discharge
+    private const val PROP_EV_CHARGE_PORT_CONNECTED = 0x1120030B
+    private const val PROP_EV_BATTERY_AVG_TEMP = 0x1160030E          // °C
+    private const val PROP_EV_BATTERY_LEVEL = 0x11600309             // Wh
+    private const val PROP_RANGE_REMAINING = 0x11600308              // metres
+    private const val PROP_INFO_EV_BATTERY_CAPACITY = 0x11600106     // Wh
+    private const val PROP_ODOMETER = 0x11600204                     // km
+    private const val PROP_CABIN_TEMP = 0x15600502                   // °C, zoned
+    private const val PROP_TIRE_PRESSURE = 0x17600309                // kPa, per wheel
+    private const val PROP_EV_BATTERY_PCT_SWI68 = 0x2160F404         // vendor float %
+    private const val PROP_EV_RANGE_KM_SWI68 = 0x2140F41C            // vendor int km
+
+    /** Battery power in kW: positive traction/accessory draw, negative charging/regen. */
+    fun getBatteryPowerKw(): Float? = supportedTelemetryRead {
+        getFloatPropertyCPM(PROP_EV_INSTANTANEOUS_CHARGE_RATE, AREA_GLOBAL)
+            ?.takeIf { it.isFinite() }
+            ?.div(-1_000_000f)
+            ?.takeIf { kotlin.math.abs(it) <= 1_000f }
+    }
+
+    fun getBatteryTemperatureCelsius(): Float? = supportedTelemetryRead {
+        getFloatPropertyCPM(PROP_EV_BATTERY_AVG_TEMP, AREA_GLOBAL)
+            ?.takeIf { it.isFinite() && it in -50f..120f }
+    }
+
+    fun getBatteryEnergyKwh(): Float? = supportedTelemetryRead {
+        getFloatPropertyCPM(PROP_EV_BATTERY_LEVEL, AREA_GLOBAL)
+            ?.takeIf { it.isFinite() && it >= 0f }
+            ?.div(1_000f)
+    }
+
+    fun getBatteryCapacityKwh(): Float? = supportedTelemetryRead {
+        getFloatPropertyCPM(PROP_INFO_EV_BATTERY_CAPACITY, AREA_GLOBAL)
+            ?.takeIf { it.isFinite() && it > 0f }
+            ?.div(1_000f)
+    }
+
+    fun getStandardRangeKm(): Float? = supportedTelemetryRead {
+        getFloatPropertyCPM(PROP_RANGE_REMAINING, AREA_GLOBAL)
+            ?.takeIf { it.isFinite() && it >= 0f }
+            ?.div(1_000f)
+    }
+
+    fun getOdometerKm(): Float? = supportedTelemetryRead {
+        getFloatPropertyCPM(PROP_ODOMETER, AREA_GLOBAL)
+            ?.takeIf { it.isFinite() && it >= 0f }
+    }
+
+    fun getCabinTemperatureCelsius(): Float? = supportedTelemetryRead {
+        getFloatPropertyCPM(PROP_CABIN_TEMP, AREA_HVAC)
+            ?.takeIf { it.isFinite() && it in -50f..100f }
+    }
+
+    fun isChargePortConnected(): Boolean? = supportedTelemetryRead {
+        getBooleanPropertyCPM(PROP_EV_CHARGE_PORT_CONNECTED, AREA_GLOBAL)
+    }
+
+    enum class Wheel(val area: Int) {
+        FRONT_LEFT(0x01), FRONT_RIGHT(0x02), REAR_LEFT(0x04), REAR_RIGHT(0x08)
+    }
+
+    fun getTirePressureKpa(wheel: Wheel): Float? = supportedTelemetryRead {
+        getFloatPropertyCPM(PROP_TIRE_PRESSURE, wheel.area)
+            ?.takeIf { it.isFinite() && it in 0f..1_000f }
+    }
+
+    /** SWI68-only fallback; other generations must use the vendor charging service. */
+    fun getVendorBatterySocPercent(): Float? =
+        if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI68) {
+            getFloatPropertyCPM(PROP_EV_BATTERY_PCT_SWI68, AREA_GLOBAL)
+                ?.takeIf { it.isFinite() && it in 0f..100f }
+        } else null
+
+    /** SWI68-only fallback; other generations use the standard or vendor-service range. */
+    fun getVendorRangeKm(): Int? =
+        if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI68) {
+            getIntPropertyCPM(PROP_EV_RANGE_KM_SWI68, AREA_GLOBAL).takeIf { it >= 0 }
+        } else null
+
+    private inline fun <T> supportedTelemetryRead(read: () -> T?): T? =
+        when (FirmwareInfo.getGeneration()) {
+            FirmwareInfo.Gen.SWI68,
+            FirmwareInfo.Gen.SWI69,
+            FirmwareInfo.Gen.SWI131,
+            FirmwareInfo.Gen.SWI132,
+            FirmwareInfo.Gen.SWI133,
+            FirmwareInfo.Gen.SWI165 -> read()
+            FirmwareInfo.Gen.UNKNOWN -> null
+        }
 
     // -------------------------------------------------------------------------
     // Climate + windows — READ ONLY.
@@ -539,6 +640,8 @@ object EVHardware {
                         AppLogger.w(TAG, "  Katman1: Car service disconnected")
                         sCarPropertyManager = null
                         sCarHvacManager = null
+                        clearCarPropertyMethods()
+                        armCarServiceWatchdog(context, carClass)
                     }
                 }
                 car = scMethodFound.invoke(null, context, sc)
@@ -550,6 +653,9 @@ object EVHardware {
 
         if (car == null) {
             AppLogger.e(TAG, "  Katman1: all createCar methods failed")
+            // Not necessarily fatal: on a cold head unit the Car service is simply not up
+            // yet. Giving up here would leave the whole process without a vehicle forever.
+            armCarServiceWatchdog(context, carClass)
             return
         }
 
@@ -576,6 +682,41 @@ object EVHardware {
         h.postDelayed({ tryGetManagersFromCar(carClass) }, 20_000)
         h.postDelayed({ tryGetManagersFromCar(carClass) }, 40_000)
         h.postDelayed({ tryGetManagersFromCar(carClass) }, 60_000)
+        armCarServiceWatchdog(context, carClass)
+    }
+
+    /**
+     * Unbounded manager watchdog, at [CAR_WATCHDOG_INTERVAL_MS].
+     *
+     * The fixed ladder above only covers the first minute. This covers everything after it:
+     * a Car service that comes up late, one that dies and comes back, and the case where
+     * `createCar` itself failed. Without it, a process started before the vehicle service
+     * is ready never sees a vehicle again for its whole lifetime — which is why consumers
+     * used to carry their own reconnect loops. The watchdog belongs next to the binding it
+     * repairs, not in each app.
+     */
+    private fun armCarServiceWatchdog(context: Context, carClass: Class<*>) {
+        if (sCarWatchdogArmed) return
+        sCarWatchdogArmed = true
+        val appContext = context.applicationContext
+        val handler = Handler(Looper.getMainLooper())
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                if (sCarPropertyManager != null) {
+                    sCarWatchdogArmed = false
+                    return
+                }
+                if (sCar == null) {
+                    // No Car object at all — retry the whole bind, not just the managers.
+                    sCarWatchdogArmed = false
+                    sCarBindAttempted = false
+                    bindCarService(appContext)
+                    return
+                }
+                tryGetManagersFromCar(carClass)
+                handler.postDelayed(this, CAR_WATCHDOG_INTERVAL_MS)
+            }
+        }, CAR_WATCHDOG_INTERVAL_MS)
     }
 
     private fun tryGetManagersFromCar(carClass: Class<*>) {
@@ -598,6 +739,7 @@ object EVHardware {
                 try {
                     val svc = carClass.getField("PROPERTY_SERVICE").get(null) as String
                     sCarPropertyManager = getCarManager.invoke(car, svc)
+                    cacheCarPropertyMethods(sCarPropertyManager)
                     AppLogger.i(TAG, "  Katman1: CarPropertyManager READY ✓")
                 } catch (e: Exception) {
                     AppLogger.w(TAG, "  Katman1: CarPropertyManager unavailable: ${e.message}")
@@ -1562,9 +1704,9 @@ object EVHardware {
     private fun getIntPropertyCPM(propId: Int, areaId: Int): Int {
         val cpm = sCarPropertyManager ?: return -1
         return try {
-            (cpm.javaClass
-                .getMethod("getIntProperty", Int::class.java, Int::class.java)
-                .invoke(cpm, propId, areaId) as? Int) ?: -1
+            val method = sCpmGetIntMethod ?: cacheCarPropertyMethods(cpm).let { sCpmGetIntMethod }
+                ?: return -1
+            (method.invoke(cpm, propId, areaId) as? Int) ?: -1
         } catch (e: Exception) {
             AppLogger.d(TAG, "  CPM getInt 0x${Integer.toHexString(propId)} exc: ${e.message}")
             -1
@@ -1575,13 +1717,51 @@ object EVHardware {
     private fun getFloatPropertyCPM(propId: Int, areaId: Int): Float? {
         val cpm = sCarPropertyManager ?: return null
         return try {
-            cpm.javaClass
-                .getMethod("getFloatProperty", Int::class.java, Int::class.java)
-                .invoke(cpm, propId, areaId) as? Float
+            val method = sCpmGetFloatMethod ?: cacheCarPropertyMethods(cpm).let { sCpmGetFloatMethod }
+                ?: return null
+            method.invoke(cpm, propId, areaId) as? Float
         } catch (e: Exception) {
             AppLogger.d(TAG, "  CPM getFloat 0x${Integer.toHexString(propId)} exc: ${e.message}")
             null
         }
+    }
+
+    private fun getBooleanPropertyCPM(propId: Int, areaId: Int): Boolean? {
+        val cpm = sCarPropertyManager ?: return null
+        return try {
+            val method = sCpmGetBooleanMethod ?: cacheCarPropertyMethods(cpm).let {
+                sCpmGetBooleanMethod
+            } ?: return null
+            method.invoke(cpm, propId, areaId) as? Boolean
+        } catch (e: Exception) {
+            AppLogger.d(TAG, "  CPM getBoolean 0x${Integer.toHexString(propId)} exc: ${e.message}")
+            null
+        }
+    }
+
+    @Synchronized
+    private fun cacheCarPropertyMethods(cpm: Any?) {
+        // Keyed on "resolved", not on "found": a getter this CarPropertyManager does not
+        // expose would otherwise be looked up again on every single sample.
+        if (cpm == null || sCpmMethodsResolved) return
+        val type = cpm.javaClass
+        sCpmGetIntMethod = runCatching {
+            type.getMethod("getIntProperty", Int::class.java, Int::class.java)
+        }.getOrNull()
+        sCpmGetFloatMethod = runCatching {
+            type.getMethod("getFloatProperty", Int::class.java, Int::class.java)
+        }.getOrNull()
+        sCpmGetBooleanMethod = runCatching {
+            type.getMethod("getBooleanProperty", Int::class.java, Int::class.java)
+        }.getOrNull()
+        sCpmMethodsResolved = true
+    }
+
+    private fun clearCarPropertyMethods() {
+        sCpmGetIntMethod = null
+        sCpmGetFloatMethod = null
+        sCpmGetBooleanMethod = null
+        sCpmMethodsResolved = false
     }
 
     private fun setIntPropertyCPM(propId: Int, areaId: Int, value: Int): Boolean {

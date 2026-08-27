@@ -4,6 +4,34 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-08-27
+
+### Added
+
+- A shared, read-only energy telemetry API: one nullable `EnergySnapshot` combines SOC,
+  range, speed, battery power and temperatures, pack energy/capacity, odometer, charge state
+  tyre pressures and climate state with explicit firmware dispatch and unit conversion.
+- Reusable trip and charging-session integration plus bounded atomic trip-history storage.
+  Both skip unreadable samples and long gaps rather than inventing energy.
+
+### Changed
+
+- Reflected `CarPropertyManager` getters are cached when the service connects instead of
+  resolving a `Method` for every sample. The cache is keyed on "resolved", not on "found",
+  so a getter this `CarPropertyManager` does not expose is no longer looked up again on
+  every sample.
+- A trip's reported duration is the time actually covered by usable samples, not wall clock.
+  A sampler suspended for ten minutes no longer adds ten minutes to a trip whose distance
+  and energy did not move — the consumption average now divides comparable numbers.
+
+### Fixed
+
+- The Car-service binding now retries without a bound. The previous fixed retry ladder gave
+  up after one minute, so a process started before the SAIC Car service was ready never saw
+  a vehicle again for its whole lifetime, and a service that died and came back was only
+  recovered if the `ServiceConnection` callback fired. Consumers carried their own reconnect
+  loops to work around this; the watchdog now lives next to the binding it repairs.
+
 ## [1.6.0] - 2026-08-26
 
 ### Fixed
