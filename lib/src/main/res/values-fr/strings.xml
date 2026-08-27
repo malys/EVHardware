@@ -157,6 +157,8 @@
     <string name="act_battery_preheat">Préchauffage de la batterie</string>
     <string name="act_play_radio">Mettre la radio</string>
     <string name="act_tune_radio">Régler la radio</string>
+    <string name="act_radio_next_station">Station radio suivante</string>
+    <string name="act_radio_prev_station">Station radio précédente</string>
     <string name="value_radio_hint">ex. 103.5 ou AM 1080</string>
     <string name="act_navigate">Naviguer vers</string>
     <string name="act_ask_confirm">Demander confirmation</string>
@@ -218,4 +220,11 @@
     <string name="cond_odometer">Compteur kilométrique</string>
     <string name="cond_weather">Météo</string>
     <string name="cond_weather_hint">ex. pluie</string>
+    <string name="act_esc">Contrôle de stabilité (ESC)</string>
+    <string name="act_drowsiness">Alerte de somnolence</string>
+    <string name="act_drowsiness_sensitivity">Sensibilité de l\'alerte de somnolence</string>
+    <string name="act_adjust_media_volume">Volume média, par crans</string>
+    <string name="cond_data_today">Données consommées aujourd\'hui</string>
+    <string name="cond_data_month">Données consommées ce mois-ci</string>
+    <string name="unit_megabyte">Mo</string>
 </resources>

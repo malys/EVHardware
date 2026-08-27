@@ -315,7 +315,14 @@ class CatalogConsistencyTest {
             // No current value to open the editor on: the reading is a position and the
             // control is a command, so seeding one with the other would be a false start.
             assertNull("${it.name} has no position to preselect", it.currentKey)
+            // Which of the eight commands raises a window is written down nowhere and no
+            // head-unit application sends one, so the write has never been shown to move
+            // anything. Until it is, the action is offered nowhere and run nowhere.
+            assertFalse("${it.name} effect is not established", it.writeProven)
         }
+        // Exactly these: an unproven write is invisible to the user, so adding one elsewhere
+        // silently removes an action from every app that carries this catalogue.
+        assertEquals(glass.toSet(), ActionType.entries.filter { !it.writeProven }.toSet())
     }
 
     @Test

@@ -40,7 +40,11 @@ class FirmwareSupportTest {
         // pas des services du SDK véhicule, rien ne les route par génération. Ils répondent
         // ou non, comme le SMS.
         ConditionType.ODOMETER,
-        ConditionType.WEATHER_NOW
+        ConditionType.WEATHER_NOW,
+        // La connexion du poste, comptée par Android : elle dépend d'une permission, pas
+        // d'une génération de firmware.
+        ConditionType.DATA_USED_TODAY,
+        ConditionType.DATA_USED_MONTH
     )
     private val firmwareIndependentActions = setOf(
         ActionType.LAUNCH_APP,

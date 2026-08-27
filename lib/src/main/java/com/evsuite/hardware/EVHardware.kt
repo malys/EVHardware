@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.media.AudioManager
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -125,6 +126,9 @@ object EVHardware {
     // Runtime range 0..255 on the supported generations.
     // A9 (SWI132/131/69) = phase 2 (setScreenBrightness(III), params not decodable without SystemUI).
     private const val GENERAL_MANAGER_CLASS = "com.saicmotor.sdk.systemsettings.GeneralManager"
+    // ESC lives on the *control* manager, not the settings one — get/setEspSwitch exist
+    // nowhere else, and looking for them on the VehicleSettingManager failed without a sound.
+    private const val VCONTROL_CLASS = "com.saicmotor.sdk.vehiclesettings.manager.VehicleControlManager"
     private const val BRIGHTNESS_NATIVE_MAX = 255
 
     // Media volume — ancien SDK (SWI133/68/165) : SmartSoundManager.getVolume/setVolume/getMaxVolume(type).
@@ -229,9 +233,14 @@ object EVHardware {
     @Volatile private var sVpm: Any? = null          // VehiclePropertyManager instance (SWI133, Katman4)
     @Volatile private var sVpmService: Any? = null   // mIVehiclePropertyService field value (SWI133)
     @Volatile private var sVsm: Any? = null          // VehicleSettingManager instance (SWI68, Katman4)
+    // The A9 adapter, kept after the VSM client is built: it is the door to every other
+    // carapi client too — the climate one among them — and nothing else can open it.
+    @Volatile private var sCarAdapter: Any? = null
+    @Volatile private var sCarAdapterClass: Class<*>? = null
     @Volatile private var sVsmService: Any? = null   // mVehicleSettingService field value (SWI68)
     @Volatile private var sVsm133: Any? = null       // VehicleSettingManager instance (SWI133, pour ELK)
     @Volatile private var sGeneral: Any? = null      // GeneralManager instance (SWI133/68/165, brightness)
+    @Volatile private var sVcontrol: Any? = null     // VehicleControlManager instance (SWI68/165, ESC)
     @Volatile private var sSmartSound: Any? = null   // SmartSoundManager instance (SWI133/68/165, loudness)
     @Volatile private var sCarGeneral: Any? = null   // CarGeneralClient instance (A9 SWI132/131/69, brightness)
     @Volatile private var sInitialized = false
@@ -557,6 +566,9 @@ object EVHardware {
         if (sInitialized) return
         sInitialized = true
         sAppContext = context.applicationContext
+        // Cached here so the catalogue predicate stays a property read: every editor and the
+        // diagnostic ask `effectProven` once per entry, several times a screen.
+        GlassEvidence.load(context)
         AppLogger.i(TAG, "=== EVHardware.init() === uid=${android.os.Process.myUid()} sdk=${android.os.Build.VERSION.SDK_INT} device=${android.os.Build.DEVICE}")
         bindCarService(context)
         sVehicleBinder = getBinderService("vehiclesetting")
@@ -854,6 +866,7 @@ object EVHardware {
 
         // 3b) GeneralManager pour SWI133 (brightness screen)
         tryInitGeneralManager(launcherCtx, context)
+        tryInitVehicleControlManager(launcherCtx, context)
 
         // 3c) SmartSoundManager pour SWI133 (loudness audio)
         tryInitSmartSoundManager(launcherCtx, context)
@@ -865,6 +878,7 @@ object EVHardware {
                 if (sVpmService == null) tryGetVpmService(sVpm ?: return@postDelayed)
                 if (sVsm133 == null) tryInitVsm133(launcherCtx, context)
                 if (sGeneral == null) tryInitGeneralManager(launcherCtx, context)
+                if (sVcontrol == null) tryInitVehicleControlManager(launcherCtx, context)
                 if (sSmartSound == null) tryInitSmartSoundManager(launcherCtx, context)
                 if (doorVolumeEnabled() && sCarPropMgr == null) startDoorVolumeWatcher()
             }, delay)
@@ -1039,6 +1053,80 @@ object EVHardware {
     // GeneralManager.init(Context, ISettingsServiceListener) — singleton sInstance.
     // Same pattern as tryInitVsm133; loaded from the launcher com.saicmotor.hmi.launcher.
     // -------------------------------------------------------------------------
+
+    /**
+     * VehicleControlManager — where ESC lives on SWI68 and SWI165.
+     *
+     * Same shape as [tryInitGeneralManager]: a static singleton, or `init(Context, listener)`
+     * when it has not been built yet. Calling `init` ourselves is not optional — the class
+     * comes from the launcher's classloader, but statics live per process, so the singleton
+     * the launcher already built is not ours to see.
+     */
+    private fun tryInitVehicleControlManager(launcherCtx: Context, appCtx: Context) {
+        if (sVcontrol != null) return
+        try {
+            val cls = launcherCtx.classLoader.loadClass(VCONTROL_CLASS)
+            val f = cls.getDeclaredField("sVehicleControlManager")
+            f.isAccessible = true
+            f.get(null)?.let {
+                sVcontrol = it
+                AppLogger.i(TAG, "  VehicleControlManager singleton \u2713")
+                return
+            }
+            val initMethod = cls.methods.firstOrNull { m ->
+                m.name == "init" && m.parameterCount == 2 &&
+                    Context::class.java.isAssignableFrom(m.parameterTypes[0])
+            } ?: run {
+                AppLogger.w(TAG, "  VehicleControlManager init() not found")
+                return
+            }
+            val listenerType = initMethod.parameterTypes[1]
+            val listener = if (listenerType.isInterface) {
+                java.lang.reflect.Proxy.newProxyInstance(listenerType.classLoader, arrayOf(listenerType)) { _, method, _ ->
+                    if (method.name == "onServiceConnected") {
+                        try {
+                            f.get(null)?.let { sVcontrol = it }
+                            AppLogger.i(TAG, "  VehicleControlManager onServiceConnected \u2014 sVcontrol=${if (sVcontrol != null) "OK" else "null"}")
+                        } catch (_: Exception) {}
+                    }
+                    null
+                }
+            } else null
+            initMethod.invoke(null, appCtx, listener)
+            f.get(null)?.let { sVcontrol = it }
+            AppLogger.i(TAG, "  VehicleControlManager.init() called \u2014 sVcontrol=${if (sVcontrol != null) "OK" else "null"}")
+        } catch (e: Exception) {
+            AppLogger.d(TAG, "  tryInitVehicleControlManager exc: ${e.message}")
+        }
+    }
+
+    private fun callVcontrol(methodName: String, vararg args: Any?): Any? {
+        val manager = sVcontrol ?: return null
+        return try {
+            val types = args.map { if (it is Int) Int::class.javaPrimitiveType!! else it!!.javaClass }.toTypedArray()
+            manager.javaClass.getMethod(methodName, *types).invoke(manager, *args)
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "  VCTRL: $methodName() exc: ${e.message}")
+            null
+        }
+    }
+
+    /** A write like any other, so it takes the standstill gate. */
+    private fun callVcontrolVoid(methodName: String, vararg args: Any?): Boolean {
+        if (!VehicleWriteGate.allow("VCTRL $methodName")) return false
+        val manager = sVcontrol ?: run {
+            AppLogger.w(TAG, "  VCTRL: $methodName() \u2014 manager not bound")
+            return false
+        }
+        return try {
+            val types = args.map { if (it is Int) Int::class.javaPrimitiveType!! else it!!.javaClass }.toTypedArray()
+            manager.javaClass.getMethod(methodName, *types).invoke(manager, *args)
+            true
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "  VCTRL: $methodName() exc: ${e.message}")
+            false
+        }
+    }
 
     private fun tryInitGeneralManager(launcherCtx: Context, appCtx: Context) {
         if (sGeneral != null) return
@@ -1297,6 +1385,7 @@ object EVHardware {
 
         // GeneralManager pour SWI68/SWI165 (brightness screen) — same launcher context
         tryInitGeneralManager(launcherCtx, context)
+        tryInitVehicleControlManager(launcherCtx, context)
 
         // SmartSoundManager pour SWI68/SWI165 (loudness audio) — same launcher context
         tryInitSmartSoundManager(launcherCtx, context)
@@ -1315,6 +1404,7 @@ object EVHardware {
                 }
                 sVsm?.let { if (sVsmService == null) tryGetVsmService(it, vsmClass) }
                 if (sGeneral == null) tryInitGeneralManager(launcherCtx, context)
+                if (sVcontrol == null) tryInitVehicleControlManager(launcherCtx, context)
                 if (sSmartSound == null) tryInitSmartSoundManager(launcherCtx, context)
             }, delay)
         }
@@ -1386,6 +1476,9 @@ object EVHardware {
             return
         }
 
+        sCarAdapter = adapter
+        sCarAdapterClass = adapterClass
+
         // Enregistrer le ServiceConnListener (onResult(0) = connected)
         val listenerType = adapterClass.declaredClasses
             .firstOrNull { it.simpleName == "ServiceConnListener" }
@@ -1456,6 +1549,34 @@ object EVHardware {
             AppLogger.d(TAG, "  SWI69: tryInitClientFromAdapter error: ${e.message}")
         }
     }
+
+    /**
+     * A carapi client binder by service code, on the A9 platform.
+     *
+     * `queryClient` is how every A9 client is obtained — the vehicle settings one (0x8) is
+     * built above, and climate (0x7) uses the same door. Null until the adapter has connected,
+     * which is a state, not a failure: the caller retries on its next call.
+     */
+    internal fun a9ClientBinder(serviceCode: Int): IBinder? {
+        val adapter = sCarAdapter ?: return null
+        val adapterClass = sCarAdapterClass ?: return null
+        return try {
+            adapterClass.getMethod("queryClient", Int::class.javaPrimitiveType!!)
+                .invoke(adapter, serviceCode) as? IBinder
+        } catch (e: Exception) {
+            AppLogger.d(TAG, "  A9: queryClient(0x${serviceCode.toString(16)}): ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * The loader that can see the vendor classes.
+     *
+     * They live in the launcher's APK, not on the boot classpath, so only a class already
+     * pulled from there can name their siblings.
+     */
+    internal fun a9ClassLoader(): ClassLoader? =
+        sVsm?.javaClass?.classLoader ?: sCarAdapterClass?.classLoader
 
     private fun callVsm(methodName: String, vararg args: Any?): Any? {
         val vsm = sVsm ?: return null
@@ -2425,6 +2546,194 @@ object EVHardware {
         AppLogger.i(TAG, "  LAS SET vibration=${if (enabled) "ON" else "OFF"} via VSM")
         callVsm("setLasWarningVibration", if (enabled) 1 else 0)
         return true
+    }
+
+    // -------------------------------------------------------------------------
+    // Drowsiness warning (UDW) and ESC
+    //
+    // Three different routes, and the differences are the whole difficulty:
+    //   • SWI133    : VPM properties;
+    //   • SWI68/165 : named methods — and ESC on the **VehicleControlManager**, not the
+    //                 settings one, which is why looking for it on sVsm found nothing;
+    //   • A9        : the CarVehicleSettingClient, where ESC is spelled "Eps".
+    // -------------------------------------------------------------------------
+
+    // UDW = "Unfit Driver Warning". 0x3010005 (UDW_MAIN_SWITCH) and NOT 0x3010001
+    // (DMS_SWITCH): both exist and their labels read alike, but DMS_SWITCH drives the CAMERA
+    // monitoring and writing it had no visible effect. The switch and its sensitivity must
+    // come from the same family — a setDmsStatus next to a setUdwSensitivity is two different
+    // settings wearing one name.
+    private const val PROP_UDW_MAIN_SWITCH = 0x3010005
+    private const val PROP_DMS_SENSITIVITY = 0x3010007
+    private const val PROP_ESC             = 0x4020003
+
+    private const val UDW_OFF = 1
+    private const val UDW_ON  = 2
+
+    /** How many agreeing reads before acting on ESC. */
+    private const val ESC_READS = 3
+
+    /** Between two of those reads. */
+    private const val ESC_READ_INTERVAL_MS = 300L
+
+    /** Time left to the controller to apply the toggle before the effect is checked. */
+    private const val ESC_SETTLE_MS = 600L
+
+    /** Drowsiness alert sensitivity — the same three steps as the AEB one. */
+    object DrowsinessSensitivity {
+        const val LOW = 1
+        const val MEDIUM = 2
+        const val HIGH = 3
+    }
+
+    /** False on a firmware none of the three routes covers, where a write would go nowhere. */
+    fun hasDrowsinessAndEsc(): Boolean = FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
+
+    /**
+     * True on the carapi platform, where the method names differ from the old SDK.
+     *
+     * Not [FirmwareInfo.isNewGenVsm]: that one covers SWI69 and SWI131 and leaves SWI132 out,
+     * which is an A9 all the same.
+     */
+    private fun isA9Vsm(): Boolean = when (FirmwareInfo.getGeneration()) {
+        FirmwareInfo.Gen.SWI69, FirmwareInfo.Gen.SWI131, FirmwareInfo.Gen.SWI132 -> true
+        else -> false
+    }
+
+    private fun nUdwSet() = if (isA9Vsm()) "setUdwStatus" else "setUnsteadyDrivingWarning"
+    private fun nUdwGet() = if (isA9Vsm()) "getUdwStatus" else "getUnsteadyDrivingWarning"
+    private fun nSenSet() = if (isA9Vsm()) "setUdwSensitivityState" else "setUnsteadyDrivingWarningSen"
+    private fun nSenGet() = if (isA9Vsm()) "getUdwSensitivityState" else "getUnsteadyDrivingWarningSen"
+    private fun nEscSet() = if (isA9Vsm()) "setDrivingEpsMode" else "setEspSwitch"
+    private fun nEscGet() = if (isA9Vsm()) "getDrivingEpsMode" else "getEspSwitch"
+
+    private fun readSafety(prop: Int, method: String): Int =
+        if (FirmwareInfo.isVsmBased()) (callVsm(method) as? Int) ?: -1
+        else getIntPropertyVpm(prop)
+
+    private fun writeSafety(prop: Int, method: String, value: Int): Boolean =
+        if (FirmwareInfo.isVsmBased()) callVsmVoid(method, value)
+        else setIntPropertyVpmRecovery(prop, value)
+
+    /**
+     * Drowsiness warning: true ON, false OFF, null unreadable.
+     *
+     * **0 counts as OFF**, not as unreadable — which is what the stock UI does (1 OFF, 2 ON,
+     * 0 OFF, anything else an error). Treating it as unreadable answered null on a perfectly
+     * valid state, so nothing lit up on screen. Only -1, the read failure sentinel, is
+     * genuinely "could not tell".
+     */
+    fun isDrowsinessOn(): Boolean? {
+        if (!hasDrowsinessAndEsc()) return null
+        return when (readSafety(PROP_UDW_MAIN_SWITCH, nUdwGet())) {
+            UDW_ON -> true
+            UDW_OFF, 0 -> false
+            else -> null
+        }
+    }
+
+    @RequiresStandstill
+    fun setDrowsiness(on: Boolean): Boolean {
+        if (!hasDrowsinessAndEsc()) return false
+        val value = if (on) UDW_ON else UDW_OFF
+        AppLogger.i(TAG, "  UDW SET switch=$value (${if (on) "ON" else "OFF"}) via ${nUdwSet()}")
+        return writeSafety(PROP_UDW_MAIN_SWITCH, nUdwSet(), value)
+    }
+
+    /** 1 low, 2 medium, 3 high. -1 when unreadable. */
+    fun getDrowsinessSensitivity(): Int {
+        if (!hasDrowsinessAndEsc()) return -1
+        return readSafety(PROP_DMS_SENSITIVITY, nSenGet()).takeIf { it in 1..3 } ?: -1
+    }
+
+    @RequiresStandstill
+    fun setDrowsinessSensitivity(level: Int): Boolean {
+        if (!hasDrowsinessAndEsc() || level !in 1..3) return false
+        AppLogger.i(TAG, "  UDW SET sensitivity=$level via ${nSenSet()}")
+        return writeSafety(PROP_DMS_SENSITIVITY, nSenSet(), level)
+    }
+
+    private fun readEscRaw(): Int = when {
+        isA9Vsm() -> (callVsm(nEscGet()) as? Int) ?: -1
+        FirmwareInfo.isVsmBased() -> (callVcontrol(nEscGet()) as? Int) ?: -1
+        else -> getIntPropertyVpm(PROP_ESC)
+    }
+
+    private fun writeEscRaw(value: Int): Boolean = when {
+        isA9Vsm() -> callVsmVoid(nEscSet(), value)
+        FirmwareInfo.isVsmBased() -> callVcontrolVoid(nEscSet(), value)
+        else -> setIntPropertyVpmRecovery(PROP_ESC, value)
+    }
+
+    /** ESC: true ON, false OFF, null unreadable. Read as 0 OFF, 1 ON, 2 OFF. */
+    fun isEscOn(): Boolean? {
+        if (!hasDrowsinessAndEsc()) return null
+        return when (readEscRaw()) {
+            1 -> true
+            0, 2 -> false
+            else -> null
+        }
+    }
+
+    /**
+     * The same reading [ESC_READS] times running, or nothing.
+     *
+     * The write is a **toggle** driven by this read, so a single wrong reading does not
+     * produce a failed write — it produces the opposite of what was asked, silently.
+     */
+    private fun readEscStable(): Boolean? {
+        val first = isEscOn() ?: return null
+        repeat(ESC_READS - 1) {
+            try { Thread.sleep(ESC_READ_INTERVAL_MS) } catch (_: InterruptedException) {}
+            if (isEscOn() != first) {
+                AppLogger.w(TAG, "  ESC: readings disagree — not acting on a toggle")
+                return null
+            }
+        }
+        return first
+    }
+
+    /**
+     * Turns ESC on or off. Blocking for about a second — never on the main thread.
+     *
+     * Two guards, both earned:
+     *
+     * **Ignition.** Getting in while the infotainment is already up but the cluster is not,
+     * the ESC property does not yet reflect reality. Since the write is a toggle driven by
+     * that read, aiming at ON from a false OFF *inverts* an ESC that was active — genuinely
+     * disabled, in silence. So a known non-RUN ignition is refused. An unreadable one is not:
+     * on a firmware where the property does not answer, refusing would cost the user the
+     * setting and protect nothing. Nothing is lost by waiting either — the car puts ESC back
+     * on at every start, and the rule runs again once the ignition reaches RUN.
+     *
+     * **Agreement.** [readEscStable] must see the same state [ESC_READS] times before the
+     * toggle is sent, and the result is checked afterwards rather than assumed.
+     */
+    @RequiresStandstill
+    fun setEsc(on: Boolean): Boolean {
+        if (!hasDrowsinessAndEsc()) return false
+
+        val ignition = getCurrentIgnitionState()
+        if (ignition == CarIgnitionItem.OFF || ignition == CarIgnitionItem.ACCESSORY ||
+            ignition == CarIgnitionItem.CRANK
+        ) {
+            AppLogger.w(TAG, "  ESC: vehicle not in RUN (ignition=$ignition) — no action, the " +
+                "reading cannot be trusted yet")
+            return false
+        }
+
+        val stable = readEscStable() ?: return false
+        if (stable == on) {
+            AppLogger.i(TAG, "  ESC already ${if (on) "ON" else "OFF"} (confirmed $ESC_READS times)")
+            return true
+        }
+
+        AppLogger.i(TAG, "  ESC -> ${if (on) "ON" else "OFF"} via ${nEscSet()}")
+        if (!writeEscRaw(1)) return false
+        try { Thread.sleep(ESC_SETTLE_MS) } catch (_: InterruptedException) {}
+        val after = isEscOn()
+        AppLogger.i(TAG, "  ESC after toggle = $after (wanted $on)")
+        return after == on
     }
 
     /**
@@ -3535,6 +3844,51 @@ object EVHardware {
         }
         AppLogger.i(VOL_TAG, "setMediaVolume($level) = $ok")
         return ok
+    }
+
+    /**
+     * Moves the media volume by [delta] steps, clamped to the vehicle's own range.
+     *
+     * A relative step rather than a target, for the case a target cannot serve: a wheel button
+     * or a rule that says "one quieter" does not know what the volume is, and reading it first
+     * from the caller would race the driver's own thumb.
+     *
+     * Falls back to `AudioManager` when the vendor level is unreadable — the volume the driver
+     * hears is the platform's either way, and a step nobody can measure is still a step. Being
+     * already at an end is reported as success: nothing had to change, and calling that a
+     * failure would fill a rule's history with refusals for working as asked.
+     */
+    fun adjustMediaVolume(delta: Int): Boolean {
+        val current = getMediaVolume()
+        val max = getMediaVolumeMax()
+        if (current >= 0 && max > 0) {
+            val target = (current + delta).coerceIn(0, max)
+            if (target == current) {
+                AppLogger.i(VOL_TAG, "adjustMediaVolume($delta): already at the end ($current/$max)")
+                return true
+            }
+            AppLogger.i(VOL_TAG, "adjustMediaVolume($delta): $current -> $target (max $max)")
+            return setMediaVolume(target)
+        }
+        val audio = sAppContext?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        if (audio == null) {
+            AppLogger.w(VOL_TAG, "adjustMediaVolume($delta): no vendor level and no AudioManager")
+            return false
+        }
+        return try {
+            repeat(kotlin.math.abs(delta)) {
+                audio.adjustStreamVolume(
+                    AudioManager.STREAM_MUSIC,
+                    if (delta > 0) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER,
+                    AudioManager.FLAG_SHOW_UI
+                )
+            }
+            AppLogger.i(VOL_TAG, "adjustMediaVolume($delta) via AudioManager (vendor level unreadable)")
+            true
+        } catch (e: Exception) {
+            AppLogger.w(VOL_TAG, "adjustMediaVolume($delta): ${(e.cause ?: e).message}")
+            false
+        }
     }
 
     // old-SDK : SmartSoundManager (reflection)

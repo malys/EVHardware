@@ -71,6 +71,13 @@ object SnapshotKeys {
     const val KEY_OVERSPEED_ALARM  = "overspeedAlarm"
     const val KEY_SPEED_LIMIT_TONE = "speedLimitTone"
     const val KEY_SOUND_WARNING    = "soundWarning"
+    const val KEY_ESC              = "esc"
+    const val KEY_DROWSINESS       = "drowsiness"
+    const val KEY_DROWSINESS_SENSITIVITY = "drowsinessSensitivity"
+
+    // ── Head-unit connection ────────────────────────────────────────────────
+    const val KEY_DATA_TODAY_MB    = "dataTodayMb"
+    const val KEY_DATA_MONTH_MB    = "dataMonthMb"
 
     // ── Vendor vehicle service (com.evsuite.hardware.saic) ───────────────────────
     // Read from the same service the car's own HVAC and charging screens use, so unlike

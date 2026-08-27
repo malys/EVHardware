@@ -53,7 +53,8 @@ enum class ActionGroup(@StringRes val labelRes: Int) {
  * nothing above 7 on the way in, and drops what it does not accept without saying so (see
  * `SaicVehicleControl`). Which command moves which way is not established by anything on the
  * firmware, so every glass write takes the standstill gate — an unknown direction cannot be
- * the one that is safe at speed. The electric tailgate stays out — the launcher defines its
+ * the one that is safe at speed, and every glass write is [writeProven] `= false` until one
+ * command is observed to move a window. The electric tailgate stays out — the launcher defines its
  * OPEN and CLOSE as the same value, so it is a pulse whose direction depends on state this
  * cannot read.
  *
@@ -77,7 +78,24 @@ enum class ActionType(
      * that starts where the screen already is makes the rule an edit of the present state,
      * which is what the user is thinking about. Null where nothing reads it back.
      */
-    val currentKey: String? = null
+    val currentKey: String? = null,
+    /**
+     * False when nothing establishes that this write does what its label says.
+     *
+     * Firmware support and effect are two different questions. `@SupportedOn` says the
+     * property exists on this generation; this says whether writing it has ever been shown
+     * to move anything. The glass is the case that made the distinction necessary: the
+     * service accepts a command in 0..7, no head-unit application sends one, and which of
+     * the eight raises a window is written down nowhere — so a write returns success while
+     * the glass stays where it was.
+     *
+     * An unproven action is offered nowhere and executed nowhere: EVTasker's diagnostic
+     * blocks it, the rule editor does not list it, and the executor refuses it rather than
+     * report a success it cannot back. Flip the flag back to true in the same commit that
+     * records the evidence — a command sent, the position read back, the glass observed to
+     * have moved.
+     */
+    val writeProven: Boolean = true
 ) {
 
     // ── Profile ──────────────────────────────────────────────────────────────
@@ -152,12 +170,17 @@ enum class ActionType(
     // These are the calls the car's own HVAC screen makes, so what they do is not in doubt.
     // Not gated: changing the cabin temperature does not alter road behaviour, and a rule
     // that pre-heats on the motorway is a legitimate one.
-    @SupportedOn(SWI68, SWI165)
+    //
+    // Two paths behind one name: the vendor hub on SWI68/SWI165, and `carapi`'s CarHvacClient
+    // on the A9 generations, which have no such hub (`A9Climate`). The exceptions are ECON and
+    // the passenger's own target — the A9 client exposes neither, so those two stay where they
+    // were rather than being offered on a car that would refuse them.
+    @SupportedOn(SWI68, SWI165, SWI69, SWI131, SWI132)
     SET_CLIMATE_POWER(
         R.string.act_climate_power, ActionGroup.CLIMATE,
         ValueSpec.BOOL, "SET_CLIMATE_POWER", currentKey = SnapshotKeys.KEY_CLIMATE_ON
     ),
-    @SupportedOn(SWI68, SWI165)
+    @SupportedOn(SWI68, SWI165, SWI69, SWI131, SWI132)
     SET_CABIN_TEMP(
         R.string.act_cabin_temp, ActionGroup.CLIMATE,
         number(VehicleEnums.CABIN_TEMP_MIN, VehicleEnums.CABIN_TEMP_MAX, R.string.unit_celsius),
@@ -176,7 +199,7 @@ enum class ActionType(
         number(VehicleEnums.CABIN_TEMP_MIN, VehicleEnums.CABIN_TEMP_MAX, R.string.unit_celsius),
         "SET_PASSENGER_TEMP", currentKey = SnapshotKeys.KEY_PASSENGER_TEMP
     ),
-    @SupportedOn(SWI68, SWI165)
+    @SupportedOn(SWI68, SWI165, SWI69, SWI131, SWI132)
     SET_AC(
         R.string.act_ac, ActionGroup.CLIMATE,
         ValueSpec.BOOL, "SET_AC", currentKey = SnapshotKeys.KEY_AC_ON
@@ -186,27 +209,27 @@ enum class ActionType(
         R.string.act_econ, ActionGroup.CLIMATE,
         ValueSpec.BOOL, "SET_ECON", currentKey = SnapshotKeys.KEY_ECON
     ),
-    @SupportedOn(SWI68, SWI165)
+    @SupportedOn(SWI68, SWI165, SWI69, SWI131, SWI132)
     SET_CLIMATE_AUTO(
         R.string.act_climate_auto, ActionGroup.CLIMATE,
         ValueSpec.BOOL, "SET_CLIMATE_AUTO", currentKey = SnapshotKeys.KEY_HVAC_AUTO
     ),
-    @SupportedOn(SWI68, SWI165)
+    @SupportedOn(SWI68, SWI165, SWI69, SWI131, SWI132)
     SET_RECIRCULATION(
         R.string.act_recirc, ActionGroup.CLIMATE,
         ValueSpec.BOOL, "SET_RECIRCULATION", currentKey = SnapshotKeys.KEY_RECIRC
     ),
-    @SupportedOn(SWI68, SWI165)
+    @SupportedOn(SWI68, SWI165, SWI69, SWI131, SWI132)
     SET_FAN_LEVEL(
         R.string.act_fan_level, ActionGroup.CLIMATE,
         number(0, VehicleEnums.FAN_LEVEL_MAX), "SET_FAN_LEVEL", currentKey = SnapshotKeys.KEY_FAN_SPEED
     ),
-    @SupportedOn(SWI68, SWI165)
+    @SupportedOn(SWI68, SWI165, SWI69, SWI131, SWI132)
     SET_FRONT_DEFROST(
         R.string.act_front_defrost, ActionGroup.CLIMATE,
         ValueSpec.BOOL, "SET_FRONT_DEFROST", currentKey = SnapshotKeys.KEY_FRONT_DEFROST
     ),
-    @SupportedOn(SWI68, SWI165)
+    @SupportedOn(SWI68, SWI165, SWI69, SWI131, SWI132)
     SET_REAR_DEFROST(
         R.string.act_rear_defrost, ActionGroup.CLIMATE,
         ValueSpec.BOOL, "SET_REAR_DEFROST", currentKey = SnapshotKeys.KEY_REAR_DEFROST
@@ -230,7 +253,7 @@ enum class ActionType(
         R.string.act_windows, ActionGroup.CLIMATE,
         number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOWS",
         currentKey = null,
-        gated = true
+        gated = true, writeProven = false
     ),
     /**
      * One window's glass command — the counterpart of [SET_WINDOWS], same 0..7 scale.
@@ -244,28 +267,28 @@ enum class ActionType(
         R.string.act_window_driver, ActionGroup.CLIMATE,
         number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOW_DRIVER",
         currentKey = null,
-        gated = true
+        gated = true, writeProven = false
     ),
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_PASSENGER(
         R.string.act_window_passenger, ActionGroup.CLIMATE,
         number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOW_PASSENGER",
         currentKey = null,
-        gated = true
+        gated = true, writeProven = false
     ),
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_REAR_LEFT(
         R.string.act_window_rear_left, ActionGroup.CLIMATE,
         number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOW_REAR_LEFT",
         currentKey = null,
-        gated = true
+        gated = true, writeProven = false
     ),
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_REAR_RIGHT(
         R.string.act_window_rear_right, ActionGroup.CLIMATE,
         number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOW_REAR_RIGHT",
         currentKey = null,
-        gated = true
+        gated = true, writeProven = false
     ),
     @SupportedOn(SWI68, SWI165)
     SET_DOOR_LOCK(
@@ -318,6 +341,22 @@ enum class ActionType(
         R.string.act_media_volume, ActionGroup.AUDIO,
         ValueSpec.dynamicNumber(0, VehicleEnums.MEDIA_VOLUME_FALLBACK_MAX),
         "SET_MEDIA_VOLUME", currentKey = SnapshotKeys.KEY_MEDIA_VOLUME
+    ),
+
+    /**
+     * Moves the volume by a number of steps instead of setting one.
+     *
+     * The two are not interchangeable. A target is what a rule wants at ignition — "start the
+     * day at 12". A step is what a *button* wants, and what a rule wants when it must not
+     * discard what the driver chose: "two quieter when the phone rings" keeps their setting,
+     * where a target throws it away. Negative goes down, and either end of the range is
+     * reported as done rather than refused.
+     */
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    ADJUST_MEDIA_VOLUME(
+        R.string.act_adjust_media_volume, ActionGroup.AUDIO,
+        number(-VehicleEnums.MEDIA_VOLUME_FALLBACK_MAX, VehicleEnums.MEDIA_VOLUME_FALLBACK_MAX),
+        "ADJUST_MEDIA_VOLUME"
     ),
     @SupportedOn(SWI69, SWI131, SWI132)
     SET_AUDIO_BALANCE(
@@ -393,6 +432,30 @@ enum class ActionType(
         ValueSpec(ValueKind.TEXT, hintRes = R.string.value_radio_hint), "TUNE_RADIO"
     ),
 
+    /**
+     * Steps through the tuner's stations, on whichever band it is already on.
+     *
+     * This is what reaches **DAB**, which [TUNE_RADIO] cannot: a DAB service is addressed by
+     * ensemble and service id, so there is no frequency for a driver to type. Stepping asks
+     * for neither — the tuner's own list is the right one — which makes "next station" the
+     * one radio action that works on all three bands.
+     *
+     * Separate from [ActionType.MEDIA_CONTROL] on purpose. That one skips a *track* on
+     * whatever owns the audio; this one changes *station* whether or not the radio is the
+     * current source, which is a different intent and a different service call.
+     */
+    @SupportedOn(SWI68, SWI165)
+    RADIO_NEXT_STATION(
+        R.string.act_radio_next_station, ActionGroup.AUDIO,
+        ValueSpec.NONE, "RADIO_NEXT_STATION"
+    ),
+
+    @SupportedOn(SWI68, SWI165)
+    RADIO_PREV_STATION(
+        R.string.act_radio_prev_station, ActionGroup.AUDIO,
+        ValueSpec.NONE, "RADIO_PREV_STATION"
+    ),
+
     // ── ADAS (gated) ─────────────────────────────────────────────────────────
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
     SET_AEB_ENABLED(
@@ -410,6 +473,42 @@ enum class ActionType(
         R.string.act_aeb_sensitivity, ActionGroup.ADAS,
         ValueSpec(ValueKind.ENUM, options = VehicleEnums.SENSITIVITIES),
         "SET_AEB_SENSITIVITY", gated = true, currentKey = SnapshotKeys.KEY_AEB_SENSITIVITY
+    ),
+
+    /**
+     * Electronic stability control.
+     *
+     * Gated like every driving write, and refused by EVHardware for a second reason of its
+     * own: the write is a **toggle** driven by a read, so it only runs on an ignition known to
+     * be in RUN and on three agreeing readings. Getting in while the cluster is still dark,
+     * the property does not yet reflect reality, and aiming at ON from a false OFF turns off
+     * an ESC that was on — silently. A rule that wants it off is simply honoured a moment
+     * later, once the car is awake.
+     */
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_ESC(
+        R.string.act_esc, ActionGroup.ADAS,
+        ValueSpec.BOOL, "SET_ESC", gated = true, currentKey = SnapshotKeys.KEY_ESC
+    ),
+
+    /**
+     * The drowsiness warning — UDW, the one the car raises when the driving gets unsteady.
+     *
+     * Deliberately the UDW switch and not the camera-based DMS one: both exist, their labels
+     * read alike, and writing the camera one changed nothing visible.
+     */
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_DROWSINESS(
+        R.string.act_drowsiness, ActionGroup.ADAS,
+        ValueSpec.BOOL, "SET_DROWSINESS", gated = true, currentKey = SnapshotKeys.KEY_DROWSINESS
+    ),
+
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    SET_DROWSINESS_SENSITIVITY(
+        R.string.act_drowsiness_sensitivity, ActionGroup.ADAS,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.SENSITIVITIES),
+        "SET_DROWSINESS_SENSITIVITY", gated = true,
+        currentKey = SnapshotKeys.KEY_DROWSINESS_SENSITIVITY
     ),
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
     SET_ELK_MODE(
@@ -559,13 +658,17 @@ enum class ActionType(
         ValueSpec(ValueKind.RULE), bridgeAction = null
     ),
     /**
-     * Play/pause, next or previous, sent as the media key the head unit's own steering
-     * controls send.
+     * Play/pause, next or previous — sent to the source that is actually playing.
      *
-     * A media key rather than a media session: the key reaches whatever app currently holds
-     * audio focus, exactly as the wheel button does, and needs no notification-listener
-     * access to any of them. What it cannot do is address one app while another is playing —
-     * which is not what a rule wants anyway.
+     * Not a media key, which is the implementation this started as. The car publishes one
+     * Android media session (`com.android.bluetooth`), so the key either reaches nothing or
+     * reaches Bluetooth, wakes a phone that was not playing and **changes the audio source**
+     * while the radio was on. `SaicMediaPlayer` asks the vendor service which source owns the
+     * audio and commands that source's own player, falling back to media sessions on the A9
+     * generations, which have no such service.
+     *
+     * The values are unchanged (85/87/88, the Android key codes): saved rules store the
+     * number, and repurposing them would silently redefine every existing rule.
      */
     MEDIA_CONTROL(
         R.string.act_media_control, ActionGroup.SYSTEM,
