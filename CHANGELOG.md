@@ -20,6 +20,18 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **`Provenanced` — a value that carries what kind of claim it is.** The MG4 publishes no
+  per-consumer energy counters, so anything past traction totals — the climate system's share,
+  what a slower motorway speed would have saved, the state of charge on arrival — can only be
+  inferred, and an inference rendered in the same typeface as a vehicle reading is a
+  measurement as far as the driver is concerned. `Provenance` names the four kinds a figure can
+  be (measured, derived, estimated, unavailable) and `Provenanced<T>` enforces them at
+  construction: an estimate cannot exist without its uncertainty band, an unavailable value
+  cannot carry a number, and a measurement cannot carry a band the vehicle never published.
+  `Provenanced.derive` propagates gaps rather than filling them, so consumption over an
+  unreadable speed is unknown — with `UnavailableReason` saying whether the firmware lacks the
+  signal, has not been validated for it, or simply is not publishing it right now.
+
 - **`EVHardware.probeTelemetryProperties()` — what each energy property actually answers on the
   car in front of you.** An unsupported property, one declared and never published, and one
   this runtime cannot reach all look identical from the driver's seat, where every unusable
