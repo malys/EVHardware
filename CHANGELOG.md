@@ -20,6 +20,18 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **`TelemetryEvidenceRecorder` — what a signal actually did on the car, instead of what the
+  code assumes it does.** Every energy figure past a state of charge divides by a number whose
+  unit, sign and update rate are currently a hypothesis: the battery power reader divides the raw
+  property by -1,000,000 because that is what the value looked like, not because a vehicle
+  confirmed it. The recorder consumes the same snapshots the dashboard renders and keeps, per
+  signal, how often it answered and how often it did not, its range and mean, its positive and
+  negative split, and the interval between the values it actually published — measured from value
+  *changes*, so a 1 Hz sampler over a signal republished every five seconds reports five seconds
+  rather than one. A signal the car never answered keeps no statistics at all: no minimum of
+  zero, no mean of zero, nothing. Captures serialise to a versioned schema for the next build and
+  render as a Markdown table for the person writing the conclusion.
+
 - **`Provenanced` — a value that carries what kind of claim it is.** The MG4 publishes no
   per-consumer energy counters, so anything past traction totals — the climate system's share,
   what a slower motorway speed would have saved, the state of charge on arrival — can only be
