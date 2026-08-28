@@ -21,10 +21,17 @@ data class EnergyTripSummary(
         } else null
 }
 
+/** A finished trip: its totals, and the track they were integrated from. */
+data class RecordedTrip(
+    val summary: EnergyTripSummary,
+    val samples: List<TripSample>,
+)
+
 /** Trapezoidal integration with bounded gaps so sleep/resume never invents energy. */
 class EnergyTripAccumulator(
     private val startedAtMs: Long,
     private val startSocPercent: Float?,
+    private val track: TripSampleTrack = TripSampleTrack(),
 ) {
     private var last: EnergySnapshot? = null
     private var distanceKm = 0.0
@@ -35,6 +42,7 @@ class EnergyTripAccumulator(
     private var latestSocPercent = startSocPercent
 
     fun add(sample: EnergySnapshot) {
+        track.add(sample)
         latestSocPercent = sample.socPercent ?: latestSocPercent
         val previous = last
         last = sample
@@ -54,6 +62,8 @@ class EnergyTripAccumulator(
             else regeneratedKwh += -intervalKwh
         }
     }
+
+    fun samples(): List<TripSample> = track.samples()
 
     fun snapshot(nowMs: Long) = EnergyTripSummary(
         startedAtMs = startedAtMs,
@@ -81,9 +91,9 @@ object EnergyTripSession {
     }
     @Synchronized fun add(sample: EnergySnapshot) = accumulator?.add(sample)
     @Synchronized fun current(nowMs: Long) = accumulator?.snapshot(nowMs)
-    @Synchronized fun stop(nowMs: Long): EnergyTripSummary? {
-        val result = accumulator?.snapshot(nowMs)
+    @Synchronized fun stop(nowMs: Long): RecordedTrip? {
+        val finished = accumulator ?: return null
         accumulator = null
-        return result
+        return RecordedTrip(finished.snapshot(nowMs), finished.samples())
     }
 }

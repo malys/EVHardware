@@ -46,7 +46,7 @@ class EnergyTelemetryTest {
         assertEquals(true, store.append(summary(1L)))
         assertEquals(true, store.append(summary(2L)))
         assertEquals(true, store.append(summary(3L)))
-        assertEquals(listOf(3L, 2L), store.read().map { it.startedAtMs })
+        assertEquals(listOf(3L, 2L), store.readSummaries().map { it.startedAtMs })
         assertEquals(emptyList<String>(), directory.list()?.filter { it.endsWith(".tmp") })
     }
 

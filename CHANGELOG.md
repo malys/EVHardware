@@ -20,6 +20,30 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A trip now keeps its shape, not only its totals.** A summary cannot be un-summarised, and
+  every model this project will grow — what a slower motorway speed would have saved, what the
+  climate system took, the state of charge on arrival — is fitted from the shape of past drives.
+  `TripSampleTrack` records one sample per five seconds of speed, power, state of charge,
+  temperatures and climate state, all nullable, so a car that publishes no pack temperature
+  stores no pack temperature rather than a column of zeros a fit would believe. A drive that
+  outlasts the track's length is decimated rather than truncated: every second sample goes and
+  the interval doubles, so the motorway stretch at the end survives at a coarser resolution
+  instead of being cut off.
+
+### Changed
+
+- **The trip history file states its own version.** The first shape was a bare JSON array with
+  no room to say what it was; it is read as before and rewritten into the v2 envelope on the
+  next append, losing nothing. A file this build cannot read — truncated, or written by a
+  build that knows something this one does not — is quarantined under a new name rather than
+  deleted, because it is the only copy of whatever it holds. Three bounds now apply in the
+  order that keeps the most meaning per byte: at most fifty trips, then sample tracks dropped
+  oldest-first to stay under the size ceiling, and only then whole trips — a trip without its
+  track is still a trip, a missing trip is not.
+- `EnergyTripSession.stop` returns a `RecordedTrip` (summary plus track) rather than a bare
+  summary, and `EnergyTripHistoryStore.read()` returns stored trips; `readSummaries()` is the
+  old view.
+
 - **`TelemetryEvidenceRecorder` — what a signal actually did on the car, instead of what the
   code assumes it does.** Every energy figure past a state of charge divides by a number whose
   unit, sign and update rate are currently a hypothesis: the battery power reader divides the raw
