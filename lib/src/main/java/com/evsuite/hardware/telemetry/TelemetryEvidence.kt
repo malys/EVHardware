@@ -5,6 +5,14 @@ import com.google.gson.Gson
 /** Whether a signal is a quantity or a flag; a flag has no meaningful mean. */
 enum class SignalKind { NUMERIC, BOOLEAN }
 
+/** A read-only candidate carried beside, but never inside, the production snapshot. */
+data class TelemetryEvidenceProbe(val signal: String, val value: Double?)
+
+data class TelemetryEvidenceSample(
+    val snapshot: EnergySnapshot,
+    val probes: List<TelemetryEvidenceProbe>,
+)
+
 /**
  * What one signal did during a capture, in the terms a decision needs.
  *
@@ -107,6 +115,13 @@ class TelemetryEvidenceRecorder {
         record(CLIMATE_FAN_LEVEL_MAX, climate.fanLevelMax?.toDouble(), at)
         record(CLIMATE_DRIVER_TARGET_C, climate.driverTargetCelsius, at)
         record(CLIMATE_PASSENGER_TARGET_C, climate.passengerTargetCelsius, at)
+    }
+
+    fun record(sample: TelemetryEvidenceSample) {
+        record(sample.snapshot)
+        sample.probes.forEach { probe ->
+            record(probe.signal, probe.value, sample.snapshot.timestampMs)
+        }
     }
 
     /** For a candidate property being probed alongside the snapshot (see the CP-004 findings). */
@@ -244,6 +259,8 @@ class TelemetryEvidenceRecorder {
         const val CLIMATE_FAN_LEVEL_MAX = "climate.fanLevelMax"
         const val CLIMATE_DRIVER_TARGET_C = "climate.driverTargetCelsius"
         const val CLIMATE_PASSENGER_TARGET_C = "climate.passengerTargetCelsius"
+        const val CANDIDATE_CURRENT_BATTERY_CAPACITY_WH =
+            "candidate.evCurrentBatteryCapacityWh"
     }
 }
 

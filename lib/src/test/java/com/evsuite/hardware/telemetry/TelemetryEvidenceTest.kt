@@ -150,13 +150,20 @@ class TelemetryEvidenceTest {
 
     @Test fun `a probed candidate property is recorded beside the snapshot signals`() {
         val recorder = TelemetryEvidenceRecorder()
-        recorder.record(snapshot(at = 0L, power = 1f))
-        recorder.record("candidate.hvacPowerKw", 0.8, 0L)
-        recorder.record("candidate.hvacPowerKw", null as Double?, 1_000L)
+        val name = TelemetryEvidenceRecorder.CANDIDATE_CURRENT_BATTERY_CAPACITY_WH
+        recorder.record(TelemetryEvidenceSample(
+            snapshot(at = 0L, power = 1f),
+            listOf(TelemetryEvidenceProbe(name, 61_700.0)),
+        ))
+        recorder.record(TelemetryEvidenceSample(
+            snapshot(at = 1_000L, power = 2f),
+            listOf(TelemetryEvidenceProbe(name, null)),
+        ))
 
-        val candidate = recorder.evidence().single { it.signal == "candidate.hvacPowerKw" }
+        val candidate = recorder.evidence().single { it.signal == name }
         assertEquals(1, candidate.samples)
         assertEquals(1, candidate.nulls)
+        assertEquals(2, recorder.capture().snapshots)
     }
 
     @Test fun `the markdown rendering names every signal and dashes what is missing`() {

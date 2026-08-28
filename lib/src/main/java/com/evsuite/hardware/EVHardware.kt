@@ -392,6 +392,7 @@ object EVHardware {
     // Standard AAOS read-only energy signals. Every access is explicitly limited to a
     // supported firmware generation; UNKNOWN stays null instead of assuming compatibility.
     private const val PROP_EV_INSTANTANEOUS_CHARGE_RATE = 0x1160030C // mW, + charge / - discharge
+    private const val PROP_EV_CURRENT_BATTERY_CAPACITY = 0x1160030D  // Wh, public post-AAOS 9 candidate
     private const val PROP_EV_CHARGE_PORT_CONNECTED = 0x1120030B
     private const val PROP_EV_BATTERY_AVG_TEMP = 0x1160030E          // °C
     private const val PROP_EV_BATTERY_LEVEL = 0x11600309             // Wh
@@ -426,6 +427,15 @@ object EVHardware {
         getFloatPropertyCPM(PROP_INFO_EV_BATTERY_CAPACITY, AREA_GLOBAL)
             ?.takeIf { it.isFinite() && it > 0f }
             ?.div(1_000f)
+    }
+
+    /**
+     * Probe-only public AAOS candidate; never use this as a production telemetry fallback until
+     * CP-003 validates its availability and meaning on every supported firmware generation.
+     */
+    internal fun probeCurrentBatteryCapacityWh(): Float? = supportedTelemetryRead {
+        getFloatPropertyCPM(PROP_EV_CURRENT_BATTERY_CAPACITY, AREA_GLOBAL)
+            ?.takeIf { it.isFinite() && it >= 0f }
     }
 
     fun getStandardRangeKm(): Float? = supportedTelemetryRead {

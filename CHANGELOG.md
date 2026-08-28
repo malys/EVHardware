@@ -20,6 +20,14 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A public post-AAOS 9 capacity signal can be tested without becoming product data.**
+  `EV_CURRENT_BATTERY_CAPACITY` describes real-time usable capacity rather than the pack's nominal
+  new capacity, but a public id does not prove that an MG4 firmware publishes it. The new
+  status-aware, firmware-branched reader is therefore internal to explicit evidence capture,
+  stays null when absent or invalid, and is carried beside — never inside — `EnergySnapshot`.
+  [The candidate review](docs/energy-signal-candidates.md) records exact AOSP provenance and the
+  negative search results for HVAC, battery-heater, accessory and cumulative energy counters.
+
 - **Three radio behaviours the library could already perform are now things a rule can ask for.**
   `srcPauseRadio`, the tuner's own play state and `startRadioActivity` were implemented and
   unreachable: the catalogue offered play, tune and station stepping, so "silence the radio"

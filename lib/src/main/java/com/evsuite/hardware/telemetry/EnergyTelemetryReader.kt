@@ -25,6 +25,8 @@ interface EnergySignalSource {
     fun parked(): Boolean?
     fun climate(): ClimateSnapshot
     fun tirePressures(): TirePressureSnapshot
+    /** Probe-only values excluded from [EnergySnapshot] and normal consumers. */
+    fun evidenceProbes(): List<TelemetryEvidenceProbe> = emptyList()
 }
 
 class EvHardwareEnergySignalSource(context: Context) : EnergySignalSource {
@@ -58,6 +60,12 @@ class EvHardwareEnergySignalSource(context: Context) : EnergySignalSource {
         frontRightKpa = EVHardware.getTirePressureKpa(EVHardware.Wheel.FRONT_RIGHT),
         rearLeftKpa = EVHardware.getTirePressureKpa(EVHardware.Wheel.REAR_LEFT),
         rearRightKpa = EVHardware.getTirePressureKpa(EVHardware.Wheel.REAR_RIGHT),
+    )
+    override fun evidenceProbes() = listOf(
+        TelemetryEvidenceProbe(
+            TelemetryEvidenceRecorder.CANDIDATE_CURRENT_BATTERY_CAPACITY_WH,
+            EVHardware.probeCurrentBatteryCapacityWh()?.toDouble(),
+        )
     )
     override fun climate() = ClimateSnapshot(
         powerOn = SaicClimate.powerOn(),
@@ -95,5 +103,13 @@ class EnergyTelemetryReader(private val source: EnergySignalSource) {
         parked = source.parked(),
         climate = source.climate(),
         tirePressures = source.tirePressures(),
+    )
+
+    /** Reads CP-004 candidates only when an unstable evidence capture explicitly requests them. */
+    fun readEvidence(nowMs: Long = System.currentTimeMillis()) = TelemetryEvidenceSample(
+        snapshot = read(nowMs),
+        probes = source.evidenceProbes().map { probe ->
+            probe.copy(value = probe.value?.takeIf { it.isFinite() })
+        },
     )
 }

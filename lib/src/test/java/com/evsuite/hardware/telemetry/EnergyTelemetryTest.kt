@@ -16,6 +16,31 @@ class EnergyTelemetryTest {
         assertEquals(18f, snapshot.batteryPowerKw)
     }
 
+    @Test fun `candidate probes exist only in the explicit evidence read`() {
+        val source = FakeSignals(soc = 80f, range = 200f, power = 18f)
+        source.probes = listOf(
+            TelemetryEvidenceProbe(
+                TelemetryEvidenceRecorder.CANDIDATE_CURRENT_BATTERY_CAPACITY_WH,
+                61_700.0,
+            )
+        )
+        val reader = EnergyTelemetryReader(source)
+
+        val normal = reader.read(41L)
+        val evidence = reader.readEvidence(42L)
+
+        assertEquals(41L, normal.timestampMs)
+        assertEquals(42L, evidence.snapshot.timestampMs)
+        assertEquals(61_700.0, evidence.probes.single().value!!, 0.0)
+    }
+
+    @Test fun `non finite candidate values fail closed`() {
+        val source = FakeSignals(soc = null, range = null, power = null)
+        source.probes = listOf(TelemetryEvidenceProbe("candidate.invalid", Double.NaN))
+
+        assertNull(EnergyTelemetryReader(source).readEvidence(42L).probes.single().value)
+    }
+
     @Test fun `trip integrates distance consumption and regeneration`() {
         val trip = EnergyTripAccumulator(0L, 80f)
         trip.add(snapshot(0L, 60f, 18f))
@@ -69,6 +94,7 @@ class EnergyTelemetryTest {
         private val range: Float?,
         private val power: Float?,
     ) : EnergySignalSource {
+        var probes: List<TelemetryEvidenceProbe> = emptyList()
         override fun firmware() = FirmwareInfo.Gen.SWI68
         override fun socPercent() = soc
         override fun rangeKm() = range
@@ -86,5 +112,6 @@ class EnergyTelemetryTest {
         override fun climate() =
             ClimateSnapshot(null, null, null, null, null, null, null, null, null)
         override fun tirePressures() = TirePressureSnapshot(null, null, null, null)
+        override fun evidenceProbes() = probes
     }
 }
