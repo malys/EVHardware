@@ -92,6 +92,43 @@ class TripHistoryStoreTest {
         assertNull(stored.last().samples)
     }
 
+    @Test fun `deleting one trip preserves the other summaries and tracks`() {
+        val directory = tempDirectory()
+        val store = EnergyTripHistoryStore(File(directory, "trips.json"))
+        assertTrue(store.append(summary(1L), listOf(sample(1L))))
+        assertTrue(store.append(summary(2L), listOf(sample(2L))))
+        assertTrue(store.append(summary(3L), listOf(sample(3L))))
+
+        assertTrue(store.deleteTrip(2L))
+
+        val remaining = store.read()
+        assertEquals(listOf(3L, 1L), remaining.map { it.summary.startedAtMs })
+        assertEquals(listOf(3L, 1L), remaining.map { it.samples!!.single().atMs })
+    }
+
+    @Test fun `deleting an unknown trip leaves the file unchanged`() {
+        val directory = tempDirectory()
+        val target = File(directory, "trips.json")
+        val store = EnergyTripHistoryStore(target)
+        assertTrue(store.append(summary(1L)))
+        val before = target.readText()
+
+        assertTrue(!store.deleteTrip(99L))
+        assertEquals(before, target.readText())
+    }
+
+    @Test fun `clearing writes a valid empty v2 history`() {
+        val directory = tempDirectory()
+        val target = File(directory, "trips.json")
+        val store = EnergyTripHistoryStore(target)
+        assertTrue(store.append(summary(1L), listOf(sample(1L))))
+
+        assertTrue(store.clear())
+
+        assertEquals(emptyList<StoredTrip>(), store.read())
+        assertTrue(target.readText().contains("\"schemaVersion\":2"))
+    }
+
     @Test fun `the file stays under its byte bound across a month of trips`() {
         val directory = tempDirectory()
         val target = File(directory, "trips.json")

@@ -64,6 +64,18 @@ class EnergyTripHistoryStore(
         return write(TripHistoryFile(trips = updated))
     }
 
+    /** Removes exactly one trip identified by its recording start, preserving every other entry. */
+    fun deleteTrip(startedAtMs: Long): Boolean {
+        val trips = read()
+        val index = trips.indexOfFirst { it.summary.startedAtMs == startedAtMs }
+        if (index < 0) return false
+        val updated = trips.toMutableList().also { it.removeAt(index) }
+        return write(TripHistoryFile(trips = updated))
+    }
+
+    /** Atomically replaces the history with a valid empty v2 envelope. */
+    fun clear(): Boolean = write(TripHistoryFile(trips = emptyList()))
+
     /**
      * Reads both shapes: the v2 envelope, and the v1 bare array that shipped before it.
      *

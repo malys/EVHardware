@@ -20,6 +20,11 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Trip history can be pruned without bypassing its atomic persistence boundary.**
+  `EnergyTripHistoryStore` can remove one start-time-identified trip or replace the history with
+  a valid empty v2 envelope; both operations preserve the same unique-temp-file rewrite used by
+  appends, so a UI never deletes the only valid file before its replacement exists.
+
 - **A public post-AAOS 9 capacity signal can be tested without becoming product data.**
   `EV_CURRENT_BATTERY_CAPACITY` describes real-time usable capacity rather than the pack's nominal
   new capacity, but a public id does not prove that an MG4 firmware publishes it. The new
