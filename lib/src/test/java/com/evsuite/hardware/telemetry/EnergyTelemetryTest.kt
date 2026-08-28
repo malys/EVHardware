@@ -2,7 +2,9 @@ package com.evsuite.hardware.telemetry
 
 import com.evsuite.hardware.FirmwareInfo
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.file.Files
 
@@ -49,8 +51,22 @@ class EnergyTelemetryTest {
         trip.add(snapshot(3_000L, 60f, -6f))
         val result = trip.snapshot(3_000L)
         assertEquals(0.05, result.distanceKm, 0.000001)
+        assertTrue(result.distanceAvailable == true)
+        assertEquals(0.05, result.recordedDistanceKm!!, 0.000001)
         assertEquals(0.006666, result.consumedKwh!!, 0.000001)
         assertEquals(0.001666, result.regeneratedKwh!!, 0.000001)
+    }
+
+    @Test fun `trip keeps distance unknown without a usable speed interval`() {
+        val trip = EnergyTripAccumulator(0L, 80f)
+        trip.add(snapshot(0L, null, 18f))
+        trip.add(snapshot(1_000L, null, 18f))
+
+        val result = trip.snapshot(1_000L)
+
+        assertFalse(result.distanceAvailable == true)
+        assertNull(result.recordedDistanceKm)
+        assertNull(result.averageConsumptionKwhPer100Km)
     }
 
     @Test fun `a suspended sampler never inflates trip duration`() {
@@ -75,7 +91,7 @@ class EnergyTelemetryTest {
         assertEquals(emptyList<String>(), directory.list()?.filter { it.endsWith(".tmp") })
     }
 
-    private fun snapshot(at: Long, speed: Float, power: Float) = EnergySnapshot(
+    private fun snapshot(at: Long, speed: Float?, power: Float) = EnergySnapshot(
         timestampMs = at, firmware = FirmwareInfo.Gen.SWI68, socPercent = 80f,
         rangeKm = null, speedKmh = speed, batteryPowerKw = power,
         outsideTempCelsius = null, cabinTempCelsius = null, batteryTempCelsius = null,

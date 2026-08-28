@@ -21,6 +21,21 @@ class TripHistoryStoreTest {
         val store = EnergyTripHistoryStore(target)
         assertEquals(listOf(2L, 1L), store.readSummaries().map { it.startedAtMs })
         assertTrue(store.read().all { it.samples == null })
+        assertTrue(store.readSummaries().all { it.recordedDistanceKm == 1.0 })
+    }
+
+    @Test fun `distance availability expands v2 without breaking older records`() {
+        val directory = tempDirectory()
+        val target = File(directory, "trips.json")
+        val oldShape = Gson().toJson(summary(1L))
+        target.writeText("{\"schemaVersion\":2,\"trips\":[{\"summary\":$oldShape}]}")
+
+        val store = EnergyTripHistoryStore(target)
+        assertEquals(1.0, store.readSummaries().single().recordedDistanceKm!!, 0.0)
+
+        assertTrue(store.append(summary(2L).copy(distanceAvailable = false)))
+        assertNull(store.readSummaries().first().recordedDistanceKm)
+        assertTrue(target.readText().contains("\"distanceAvailable\":false"))
     }
 
     @Test fun `a v1 file is rewritten as v2 on the next append`() {

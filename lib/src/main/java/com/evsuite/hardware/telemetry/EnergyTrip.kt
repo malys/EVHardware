@@ -14,9 +14,18 @@ data class EnergyTripSummary(
     val endSocPercent: Float?,
     val consumedKwh: Double?,
     val regeneratedKwh: Double?,
+    /**
+     * `null` means a pre-field record whose numeric distance remains authoritative for
+     * compatibility. New accumulators write false until at least one usable speed interval
+     * exists, so an unreadable signal can no longer masquerade as 0 km.
+     */
+    val distanceAvailable: Boolean? = null,
 ) {
+    val recordedDistanceKm: Double?
+        get() = distanceKm.takeIf { distanceAvailable != false }
+
     val averageConsumptionKwhPer100Km: Double?
-        get() = if (consumedKwh != null && distanceKm >= 0.1) {
+        get() = if (consumedKwh != null && recordedDistanceKm != null && distanceKm >= 0.1) {
             consumedKwh * 100.0 / distanceKm
         } else null
 }
@@ -37,6 +46,7 @@ class EnergyTripAccumulator(
     private var distanceKm = 0.0
     private var consumedKwh = 0.0
     private var regeneratedKwh = 0.0
+    private var hasSpeedInterval = false
     private var hasPowerInterval = false
     private var recordedMs = 0L
     private var latestSocPercent = startSocPercent
@@ -52,6 +62,7 @@ class EnergyTripAccumulator(
         recordedMs += gapMs
         val hours = gapMs / 3_600_000.0
         if (previous.speedKmh != null && sample.speedKmh != null) {
+            hasSpeedInterval = true
             distanceKm += ((previous.speedKmh + sample.speedKmh) / 2.0) * hours
         }
         if (previous.batteryPowerKw != null && sample.batteryPowerKw != null) {
@@ -74,6 +85,7 @@ class EnergyTripAccumulator(
         endSocPercent = latestSocPercent,
         consumedKwh = consumedKwh.takeIf { hasPowerInterval },
         regeneratedKwh = regeneratedKwh.takeIf { hasPowerInterval },
+        distanceAvailable = hasSpeedInterval,
     )
 
     private companion object { const val MAX_SAMPLE_GAP_MS = 5_000L }
