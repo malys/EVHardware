@@ -227,7 +227,9 @@ object EVHardware {
     @Volatile private var sCpmGetIntMethod: java.lang.reflect.Method? = null
     @Volatile private var sCpmGetFloatMethod: java.lang.reflect.Method? = null
     @Volatile private var sCpmGetBooleanMethod: java.lang.reflect.Method? = null
-    /** Set once the three getters above have been looked up, present or absent. */
+    /** `getProperty(Class, int, int)` — the only read that carries the VHAL's status. */
+    @Volatile private var sCpmGetPropertyMethod: java.lang.reflect.Method? = null
+    /** Set once the getters above have been looked up, present or absent. */
     @Volatile private var sCpmMethodsResolved = false
     @Volatile private var sVehicleBinder: IBinder? = null
     @Volatile private var sVpm: Any? = null          // VehiclePropertyManager instance (SWI133, Katman4)
@@ -467,6 +469,56 @@ object EVHardware {
         if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI68) {
             getIntPropertyCPM(PROP_EV_RANGE_KM_SWI68, AREA_GLOBAL).takeIf { it >= 0 }
         } else null
+
+    /** One property, its id, and exactly what the vehicle answered for it. */
+    data class PropertyReport(val name: String, val propId: Int, val areaId: Int, val outcome: String) {
+        override fun toString() = "$name 0x${Integer.toHexString(propId)} → $outcome"
+    }
+
+    /**
+     * What every read-only energy property answers on the car in front of you, unfiltered.
+     *
+     * The dashboard shows an em dash for a signal it does not trust, which is the right thing
+     * to show a driver and the wrong thing to debug with: an unsupported property, one declared
+     * and never published, and one this runtime cannot reach all look identical from the seat.
+     * This reports the three apart — status, raw value and publication timestamp as the vehicle
+     * gave them — so a firmware generation's actual telemetry surface can be recorded from the
+     * car rather than inferred.
+     *
+     * Deliberately outside [supportedTelemetryRead]: the point is to find out what a generation
+     * answers, including one the library currently declines to read from.
+     */
+    fun probeTelemetryProperties(): List<PropertyReport> = listOf(
+        probeProperty("PERF_VEHICLE_SPEED", PROP_VEHICLE_SPEED, AREA_GLOBAL, Float::class.javaObjectType),
+        probeProperty("EV_BATTERY_AVG_TEMP", PROP_EV_BATTERY_AVG_TEMP, AREA_GLOBAL, Float::class.javaObjectType),
+        probeProperty("EV_INSTANTANEOUS_CHARGE_RATE", PROP_EV_INSTANTANEOUS_CHARGE_RATE, AREA_GLOBAL, Float::class.javaObjectType),
+        probeProperty("EV_BATTERY_LEVEL", PROP_EV_BATTERY_LEVEL, AREA_GLOBAL, Float::class.javaObjectType),
+        probeProperty("INFO_EV_BATTERY_CAPACITY", PROP_INFO_EV_BATTERY_CAPACITY, AREA_GLOBAL, Float::class.javaObjectType),
+        probeProperty("RANGE_REMAINING", PROP_RANGE_REMAINING, AREA_GLOBAL, Float::class.javaObjectType),
+        probeProperty("ENV_OUTSIDE_TEMPERATURE", PROP_OUTSIDE_TEMP, AREA_GLOBAL, Float::class.javaObjectType),
+        probeProperty("PERF_ODOMETER", PROP_ODOMETER, AREA_GLOBAL, Float::class.javaObjectType),
+        probeProperty("HVAC_TEMPERATURE_CURRENT", PROP_CABIN_TEMP, AREA_HVAC, Float::class.javaObjectType),
+        probeProperty("EV_CHARGE_PORT_CONNECTED", PROP_EV_CHARGE_PORT_CONNECTED, AREA_GLOBAL, Boolean::class.javaObjectType),
+    )
+
+    private fun probeProperty(name: String, propId: Int, areaId: Int, boxed: Class<*>): PropertyReport {
+        val cpm = sCarPropertyManager
+            ?: return PropertyReport(name, propId, areaId, "CarPropertyManager not connected")
+        cacheCarPropertyMethods(cpm)
+        val getProperty = sCpmGetPropertyMethod
+            ?: return PropertyReport(name, propId, areaId, "runtime exposes no getProperty")
+        return try {
+            val holder = getProperty.invoke(cpm, boxed, propId, areaId)
+                ?: return PropertyReport(name, propId, areaId, "no CarPropertyValue")
+            val status = (holder.javaClass.getMethod("getStatus").invoke(holder) as? Int)
+                ?.let(CarPropertyEvidence::describe) ?: "no status"
+            val value = holder.javaClass.getMethod("getValue").invoke(holder)
+            val timestamp = holder.javaClass.getMethod("getTimestamp").invoke(holder) as? Long
+            PropertyReport(name, propId, areaId, "$status, value=$value, t=${timestamp ?: "?"}")
+        } catch (e: Exception) {
+            PropertyReport(name, propId, areaId, e.readFailureReason())
+        }
+    }
 
     private inline fun <T> supportedTelemetryRead(read: () -> T?): T? =
         when (FirmwareInfo.getGeneration()) {
@@ -1830,42 +1882,80 @@ object EVHardware {
     // Low-level property accessors
     // -------------------------------------------------------------------------
 
-    private fun getIntPropertyCPM(propId: Int, areaId: Int): Int {
-        val cpm = sCarPropertyManager ?: return -1
-        return try {
-            val method = sCpmGetIntMethod ?: cacheCarPropertyMethods(cpm).let { sCpmGetIntMethod }
-                ?: return -1
-            (method.invoke(cpm, propId, areaId) as? Int) ?: -1
-        } catch (e: Exception) {
-            AppLogger.d(TAG, "  CPM getInt 0x${Integer.toHexString(propId)} exc: ${e.message}")
-            -1
-        }
-    }
+    private fun getIntPropertyCPM(propId: Int, areaId: Int): Int =
+        readPropertyCPM(propId, areaId, Int::class.javaObjectType) { sCpmGetIntMethod } as? Int ?: -1
 
     /** Read float via CarPropertyManager. null = unreadable (distinct from 0). */
-    private fun getFloatPropertyCPM(propId: Int, areaId: Int): Float? {
+    private fun getFloatPropertyCPM(propId: Int, areaId: Int): Float? =
+        readPropertyCPM(propId, areaId, Float::class.javaObjectType) { sCpmGetFloatMethod } as? Float
+
+    private fun getBooleanPropertyCPM(propId: Int, areaId: Int): Boolean? =
+        readPropertyCPM(propId, areaId, Boolean::class.javaObjectType) { sCpmGetBooleanMethod }
+            as? Boolean
+
+    /**
+     * One property read, judged before the value is handed back.
+     *
+     * Prefers `getProperty`, whose `CarPropertyValue` carries the status the VHAL attaches to
+     * the property, and only falls back to the bare typed getter on a runtime that does not
+     * expose it. The typed getters cannot tell a measurement from a property the firmware
+     * declares and never publishes — both arrive as a plain zero — so the status is what keeps
+     * an unpublished signal from reaching the screen as a reading. See [CarPropertyEvidence].
+     *
+     * @param boxed the boxed type the property holds; car-lib checks it against the property's
+     *        declared type, so a blanket `Object::class.java` is not accepted.
+     * @param legacyGetter the typed getter for [boxed], read lazily so it is resolved after
+     *        [cacheCarPropertyMethods] has run.
+     */
+    private fun readPropertyCPM(
+        propId: Int,
+        areaId: Int,
+        boxed: Class<*>,
+        legacyGetter: () -> java.lang.reflect.Method?,
+    ): Any? {
         val cpm = sCarPropertyManager ?: return null
+        cacheCarPropertyMethods(cpm)
+        val key = "0x${Integer.toHexString(propId)}@0x${Integer.toHexString(areaId)}"
+
+        sCpmGetPropertyMethod?.let { getProperty ->
+            return try {
+                val holder = getProperty.invoke(cpm, boxed, propId, areaId)
+                    ?: return readFailed(key, "no CarPropertyValue")
+                val status = holder.javaClass.getMethod("getStatus").invoke(holder) as? Int
+                    ?: return readFailed(key, "no status")
+                val value = holder.javaClass.getMethod("getValue").invoke(holder)
+                CarPropertyEvidence.accept(value, status)
+                    ?.also { ReadFailureLog.clear(key) }
+                    ?: readFailed(key, CarPropertyEvidence.describe(status))
+            } catch (e: Exception) {
+                readFailed(key, e.readFailureReason())
+            }
+        }
+
+        val method = legacyGetter() ?: return null
         return try {
-            val method = sCpmGetFloatMethod ?: cacheCarPropertyMethods(cpm).let { sCpmGetFloatMethod }
-                ?: return null
-            method.invoke(cpm, propId, areaId) as? Float
+            method.invoke(cpm, propId, areaId)?.also { ReadFailureLog.clear(key) }
         } catch (e: Exception) {
-            AppLogger.d(TAG, "  CPM getFloat 0x${Integer.toHexString(propId)} exc: ${e.message}")
-            null
+            readFailed(key, e.readFailureReason())
         }
     }
 
-    private fun getBooleanPropertyCPM(propId: Int, areaId: Int): Boolean? {
-        val cpm = sCarPropertyManager ?: return null
-        return try {
-            val method = sCpmGetBooleanMethod ?: cacheCarPropertyMethods(cpm).let {
-                sCpmGetBooleanMethod
-            } ?: return null
-            method.invoke(cpm, propId, areaId) as? Boolean
-        } catch (e: Exception) {
-            AppLogger.d(TAG, "  CPM getBoolean 0x${Integer.toHexString(propId)} exc: ${e.message}")
-            null
-        }
+    /** Logs a failed read the first time it says something new, and reads as null. */
+    private fun readFailed(key: String, reason: String): Any? {
+        if (ReadFailureLog.isNew(key, reason)) AppLogger.d(TAG, "  CPM $key unreadable: $reason")
+        return null
+    }
+
+    /**
+     * A reflected call fails as `InvocationTargetException`, whose own message is null: the
+     * sentence that says what happened belongs to the cause. Naming the cause's class when it
+     * carries no message keeps a `PropertyNotAvailableException` out of the log as "exc: null".
+     */
+    private fun Throwable.readFailureReason(): String {
+        val root = (this as? java.lang.reflect.InvocationTargetException)?.targetException
+            ?: cause
+            ?: this
+        return root.message?.takeIf { it.isNotBlank() } ?: root.javaClass.simpleName
     }
 
     @Synchronized
@@ -1883,6 +1973,9 @@ object EVHardware {
         sCpmGetBooleanMethod = runCatching {
             type.getMethod("getBooleanProperty", Int::class.java, Int::class.java)
         }.getOrNull()
+        sCpmGetPropertyMethod = runCatching {
+            type.getMethod("getProperty", Class::class.java, Int::class.java, Int::class.java)
+        }.getOrNull()
         sCpmMethodsResolved = true
     }
 
@@ -1890,7 +1983,11 @@ object EVHardware {
         sCpmGetIntMethod = null
         sCpmGetFloatMethod = null
         sCpmGetBooleanMethod = null
+        sCpmGetPropertyMethod = null
         sCpmMethodsResolved = false
+        // The next connection is a new vehicle session: nothing carried over should keep a
+        // first failure from being logged.
+        ReadFailureLog.reset()
     }
 
     private fun setIntPropertyCPM(propId: Int, areaId: Int, value: Int): Boolean {

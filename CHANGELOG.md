@@ -6,6 +6,36 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **A property the firmware declares and never publishes no longer reads as a measurement.**
+  `CarPropertyManager.getFloatProperty` answers such a property with a plain zero, and nothing
+  in the number says the vehicle never put a value behind it — an MG4 on SWI68 reporting 31 °C
+  outside showed a 0 °C traction battery and a 0 kW pack current on the dashboard next to it.
+  Reads now go through `getProperty`, whose `CarPropertyValue` carries the VHAL's status for
+  the property, and only `STATUS_AVAILABLE` is treated as a reading; anything else stays null
+  and reaches the screen as "unknown", which is what it is. A measured zero is still a zero.
+  Runtimes that do not expose `getProperty` fall back to the typed getters unchanged, so no
+  generation loses a property it was already answering.
+
+### Added
+
+- **`EVHardware.probeTelemetryProperties()` — what each energy property actually answers on the
+  car in front of you.** An unsupported property, one declared and never published, and one
+  this runtime cannot reach all look identical from the driver's seat, where every unusable
+  signal is one em dash. The probe reports status, raw value and publication timestamp per
+  property, unfiltered and outside the supported-generation gate, so a generation's telemetry
+  surface can be recorded from the vehicle instead of inferred from a blank field.
+
+### Changed
+
+- **A read that fails the same way every second is worth one log line, not one per sample.**
+  One unreadable speed property wrote two identical lines a second, filled the 400-entry buffer
+  and pushed everything else out of it, so the diagnostics screen was least useful exactly when
+  something was wrong. A repeated failure is logged again only when its reason changes.
+  Reflected failures also name their cause: `InvocationTargetException` carries no message of
+  its own, which is why these lines used to read `exc: null`.
+
 ## [1.9.0] - 2026-08-28
 
 ### Fixed
