@@ -141,6 +141,18 @@ class TripHistoryStoreTest {
         assertEquals(30, store.read().size)
     }
 
+    @Test fun `the default history retains two hundred summaries newest first`() {
+        val directory = tempDirectory()
+        val store = EnergyTripHistoryStore(File(directory, "trips.json"))
+
+        repeat(201) { trip -> assertTrue(store.append(summary(trip.toLong()))) }
+
+        val starts = store.readSummaries().map { it.startedAtMs }
+        assertEquals(200, starts.size)
+        assertEquals(200L, starts.first())
+        assertEquals(1L, starts.last())
+    }
+
     @Test fun `a four hour trip is decimated rather than truncated`() {
         val track = TripSampleTrack(startIntervalMs = 5_000L, maxSamples = 64)
         // Four hours at 1 Hz: 14 400 reads, of which the track would keep 2 880 at 5 s.

@@ -23,7 +23,8 @@ All notable changes to this project are documented here. Format follows
 - **Trip history can be pruned without bypassing its atomic persistence boundary.**
   `EnergyTripHistoryStore` can remove one start-time-identified trip or replace the history with
   a valid empty v2 envelope; both operations preserve the same unique-temp-file rewrite used by
-  appends, so a UI never deletes the only valid file before its replacement exists.
+  appends, so a UI never deletes the only valid file before its replacement exists. The default
+  summary bound is 200 trips; the existing byte ceiling still drops old sample tracks first.
 
 - **A public post-AAOS 9 capacity signal can be tested without becoming product data.**
   `EV_CURRENT_BATTERY_CAPACITY` describes real-time usable capacity rather than the pack's nominal

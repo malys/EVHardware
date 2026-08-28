@@ -42,7 +42,7 @@ data class TripHistoryFile(
  */
 class EnergyTripHistoryStore(
     private val target: File,
-    private val maxTrips: Int = 50,
+    private val maxTrips: Int = 200,
     private val maxBytes: Int = 512 * 1024,
     private val gson: Gson = Gson(),
 ) {
