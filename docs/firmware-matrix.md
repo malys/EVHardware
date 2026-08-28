@@ -135,6 +135,9 @@
 | TUNE_RADIO | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | RADIO_NEXT_STATION | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | RADIO_PREV_STATION | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| PAUSE_RADIO | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| RADIO_PLAY_PAUSE | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| OPEN_RADIO_SCREEN | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_AEB_ENABLED | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_AEB_MODE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_AEB_SENSITIVITY | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

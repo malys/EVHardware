@@ -20,6 +20,24 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Three radio behaviours the library could already perform are now things a rule can ask for.**
+  `srcPauseRadio`, the tuner's own play state and `startRadioActivity` were implemented and
+  unreachable: the catalogue offered play, tune and station stepping, so "silence the radio"
+  had to be approximated with `MEDIA_CONTROL`, which addresses whichever source owns the audio
+  and therefore stops Bluetooth when Bluetooth is the one playing. `PAUSE_RADIO`,
+  `RADIO_PLAY_PAUSE` and `OPEN_RADIO_SCREEN` name the tuner instead. The toggle reads
+  `RadioBean.state` rather than `AudioManager.isMusicActive`, which is **false while the radio
+  plays** — a toggle driven by it would answer a playing radio with another "play", forever —
+  and when even that cannot be read it sends nothing and says so: a wheel button can be pressed
+  twice, an unattended rule cannot, and a guessed direction leaves the car silent or playing
+  with nothing in the history admitting the direction was invented. Opening the radio screen is
+  the one of the three that is not audio-only, so it takes the standstill gate, unreadable
+  speed included; skipping a station does not, and did not gain it. Band selection and direct
+  DAB service selection were considered and rejected — see
+  [docs/radio-action-gap.md](docs/radio-action-gap.md), which records every candidate including
+  the refused ones. DAB remains reachable through station stepping, which is what the head
+  unit's own launcher calls.
+
 - **A trip now keeps its shape, not only its totals.** A summary cannot be un-summarised, and
   every model this project will grow — what a slower motorway speed would have saved, what the
   climate system took, the state of charge on arrival — is fitted from the shape of past drives.

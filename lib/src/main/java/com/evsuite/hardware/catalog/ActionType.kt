@@ -456,6 +456,60 @@ enum class ActionType(
         ValueSpec.NONE, "RADIO_PREV_STATION"
     ),
 
+    /**
+     * Silences the tuner — `srcPauseRadio`, the counterpart of [PLAY_RADIO].
+     *
+     * Not [MEDIA_CONTROL]'s play/pause, which addresses whichever source owns the audio and
+     * would therefore stop Bluetooth when Bluetooth is the one playing. This one names the
+     * radio, so a rule that silences the news on arrival silences the news.
+     *
+     * It mutes rather than handing the audio focus back: the vendor service only abandons
+     * focus when it loses it, so whatever played before the radio does not resume on its own.
+     * Silence is the most the service offers, and the label says no more than that.
+     */
+    @SupportedOn(SWI68, SWI165)
+    PAUSE_RADIO(
+        R.string.act_pause_radio, ActionGroup.AUDIO,
+        ValueSpec.NONE, "PAUSE_RADIO"
+    ),
+
+    /**
+     * Toggles the tuner between playing and silent, on the state the tuner reports.
+     *
+     * One entry for a driver who has one button and wants the radio specifically — again not
+     * [MEDIA_CONTROL], which follows the current source wherever it went.
+     *
+     * The direction is read, never assumed. `AudioManager.isMusicActive` is **false while the
+     * radio plays**, its stream not being the music one, so the obvious substitute would send
+     * "play" to a playing radio forever; `SaicRadio.isPlaying` reads `RadioBean.state`
+     * instead. When even that cannot be read the action sends nothing and reports why: a
+     * media shortcut can be pressed a second time, an unattended rule cannot, and a toggle
+     * that guessed wrong leaves the car silent — or playing — with nothing saying the
+     * direction was invented.
+     */
+    @SupportedOn(SWI68, SWI165)
+    RADIO_PLAY_PAUSE(
+        R.string.act_radio_play_pause, ActionGroup.AUDIO,
+        ValueSpec.NONE, "RADIO_PLAY_PAUSE"
+    ),
+
+    /**
+     * Brings the radio screen up — `startRadioActivity`, a different intent from playing.
+     *
+     * The one radio action that is not audio-only, and the only one that is [gated]. Skipping
+     * a station changes what comes out of the speakers; this replaces what is on the screen,
+     * and a full-screen app thrown in front of a driver at 110 km/h takes their eyes off the
+     * road for as long as it takes to understand what happened. It follows the standstill
+     * gate for the same reason the glass does, refusal on an unreadable speed included —
+     * which is the gate the rest of the audio family is deliberately outside of, and stays
+     * outside of.
+     */
+    @SupportedOn(SWI68, SWI165)
+    OPEN_RADIO_SCREEN(
+        R.string.act_open_radio_screen, ActionGroup.AUDIO,
+        ValueSpec.NONE, "OPEN_RADIO_SCREEN", gated = true
+    ),
+
     // ── ADAS (gated) ─────────────────────────────────────────────────────────
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
     SET_AEB_ENABLED(

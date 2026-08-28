@@ -140,6 +140,9 @@
     <string name="act_tune_radio">Sintonizar o rádio</string>
     <string name="act_radio_next_station">Estação de rádio seguinte</string>
     <string name="act_radio_prev_station">Estação de rádio anterior</string>
+    <string name="act_pause_radio">Silenciar o rádio</string>
+    <string name="act_radio_play_pause">Rádio: reproduzir/pausa</string>
+    <string name="act_open_radio_screen">Abrir o ecrã do rádio</string>
     <string name="value_radio_hint">ex. 103.5 ou AM 1080</string>
     <string name="act_navigate">Navegar para</string>
     <string name="act_ask_confirm">Pedir confirmação</string>

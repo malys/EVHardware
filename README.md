@@ -42,6 +42,7 @@ same energy snapshot instead of carrying their own property ids, units and fallb
 | Vehicle access | `EVHardware` — Katman1/4/5 reflection over `android.car` + SAIC SDK, per-firmware routing |
 | Safety | `VehicleWriteGate` (0 km/h, fail-closed) + `@RequiresStandstill` on every gated setter |
 | Vendor services | `saic.*` — the AIDL the head unit's own HVAC, charging, radio, hands-free and TTS apps use |
+| Radio | `SaicRadio` — play, silence, fail-closed play/pause toggle, FM/AM tune, station stepping (DAB included), screen |
 | Energy telemetry | `EnergyTelemetryReader`, `EnergySnapshot` — coherent nullable SOC, range, power, temperature, charging, tyre and climate reads |
 | Energy accounting | `EnergyTripAccumulator`, `ChargingSessionMeter`, `EnergyTripHistoryStore` — tested integration and atomic local persistence |
 | Firmware | `FirmwareInfo` (detection + capability helpers), `FirmwareGen` |
@@ -183,6 +184,7 @@ next test run.
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to build, test and submit a change |
 | [SECURITY.md](SECURITY.md) | Threat model and vulnerability disclosure |
 | [DISCLAIMER.md](DISCLAIMER.md) | Vehicle-safety disclaimer — read before installing |
+| [docs/radio-action-gap.md](docs/radio-action-gap.md) | Which radio behaviours the catalogue carries, and which were rejected |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [LICENSE.md](LICENSE.md) | Licence text |
 

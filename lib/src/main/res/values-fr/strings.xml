@@ -159,6 +159,9 @@
     <string name="act_tune_radio">Régler la radio</string>
     <string name="act_radio_next_station">Station radio suivante</string>
     <string name="act_radio_prev_station">Station radio précédente</string>
+    <string name="act_pause_radio">Couper la radio</string>
+    <string name="act_radio_play_pause">Radio : lecture/pause</string>
+    <string name="act_open_radio_screen">Ouvrir l’écran radio</string>
     <string name="value_radio_hint">ex. 103.5 ou AM 1080</string>
     <string name="act_navigate">Naviguer vers</string>
     <string name="act_ask_confirm">Demander confirmation</string>

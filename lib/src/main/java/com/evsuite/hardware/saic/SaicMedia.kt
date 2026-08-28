@@ -82,6 +82,50 @@ object SaicRadio {
 
     fun previousStation(): Boolean = SaicAidl.callVoid(service.binder(), DESCRIPTOR, TX_PREVIOUS)
 
+    /** What [playPause] did, or why it did nothing. */
+    enum class ToggleResult {
+        /** The tuner was silent and was asked to play. */
+        PLAYED,
+
+        /** The tuner was playing and was asked to stop. */
+        PAUSED,
+
+        /**
+         * The tuner would not say whether it was playing, so nothing was sent.
+         *
+         * The distinction from [REFUSED] is the one a caller has to report: the service
+         * refused nothing, it was never asked.
+         */
+        STATE_UNKNOWN,
+
+        /** The state was read, and the play or pause call that followed was not accepted. */
+        REFUSED
+    }
+
+    /**
+     * Toggles the tuner between playing and silent, addressing the radio whatever owns the
+     * audio right now.
+     *
+     * Deliberately not [SaicMediaPlayer]'s play/pause, which commands the *current source* —
+     * that one silences Bluetooth when Bluetooth is playing, which is right for a media
+     * shortcut and wrong for "toggle the radio".
+     *
+     * **Fails closed on an unreadable state.** [SaicMediaPlayer.radioCommand] treats a null
+     * as playing, and is right to: a driver pressing a wheel button sees nothing happen and
+     * presses again. A rule has no second press. Guessing wrong there leaves the car silent
+     * on a morning commute, or playing at a hospital car park, with nothing in the history
+     * saying the direction was invented — so an unreadable state sends nothing at all.
+     */
+    fun playPause(): ToggleResult {
+        val playing = isPlaying() ?: return ToggleResult.STATE_UNKNOWN
+        val ok = if (playing) pause() else play()
+        return when {
+            !ok -> ToggleResult.REFUSED
+            playing -> ToggleResult.PAUSED
+            else -> ToggleResult.PLAYED
+        }
+    }
+
     /**
      * Is the tuner playing? Null when the question could not be asked.
      *
