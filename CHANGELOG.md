@@ -6,6 +6,38 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-08-28
+
+### Fixed
+
+- **The glass probe refused to run on a car whose ignition was on.** It read
+  `getCurrentIgnitionState()`, which answers on the AAOS `IgnitionState` scale, against
+  `CarIgnitionItem.RUN` — and the two scales do not line up: RUN is 2 for Katman5, where 2 is
+  OFF. Contact mis read as 4 and was refused; contact coupé read as 2 and was let through.
+  `setEsc` compared the same two scales and now refuses only a *known* non-RUN ignition, as its
+  own documentation always said it did.
+- **Window actions moved nothing.** They were written through the vendor hub's
+  `setDriveWindow`, a setter no application on the head unit calls, whose accepted values
+  nothing explains and whose dropped writes are indistinguishable from obeyed ones.
+
+### Added
+
+- **`VsmGlass` — the windows through the interface the car's own window switch uses.**
+  `setVehicleWindowStatus(area, command)` and `getVehicleWindowValue(area)`, on the VSM already
+  bound for ADAS. The commands are established rather than guessed: `STOP`, `UP` and `AUTO_UP`.
+  `UP` is a switch held down and not an order — the glass travels only while the command keeps
+  arriving, which is why a single write looked exactly like a command that does nothing, and
+  why `hold()` re-sends it and then releases it. Reads answer 0–255, not the hub's 0–100, and a
+  motor without a position sensor answers off that scale and is reported as no reading rather
+  than as a closed window. VSM-based firmwares only; the hub stays the fallback.
+
+### Changed
+
+- **`SaicVehicleControl` prefers the VSM for every glass read and write**, falling back to the
+  hub only where the VSM does not carry the methods. `GlassProbe` holds each command down for
+  `HOLD_MS` instead of writing it once, which is the only way a momentary command shows up in a
+  position read at all.
+
 ## [1.8.0] - 2026-08-27
 
 ### Added

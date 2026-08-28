@@ -94,7 +94,10 @@ object GlassProbe {
         window: Window,
         glass: Glass = VehicleGlass,
         stopped: () -> Boolean = { VehicleWriteGate.decideNow() == VehicleWriteGate.Decision.ALLOWED },
-        ignitionRun: () -> Boolean = { EVHardware.getCurrentIgnitionState() == EVHardware.CarIgnitionItem.RUN },
+        // [IgnitionState], not [CarIgnitionItem]: getCurrentIgnitionState() answers on the AAOS
+        // scale, and the two do not line up — RUN is 2 for Katman5, where 2 is OFF here. Read
+        // against the wrong one, a car with the ignition on refused the probe as if it were off.
+        ignitionRun: () -> Boolean = { EVHardware.getCurrentIgnitionState() == EVHardware.IgnitionState.ON },
         sleep: (Long) -> Unit = { Thread.sleep(it) },
     ): Result {
         val attempts = mutableListOf<Attempt>()
@@ -172,11 +175,23 @@ object GlassProbe {
         return abs(settled - start) < MOVEMENT_PERCENT
     }
 
+    /**
+     * How long each command is held down before the position is read back.
+     *
+     * Shorter than a close, because the sweep sends up to sixteen of them and the driver is
+     * sitting through all of it — long enough for a window to travel further than
+     * [MOVEMENT_PERCENT], which is all the probe has to see.
+     */
+    const val HOLD_MS = 1_500L
+
     /** The real car. */
     object VehicleGlass : Glass {
         override fun position(window: Window): Int? = SaicVehicleControl.windowPercent(window)
+        // Held, not sent once: the commands that move this glass are switches rather than
+        // orders, and a single write travels the window by less than the read can resolve.
+        // Holding a command that *is* an order costs nothing — it simply arrives again.
         override fun send(window: Window, command: Int): Boolean =
-            SaicVehicleControl.setWindow(window, command)
+            SaicVehicleControl.holdWindow(window, command, HOLD_MS)
     }
 
     private const val TAG = "EV_GLASS"

@@ -1578,6 +1578,14 @@ object EVHardware {
     internal fun a9ClassLoader(): ClassLoader? =
         sVsm?.javaClass?.classLoader ?: sCarAdapterClass?.classLoader
 
+    /**
+     * The VSM singleton, for the primitives that live outside this file.
+     *
+     * [VsmGlass] is one of them: the glass belongs with the glass, not in the middle of the
+     * ADAS calls, and it needs the same instance [callVsm] uses rather than a second bind.
+     */
+    internal fun vsmInstance(): Any? = sVsm
+
     private fun callVsm(methodName: String, vararg args: Any?): Any? {
         val vsm = sVsm ?: return null
         return try {
@@ -2713,10 +2721,11 @@ object EVHardware {
     fun setEsc(on: Boolean): Boolean {
         if (!hasDrowsinessAndEsc()) return false
 
+        // [IgnitionState], not [CarIgnitionItem]: getCurrentIgnitionState() answers on the
+        // AAOS scale, where the two do not line up — RUN is 2 for Katman5 and OFF is 2 here.
+        // Unreadable is 0 or -1 and is deliberately not a refusal, per the KDoc above.
         val ignition = getCurrentIgnitionState()
-        if (ignition == CarIgnitionItem.OFF || ignition == CarIgnitionItem.ACCESSORY ||
-            ignition == CarIgnitionItem.CRANK
-        ) {
+        if (ignition > 0 && ignition != IgnitionState.ON) {
             AppLogger.w(TAG, "  ESC: vehicle not in RUN (ignition=$ignition) — no action, the " +
                 "reading cannot be trusted yet")
             return false

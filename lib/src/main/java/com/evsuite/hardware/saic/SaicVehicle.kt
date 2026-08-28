@@ -3,6 +3,8 @@ package com.evsuite.hardware.saic
 import android.content.Context
 import android.os.IBinder
 import com.evsuite.hardware.A9Climate
+import com.evsuite.hardware.GlassProbe
+import com.evsuite.hardware.VsmGlass
 
 /**
  * The vendor vehicle service the head unit's HVAC and charging screens talk to.
@@ -297,13 +299,12 @@ object SaicCharging {
  * same shape holds elsewhere in the service — the tailgate is `get = 100`, `set = 1` — so a
  * status range and a command range simply are not the same thing on this interface.
  *
- * **What the seven commands mean is not known.** No head-unit application writes this
- * property: the settings, HVAC, launcher, system UI and telematics APKs all carry the SDK
- * and none of them calls the setter, so the firmware offers no example to read the values
- * off. Until one is identified, the command is passed through as the caller gave it and
- * anything outside 0–7 is refused here rather than sent to be dropped — a refusal in the
- * history is the honest report, and the value that moves the glass is then one experiment
- * away rather than hidden behind a scale that cannot work.
+ * **The hub is the fallback, not the path.** No head-unit application writes this property,
+ * so the firmware offers no example to read the seven values off, and the command is passed
+ * through as the caller gave it with anything outside 0–7 refused here rather than sent to
+ * be dropped. The VSM carries the same glass under a setter the car's own window switch
+ * goes through, where the commands *are* established — [VsmGlass]. Every read and write
+ * below prefers it and falls back to the hub only on a firmware whose VSM does not have it.
  *
  * The electric tailgate is deliberately absent: the launcher defines OPEN and CLOSE as the
  * same value (1.0f), so it is a pulse whose direction depends on state this cannot read.
@@ -350,11 +351,16 @@ object SaicVehicleControl {
      * is the other half — a rule that vents the driver's window alone cannot be written with
      * an all-or-nothing call.
      */
-    enum class Window(internal val readCode: Int, internal val writeCode: Int) {
-        DRIVER(TX_GET_DRIVER_WINDOW, TX_SET_DRIVER_WINDOW),
-        PASSENGER(TX_GET_PASSENGER_WINDOW, TX_SET_PASSENGER_WINDOW),
-        REAR_LEFT(TX_GET_LEFT_REAR_WINDOW, TX_SET_LEFT_REAR_WINDOW),
-        REAR_RIGHT(TX_GET_RIGHT_REAR_WINDOW, TX_SET_RIGHT_REAR_WINDOW)
+    enum class Window(
+        internal val readCode: Int,
+        internal val writeCode: Int,
+        /** The same window's number on the VSM, which addresses glass by area — [VsmGlass]. */
+        internal val area: Int,
+    ) {
+        DRIVER(TX_GET_DRIVER_WINDOW, TX_SET_DRIVER_WINDOW, 0),
+        PASSENGER(TX_GET_PASSENGER_WINDOW, TX_SET_PASSENGER_WINDOW, 1),
+        REAR_LEFT(TX_GET_LEFT_REAR_WINDOW, TX_SET_LEFT_REAR_WINDOW, 2),
+        REAR_RIGHT(TX_GET_RIGHT_REAR_WINDOW, TX_SET_RIGHT_REAR_WINDOW, 3)
     }
 
     private val WINDOW_READS = Window.entries.map { it.readCode }
@@ -369,7 +375,8 @@ object SaicVehicleControl {
      * window open" is `> 0`, and a rule closing them cares about the worst case.
      */
     fun widestWindowPercent(): Int? =
-        WINDOW_READS.mapNotNull { code -> SaicAidl.callFloat(binder(), DESCRIPTOR, code) }
+        if (VsmGlass.isAvailable) Window.entries.mapNotNull { VsmGlass.percent(it.area) }.maxOrNull()
+        else WINDOW_READS.mapNotNull { code -> SaicAidl.callFloat(binder(), DESCRIPTOR, code) }
             .takeIf { it.isNotEmpty() }
             ?.max()
             ?.toInt()
@@ -379,7 +386,8 @@ object SaicVehicleControl {
      * One window's position in percent, 0 closed to 100 open. Null when it does not answer.
      */
     fun windowPercent(window: Window): Int? =
-        SaicAidl.callFloat(binder(), DESCRIPTOR, window.readCode)?.toInt()?.takeIf { it >= 0 }
+        if (VsmGlass.isAvailable) VsmGlass.percent(window.area)
+        else SaicAidl.callFloat(binder(), DESCRIPTOR, window.readCode)?.toInt()?.takeIf { it >= 0 }
 
     /**
      * Sends one glass command to one window.
@@ -387,10 +395,30 @@ object SaicVehicleControl {
      * [command] is a command in `0..`[WINDOW_COMMAND_MAX], **not** a position — see the class
      * KDoc. A value outside that range is refused here and returns false: the service would
      * accept the call and drop the value, which is indistinguishable from having moved.
+     *
+     * [VsmGlass.Command.UP] is held down rather than written once, because that is the only
+     * way it moves anything — see [holdWindow]. The hub path has no such notion and cannot
+     * acquire one: it is one write there whatever the value.
      */
     fun setWindow(window: Window, command: Int): Boolean {
         if (command !in 0..WINDOW_COMMAND_MAX) return false
-        return SaicAidl.callVoid(binder(), DESCRIPTOR, window.writeCode, command.toFloat())
+        if (!VsmGlass.isAvailable)
+            return SaicAidl.callVoid(binder(), DESCRIPTOR, window.writeCode, command.toFloat())
+        return if (command == VsmGlass.Command.UP) VsmGlass.hold(listOf(window.area), command)
+        else VsmGlass.send(listOf(window.area), command)
+    }
+
+    /**
+     * Holds [command] on one window for [durationMs], then releases it.
+     *
+     * What [GlassProbe] sweeps with, and the reason a close works on the trims whose motors
+     * have no position sensor: those obey nothing but a switch held down. Falls back to a
+     * single write on the hub, which is all that path offers.
+     */
+    fun holdWindow(window: Window, command: Int, durationMs: Long = VsmGlass.HOLD_MS): Boolean {
+        if (command !in 0..WINDOW_COMMAND_MAX) return false
+        return if (VsmGlass.isAvailable) VsmGlass.hold(listOf(window.area), command, durationMs)
+        else SaicAidl.callVoid(binder(), DESCRIPTOR, window.writeCode, command.toFloat())
     }
 
     /** Each window individually, for the diagnostic — this is what confirms the scale. */
@@ -404,6 +432,11 @@ object SaicVehicleControl {
      */
     fun setAllWindows(command: Int): Boolean {
         if (command !in 0..WINDOW_COMMAND_MAX) return false
+        if (VsmGlass.isAvailable) {
+            val areas = Window.entries.map { it.area }
+            return if (command == VsmGlass.Command.UP) VsmGlass.hold(areas, command)
+            else VsmGlass.send(areas, command)
+        }
         val value = command.toFloat()
         // Every window attempted even if one refuses: three closed beats none closed, and
         // the caller still learns that it was not complete.
