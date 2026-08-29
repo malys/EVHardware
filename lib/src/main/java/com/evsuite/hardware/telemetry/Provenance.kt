@@ -42,6 +42,9 @@ enum class UnavailableReason {
     /** A derived or estimated value whose inputs have not accumulated enough samples. */
     INSUFFICIENT_SAMPLES,
 
+    /** A speed-normalised value is undefined or unstable below its documented speed floor. */
+    SPEED_TOO_LOW,
+
     /** An estimator with no fit to predict from. */
     MODEL_NOT_TRAINED,
 }

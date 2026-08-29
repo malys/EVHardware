@@ -20,6 +20,13 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Consumption is now one shared, nullable derivation instead of UI arithmetic.**
+  `ConsumptionCalculator` exposes raw and five-second exponentially smoothed instantaneous
+  kWh/100 km plus a two-minute energy/distance average. It masks missing inputs and speeds
+  below 5 km/h, preserves negative regeneration, rejects unobserved gaps over five seconds,
+  and bounds its working set independently of trip length. Every output is provenance-labelled;
+  the existing trip accumulator continues to integrate raw power and speed unchanged.
+
 - **Trip history can be pruned without bypassing its atomic persistence boundary.**
   `EnergyTripHistoryStore` can remove one start-time-identified trip or replace the history with
   a valid empty v2 envelope; both operations preserve the same unique-temp-file rewrite used by
