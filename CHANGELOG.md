@@ -53,6 +53,12 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Automatic trip boundaries are now one fail-closed telemetry state machine.**
+  `TripDetector` requires five seconds above 5 km/h to start and two minutes below 1 km/h
+  to end, using park or charge-port confirmation when those signals exist. Missing speed
+  cancels partial evidence and can never start or stop a recording; all timers and threshold
+  bounce behaviour are covered without Android or a vehicle.
+
 - **Adaptive range is now an explicit estimate with evidence-sized uncertainty.**
   `AdaptiveRangeEstimator` fits up to eight recent trip-consumption averages, requires three
   usable observations, and converts their sample spread into a kilometre uncertainty band.
