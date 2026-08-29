@@ -12,12 +12,14 @@ class TripDetector {
 
     data class Result(val state: State, val event: Event? = null)
 
+    @Volatile
     var state: State = State.IDLE
         private set
 
     private var stateSinceMs: Long? = null
     private var lastTimestampMs: Long? = null
 
+    @Synchronized
     fun add(snapshot: EnergySnapshot): Result {
         val timestampMs = snapshot.timestampMs
         val previousTimestamp = lastTimestampMs
@@ -84,12 +86,14 @@ class TripDetector {
     }
 
     /** Keeps detector state aligned when the parked-only manual control starts a trip. */
+    @Synchronized
     fun markRecording() {
         state = State.RECORDING
         stateSinceMs = null
     }
 
     /** Used after a manual stop or when automatic detection is disabled. */
+    @Synchronized
     fun reset() {
         state = State.IDLE
         stateSinceMs = null
