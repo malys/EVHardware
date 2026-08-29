@@ -20,6 +20,12 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Adaptive range is now an explicit estimate with evidence-sized uncertainty.**
+  `AdaptiveRangeEstimator` fits up to eight recent trip-consumption averages, requires three
+  usable observations, and converts their sample spread into a kilometre uncertainty band.
+  It prefers measured usable energy, falls back to SOC times capacity, and refuses to estimate
+  when the current firmware does not publish battery power; the vehicle's own range is untouched.
+
 - **Consumption is now one shared, nullable derivation instead of UI arithmetic.**
   `ConsumptionCalculator` exposes raw and five-second exponentially smoothed instantaneous
   kWh/100 km plus a two-minute energy/distance average. It masks missing inputs and speeds
