@@ -162,6 +162,12 @@
     <string name="act_pause_radio">Silence the radio</string>
     <string name="act_radio_play_pause">Radio play/pause</string>
     <string name="act_open_radio_screen">Open the radio screen</string>
+    <string name="act_select_radio_band">Radio band</string>
+    <string name="radio_band_am">AM</string>
+    <string name="radio_band_fm">FM</string>
+    <string name="radio_band_dab">DAB</string>
+    <string name="window_close">Closed</string>
+    <string name="window_open">Open</string>
     <string name="value_radio_hint">e.g. 103.5 or AM 1080</string>
     <string name="act_navigate">Navigate to</string>
     <string name="act_ask_confirm">Ask for confirmation</string>
@@ -173,7 +179,7 @@
     <string name="act_call_contact">Call a contact</string>
     <string name="cond_window_position">Window opening</string>
     <string name="cond_doors_locked">Doors locked</string>
-    <string name="act_windows">Windows</string>
+    <string name="act_windows">All windows</string>
     <string name="act_door_lock">Door locks</string>
     <string name="act_delay">Wait</string>
     <string name="unit_second">s</string>

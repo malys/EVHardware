@@ -137,14 +137,134 @@ object SaicRadio {
      * is **false while the radio plays**, its stream not being the music one. A play/pause
      * shortcut driven by it would send "play" to a radio that is already playing, forever.
      */
-    fun isPlaying(): Boolean? =
+    fun isPlaying(): Boolean? = currentStation()?.playing
+
+    /** What the tuner is on right now, or null when the question could not be put. */
+    data class Tuned(val band: Int, val frequencyKhz: Int, val playing: Boolean)
+
+    /**
+     * The whole `RadioBean`, not just its play state.
+     *
+     * [Tuned.band] is what makes a band action possible without a new transaction: the service
+     * exposes no "switch band" call, but it says which band it is on, and [tune] can put it on
+     * another one. See [selectBand].
+     */
+    fun currentStation(): Tuned? =
         SaicAidl.callParcel(service.binder(), DESCRIPTOR, TX_CURRENT_INFO) { reply ->
             if (reply.readInt() == 0) return@callParcel null   // null bean: nothing to conclude
             reply.readByte(); reply.readString()               // enable, station name
             reply.readByte(); reply.readString()               // rds, cover art
-            reply.readInt(); reply.readInt()                   // frequency, band
-            reply.readInt() == 1
+            val frequency = reply.readInt()
+            val band = reply.readInt()
+            Tuned(band = band, frequencyKhz = frequency, playing = reply.readInt() == 1)
         }
+
+    /** Whether [band] is one this class knows how to reach. */
+    fun isKnownBand(band: Int) = band == BAND_AM || band == BAND_FM || band == BAND_DAB
+
+    /** What [selectBand] did, or why it did nothing. */
+    enum class BandResult {
+        /** The tuner moved to the requested band. */
+        SWITCHED,
+
+        /** It was already there; nothing was sent. */
+        ALREADY_ON_BAND,
+
+        /** The tuner would not say which band it is on, so nothing was sent. */
+        STATE_UNKNOWN,
+
+        /** The band is not one the tuner offers. */
+        UNSUPPORTED_BAND,
+
+        /** The tune call was not accepted. */
+        REFUSED
+    }
+
+    /**
+     * Puts the tuner on [band], including **DAB**.
+     *
+     * `IRadioAppService` exposes no band-only call that this project has observed, and
+     * guessing a transaction code is the one thing the vehicle layer must never do — a wrong
+     * code on a vendor binder does something unknown to a car. So this composes calls that are
+     * already established instead: read the current band from `RadioBean`, and if it is not the
+     * one asked for, [tune] to a frequency **inside** the requested band. Tuning implies the
+     * band, because `tune` takes the band as its first argument.
+     *
+     * Which frequency: the last one this car was seen on for that band, remembered by
+     * [RadioBandMemory] every time the tuner is read. With no memory yet it lands on the
+     * bottom of the band and steps to the first real station, because the bottom of a band is
+     * usually noise — a driver asking for DAB wants a programme, not 174.928 MHz of silence.
+     *
+     * DAB is addressed here by its **block frequency**, which is a real frequency in Band III,
+     * not by an ensemble and service id. That is why a band switch can reach DAB while
+     * [tune] from a driver's typed text cannot.
+     */
+    fun selectBand(band: Int): BandResult {
+        if (!isKnownBand(band)) return BandResult.UNSUPPORTED_BAND
+        val current = currentStation() ?: return BandResult.STATE_UNKNOWN
+        RadioBandMemory.remember(current.band, current.frequencyKhz)
+        if (current.band == band) return BandResult.ALREADY_ON_BAND
+
+        val remembered = RadioBandMemory.frequencyFor(band)
+        val target = remembered ?: bandFloorKhz(band)
+        if (!tune(band, target, andPlay = true)) return BandResult.REFUSED
+        // Nothing was remembered, so the tuner is sitting at the bottom of the band, which is
+        // where stations are not. Stepping finds the first one the car itself lists.
+        if (remembered == null) nextStation()
+        return BandResult.SWITCHED
+    }
+
+    /**
+     * The bottom of each band, used only when this car has never been seen on it.
+     *
+     * FM and AM come from `RadioConstants`; DAB is block 5A at 174.928 MHz, the bottom of
+     * Band III as the standard defines it — not a value read off this firmware, which is why
+     * a band switch that lands there immediately steps to a real station rather than staying.
+     */
+    private fun bandFloorKhz(band: Int): Int = when (band) {
+        BAND_AM -> RadioFrequency.AM_MIN_KHZ
+        BAND_DAB -> DAB_BAND_III_MIN_KHZ
+        else -> RadioFrequency.FM_MIN_KHZ
+    }
+
+    const val DAB_BAND_III_MIN_KHZ = 174_928
+}
+
+/**
+ * The last frequency this car was seen on, per band.
+ *
+ * Switching band needs a frequency, and the least surprising one is the station the driver
+ * was last listening to on that band. Kept beside the glass evidence in the same preferences,
+ * and for the same reason: it is an observation about this car, worth nothing anywhere else
+ * and never sent anywhere.
+ */
+object RadioBandMemory {
+
+    private const val PREFS = "ev_settings"
+    private const val KEY_PREFIX = "radio_last_khz_band_"
+
+    @Volatile
+    private var prefs: android.content.SharedPreferences? = null
+
+    /** Cache so a read on the sampling path is not a disk hit. */
+    private val cache = java.util.concurrent.ConcurrentHashMap<Int, Int>()
+
+    fun load(context: Context) {
+        prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    }
+
+    fun frequencyFor(band: Int): Int? =
+        cache[band] ?: prefs?.getInt(KEY_PREFIX + band, -1)?.takeIf { it > 0 }?.also {
+            cache[band] = it
+        }
+
+    /** Records where the tuner was, ignoring a band or frequency that says nothing. */
+    fun remember(band: Int, frequencyKhz: Int) {
+        if (!SaicRadio.isKnownBand(band) || frequencyKhz <= 0) return
+        if (cache[band] == frequencyKhz) return
+        cache[band] = frequencyKhz
+        prefs?.edit()?.putInt(KEY_PREFIX + band, frequencyKhz)?.apply()
+    }
 }
 
 /**

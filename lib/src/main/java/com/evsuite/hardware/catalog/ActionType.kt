@@ -12,7 +12,6 @@ import com.evsuite.hardware.FirmwareGen.SWI165
 import com.evsuite.hardware.FirmwareGen.SWI68
 import com.evsuite.hardware.FirmwareGen.SWI69
 import com.evsuite.hardware.catalog.ValueSpec.Companion.number
-import com.evsuite.hardware.saic.SaicVehicleControl.WINDOW_COMMAND_MAX
 
 /** Grouping in the action picker. */
 enum class ActionGroup(@StringRes val labelRes: Int) {
@@ -251,7 +250,7 @@ enum class ActionType(
     @SupportedOn(SWI68, SWI165)
     SET_WINDOWS(
         R.string.act_windows, ActionGroup.CLIMATE,
-        number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOWS",
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.WINDOW_COMMANDS), "SET_WINDOWS",
         currentKey = null,
         gated = true, writeProven = false
     ),
@@ -265,28 +264,28 @@ enum class ActionType(
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_DRIVER(
         R.string.act_window_driver, ActionGroup.CLIMATE,
-        number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOW_DRIVER",
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.WINDOW_COMMANDS), "SET_WINDOW_DRIVER",
         currentKey = null,
         gated = true, writeProven = false
     ),
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_PASSENGER(
         R.string.act_window_passenger, ActionGroup.CLIMATE,
-        number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOW_PASSENGER",
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.WINDOW_COMMANDS), "SET_WINDOW_PASSENGER",
         currentKey = null,
         gated = true, writeProven = false
     ),
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_REAR_LEFT(
         R.string.act_window_rear_left, ActionGroup.CLIMATE,
-        number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOW_REAR_LEFT",
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.WINDOW_COMMANDS), "SET_WINDOW_REAR_LEFT",
         currentKey = null,
         gated = true, writeProven = false
     ),
     @SupportedOn(SWI68, SWI165)
     SET_WINDOW_REAR_RIGHT(
         R.string.act_window_rear_right, ActionGroup.CLIMATE,
-        number(0, WINDOW_COMMAND_MAX, R.string.unit_command), "SET_WINDOW_REAR_RIGHT",
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.WINDOW_COMMANDS), "SET_WINDOW_REAR_RIGHT",
         currentKey = null,
         gated = true, writeProven = false
     ),
@@ -454,6 +453,30 @@ enum class ActionType(
     RADIO_PREV_STATION(
         R.string.act_radio_prev_station, ActionGroup.AUDIO,
         ValueSpec.NONE, "RADIO_PREV_STATION"
+    ),
+
+    /**
+     * Puts the tuner on a band — AM, FM or **DAB**.
+     *
+     * The one radio action that reaches DAB deliberately. [TUNE_RADIO] cannot: it takes a
+     * frequency a driver typed, and a DAB *service* is addressed by ensemble and service id,
+     * so there is nothing to type. A DAB **block**, on the other hand, is a real frequency in
+     * Band III, which is what makes the band reachable at all.
+     *
+     * No band-only call in the vendor service has been observed, and a guessed transaction
+     * code is never sent to a vehicle. `SaicRadio.selectBand` composes established calls
+     * instead — read the current band from `RadioBean`, then `tune` into the requested one,
+     * since `tune` carries the band as its first argument. It lands on the station this car
+     * was last heard on for that band, or steps to the first one the tuner lists when it has
+     * never been there.
+     *
+     * Audio-only, so it is not gated: changing band is what the wheel's source button already
+     * does at speed.
+     */
+    @SupportedOn(SWI68, SWI165)
+    SELECT_RADIO_BAND(
+        R.string.act_select_radio_band, ActionGroup.AUDIO,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.RADIO_BANDS), "SELECT_RADIO_BAND"
     ),
 
     /**

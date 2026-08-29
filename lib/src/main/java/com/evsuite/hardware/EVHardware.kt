@@ -631,6 +631,7 @@ object EVHardware {
         // Cached here so the catalogue predicate stays a property read: every editor and the
         // diagnostic ask `effectProven` once per entry, several times a screen.
         GlassEvidence.load(context)
+        com.evsuite.hardware.saic.RadioBandMemory.load(context)
         AppLogger.i(TAG, "=== EVHardware.init() === uid=${android.os.Process.myUid()} sdk=${android.os.Build.VERSION.SDK_INT} device=${android.os.Build.DEVICE}")
         bindCarService(context)
         sVehicleBinder = getBinderService("vehiclesetting")

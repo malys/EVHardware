@@ -140,4 +140,40 @@ object VehicleEnums {
      * fire on a car that is not charging.
      */
     val CHARGING_ACTIVE_STATES = setOf(CHARGING_AC, CHARGING_DC)
+
+    /**
+     * What a glass action asks for: open the window, or close it. Nothing in between.
+     *
+     * The vendor service takes a **command**, not a position — it reads a percentage back
+     * and accepts nothing above 7 on the way in — so the only two states a rule can reach are
+     * fully open and fully closed. A percentage control would offer a hundred and one values
+     * of which ninety-nine are unreachable, and the history would report "applied" for a
+     * position the glass never went to.
+     *
+     * Which raw command opens and which closes is **not** encoded here, because it is not a
+     * property of the catalogue: it is a property of the car, established by `GlassProbe` and
+     * stored in `GlassEvidence`. The executor translates. That is why these values are 0 and 1
+     * rather than the observed commands — a rule saved on one car must not carry another car's
+     * command numbers.
+     */
+    const val WINDOW_CLOSE = 0
+    const val WINDOW_OPEN  = 1
+
+    val WINDOW_COMMANDS = listOf(
+        EnumOption(WINDOW_CLOSE, R.string.window_close),
+        EnumOption(WINDOW_OPEN, R.string.window_open)
+    )
+
+    /**
+     * The tuner's bands, as `RadioType` numbers them.
+     *
+     * DAB is in the list because stepping already reaches it and the band is what a rule
+     * cannot otherwise change: `TUNE_RADIO` takes a frequency, and a DAB service is addressed
+     * by ensemble and service id, so there is no DAB station a driver could type.
+     */
+    val RADIO_BANDS = listOf(
+        EnumOption(1, R.string.radio_band_am),
+        EnumOption(2, R.string.radio_band_fm),
+        EnumOption(4, R.string.radio_band_dab)
+    )
 }

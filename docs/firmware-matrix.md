@@ -135,6 +135,7 @@
 | TUNE_RADIO | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | RADIO_NEXT_STATION | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | RADIO_PREV_STATION | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SELECT_RADIO_BAND | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | PAUSE_RADIO | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | RADIO_PLAY_PAUSE | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | OPEN_RADIO_SCREEN | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |

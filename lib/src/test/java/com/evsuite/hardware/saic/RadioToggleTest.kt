@@ -5,6 +5,7 @@ import com.evsuite.hardware.catalog.ValueKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -81,6 +82,69 @@ class RadioToggleTest {
         (RADIO_ACTIONS - ActionType.TUNE_RADIO).forEach {
             assertEquals("${it.name} takes no argument", ValueKind.NONE, it.spec.kind)
         }
+    }
+
+    /** [SaicRadio.selectBand]'s decision, over a current band that may be unreadable. */
+    private fun band(current: Int?, requested: Int, tuneAccepted: Boolean): SaicRadio.BandResult {
+        if (!SaicRadio.isKnownBand(requested)) return SaicRadio.BandResult.UNSUPPORTED_BAND
+        if (current == null) return SaicRadio.BandResult.STATE_UNKNOWN
+        if (current == requested) return SaicRadio.BandResult.ALREADY_ON_BAND
+        return if (tuneAccepted) SaicRadio.BandResult.SWITCHED else SaicRadio.BandResult.REFUSED
+    }
+
+    @Test
+    fun `a band switch sends nothing when the tuner will not say where it is`() {
+        // Same rule as the play/pause toggle: without the current band there is no way to
+        // know whether a tune is a switch or a station change nobody asked for.
+        assertEquals(
+            SaicRadio.BandResult.STATE_UNKNOWN,
+            band(current = null, requested = SaicRadio.BAND_DAB, tuneAccepted = true)
+        )
+    }
+
+    @Test
+    fun `asking for the band already playing changes no station`() {
+        // The naive implementation tunes anyway and moves the driver off the station they
+        // were listening to, for an action that was supposed to be a no-op.
+        assertEquals(
+            SaicRadio.BandResult.ALREADY_ON_BAND,
+            band(current = SaicRadio.BAND_FM, requested = SaicRadio.BAND_FM, tuneAccepted = true)
+        )
+    }
+
+    @Test
+    fun `DAB is reachable by band where it is not reachable by frequency`() {
+        // The point of the action. RadioFrequency.parse names no DAB station — a DAB service
+        // is an ensemble and service id — but the band itself is one tune() argument away.
+        assertEquals(
+            SaicRadio.BandResult.SWITCHED,
+            band(current = SaicRadio.BAND_FM, requested = SaicRadio.BAND_DAB, tuneAccepted = true)
+        )
+        assertNull("no typed text names a DAB station", RadioFrequency.parse("11D"))
+    }
+
+    @Test
+    fun `an unknown band is refused before anything is sent`() {
+        assertEquals(
+            SaicRadio.BandResult.UNSUPPORTED_BAND,
+            band(current = SaicRadio.BAND_FM, requested = 9, tuneAccepted = true)
+        )
+    }
+
+    @Test
+    fun `a refused tune is not reported as a switch`() {
+        assertEquals(
+            SaicRadio.BandResult.REFUSED,
+            band(current = SaicRadio.BAND_AM, requested = SaicRadio.BAND_FM, tuneAccepted = false)
+        )
+    }
+
+    @Test
+    fun `the DAB band floor is a real Band III block frequency`() {
+        // Block 5A. It is only ever a starting point — a switch that lands there steps to the
+        // first station the tuner lists — but it must be inside Band III or the tune is
+        // meaningless.
+        assertTrue(SaicRadio.DAB_BAND_III_MIN_KHZ in 174_000..240_000)
     }
 
     private companion object {

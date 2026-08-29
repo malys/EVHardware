@@ -3,6 +3,7 @@ package com.evsuite.hardware.catalog
 import com.evsuite.hardware.catalog.ActionType
 import com.evsuite.hardware.catalog.ConditionType
 import com.evsuite.hardware.catalog.ValueKind
+import com.evsuite.hardware.saic.SaicRadio
 import com.evsuite.hardware.saic.SaicVehicleControl
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
@@ -295,34 +296,59 @@ class CatalogConsistencyTest {
     }
 
     @Test
-    fun `every glass write is gated, and carries a command rather than a position`() {
+    fun `every glass write is gated, and asks for a state rather than a raw command`() {
         // The service takes a command in 0..7 on the way in and answers a percentage on the
-        // way out, so a position-scaled write is dropped in silence. Nothing on the firmware
-        // says which command opens and which closes, and a write whose direction is unknown
-        // is not one to allow at speed.
+        // way out, so neither a raw command nor a position belongs in a saved rule. A command
+        // number is worse than useless in the editor — it is what let a rule ask for "7",
+        // which the service accepts and drops — and a percentage would offer a hundred and one
+        // values of which ninety-nine the glass cannot reach. Open and closed are the two
+        // states that exist.
         val glass = listOf(
             ActionType.SET_WINDOWS, ActionType.SET_WINDOW_DRIVER, ActionType.SET_WINDOW_PASSENGER,
             ActionType.SET_WINDOW_REAR_LEFT, ActionType.SET_WINDOW_REAR_RIGHT
         )
         glass.forEach {
             assertTrue("${it.name} must take the standstill gate", it.gated)
-            assertEquals(ValueKind.NUMBER, it.spec.kind)
-            assertEquals("${it.name} sends a command, not a percentage", 0, it.spec.min)
+            assertEquals("${it.name} asks for a state", ValueKind.ENUM, it.spec.kind)
             assertEquals(
-                "${it.name} must not offer a value the service drops",
-                SaicVehicleControl.WINDOW_COMMAND_MAX, it.spec.max
+                "${it.name} offers exactly open and closed",
+                VehicleEnums.WINDOW_COMMANDS, it.spec.options
             )
             // No current value to open the editor on: the reading is a position and the
-            // control is a command, so seeding one with the other would be a false start.
+            // control is a state, so seeding one with the other would be a false start.
             assertNull("${it.name} has no position to preselect", it.currentKey)
-            // Which of the eight commands raises a window is written down nowhere and no
-            // head-unit application sends one, so the write has never been shown to move
-            // anything. Until it is, the action is offered nowhere and run nowhere.
+            // The catalogue still cannot claim the write moves anything. GlassEvidence lifts
+            // this per car, once a probe has watched a command move the glass.
             assertFalse("${it.name} effect is not established", it.writeProven)
         }
         // Exactly these: an unproven write is invisible to the user, so adding one elsewhere
         // silently removes an action from every app that carries this catalogue.
         assertEquals(glass.toSet(), ActionType.entries.filter { !it.writeProven }.toSet())
+    }
+
+    @Test
+    fun `the window states carry no car-specific command number`() {
+        // Which raw command opens and which closes is a property of the car, established by
+        // GlassProbe and stored in GlassEvidence — never of the catalogue. A rule exported
+        // from one car and imported on another must not carry the first car's command codes.
+        assertEquals(0, VehicleEnums.WINDOW_CLOSE)
+        assertEquals(1, VehicleEnums.WINDOW_OPEN)
+        assertEquals(2, VehicleEnums.WINDOW_COMMANDS.size)
+        assertEquals(
+            setOf(VehicleEnums.WINDOW_CLOSE, VehicleEnums.WINDOW_OPEN),
+            VehicleEnums.WINDOW_COMMANDS.map { it.value }.toSet()
+        )
+    }
+
+    @Test
+    fun `the radio bands are the vendor RadioType values, and include DAB`() {
+        // Passed straight to tune() as its band argument: a value invented here tunes the
+        // wrong band, or none.
+        val byValue = VehicleEnums.RADIO_BANDS.associateBy { it.value }
+        assertTrue("AM missing", SaicRadio.BAND_AM in byValue)
+        assertTrue("FM missing", SaicRadio.BAND_FM in byValue)
+        assertTrue("DAB missing — it is the band the tune action cannot reach", SaicRadio.BAND_DAB in byValue)
+        assertEquals(3, VehicleEnums.RADIO_BANDS.size)
     }
 
     @Test
