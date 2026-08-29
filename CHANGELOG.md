@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-08-29
+
 ### Fixed
 
 - **A property the firmware declares and never publishes no longer reads as a measurement.**
