@@ -77,8 +77,10 @@ class ConsumptionCalculator(
         val previous = smoothedValue
         val previousAt = smoothedAtMs
         val deltaMs = previousAt?.let { timestampMs - it }
+        val signChanged = previous != null && previous * current < 0.0
         val value = if (
-            previous == null || deltaMs == null || deltaMs <= 0L || deltaMs > MAX_SAMPLE_GAP_MS
+            previous == null || deltaMs == null || deltaMs <= 0L ||
+            deltaMs > MAX_SAMPLE_GAP_MS || signChanged
         ) {
             current
         } else {

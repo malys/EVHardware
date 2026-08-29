@@ -36,6 +36,16 @@ class ConsumptionCalculatorTest {
         assertEquals(-20.0, value.value!!, 1e-9)
     }
 
+    @Test fun `dashboard smoothing resets when consumption changes to regeneration`() {
+        val calculator = ConsumptionCalculator()
+        calculator.add(0L, 18f, 90f)
+
+        val regeneration = calculator.add(1_000L, -18f, 90f)
+
+        assertEquals(-20.0, regeneration.rawInstantaneous.value!!, 1e-9)
+        assertEquals(-20.0, regeneration.smoothedInstantaneous.value!!, 1e-9)
+    }
+
     @Test fun `dashboard value uses a five second exponential moving average`() {
         val calculator = ConsumptionCalculator()
         calculator.add(0L, 18f, 90f)
