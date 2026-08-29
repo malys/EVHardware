@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-08-29
+
 ### Added
 
 - **A rule can put the tuner on a band, DAB included.** `SELECT_RADIO_BAND` is the answer to
