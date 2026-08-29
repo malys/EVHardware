@@ -6,6 +6,35 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- **A rule can put the tuner on a band, DAB included.** `SELECT_RADIO_BAND` is the answer to
+  the one gap the radio work left: "tune the radio" takes a frequency a driver typed, and a DAB
+  service is addressed by an ensemble and service id, so there was nothing to type and no way
+  to ask for DAB. The action guesses no transaction code — the vendor service exposes no
+  band-only call that anyone here has observed, and a wrong code on a vehicle binder does
+  something unknown to a car. It composes calls that are already proven instead: read the
+  current band from `RadioBean`, then `tune` into the requested one, since `tune` carries the
+  band as its first argument. It lands on the station this car was last heard on for that band,
+  and when it has never been there it steps to the first station the tuner lists rather than
+  leaving the driver on an empty frequency. An unreadable current band sends nothing at all.
+
+### Changed
+
+- **The window actions ask to open or close, instead of carrying a raw command.** They used to
+  take a number in 0..7 — the vendor service's own command range, which nothing in the app or
+  the car explains to the person writing the rule. An on-vehicle capture showed what that
+  costs: a rule asking for `7` ran five times, was reported as applied five times, and left the
+  driver's window fully open throughout, because the service accepts a command it does not
+  implement and drops it. Closed and open are the only two states the glass can be asked for,
+  so those are the two the editor now offers.
+  Which raw command reaches each is a property of the *car*, established by the window probe and
+  stored per car, so it stays out of the catalogue and out of saved rules — a rule exported from
+  one car must not carry that car's command numbers.
+
+- **"Windows" is now "All windows".** It commands four windows at once, and the bare plural read
+  as the family of window actions rather than the one that moves them together.
+
 ## [1.10.0] - 2026-08-29
 
 ### Fixed
