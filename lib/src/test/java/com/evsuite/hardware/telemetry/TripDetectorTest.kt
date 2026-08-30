@@ -22,7 +22,8 @@ class TripDetectorTest {
         val detector = recordingDetector()
 
         assertEquals(TripDetector.State.ENDING, detector.add(snapshot(6_000L, 0f, parked = false)).state)
-        assertNull(detector.add(snapshot(96_000L, 0f, parked = false)).event)
+        val trafficStop = sustainStop(detector, 7_000L, 96_000L, parked = false)
+        assertNull(trafficStop.event)
         val movingAgain = detector.add(snapshot(97_000L, 20f, parked = false))
 
         assertEquals(TripDetector.State.RECORDING, movingAgain.state)
@@ -33,7 +34,7 @@ class TripDetectorTest {
         val detector = recordingDetector()
         detector.add(snapshot(6_000L, 0f, parked = false))
 
-        val stopped = detector.add(snapshot(126_000L, 0f, parked = true))
+        val stopped = sustainStop(detector, 7_000L, 126_000L, parked = true)
 
         assertEquals(TripDetector.State.IDLE, stopped.state)
         assertEquals(TripDetector.Event.STOP, stopped.event)
@@ -43,7 +44,7 @@ class TripDetectorTest {
         val detector = recordingDetector()
         detector.add(snapshot(6_000L, 0f))
 
-        val stopped = detector.add(snapshot(126_000L, 0f))
+        val stopped = sustainStop(detector, 7_000L, 126_000L)
 
         assertEquals(TripDetector.Event.STOP, stopped.event)
     }
@@ -52,8 +53,12 @@ class TripDetectorTest {
         val detector = recordingDetector()
         detector.add(snapshot(6_000L, 0f, parked = false, chargePortConnected = false))
 
-        val unconfirmed = detector.add(
-            snapshot(126_000L, 0f, parked = false, chargePortConnected = false)
+        val unconfirmed = sustainStop(
+            detector,
+            7_000L,
+            126_000L,
+            parked = false,
+            chargePortConnected = false,
         )
         val charging = detector.add(
             snapshot(127_000L, 0f, parked = false, chargePortConnected = true)
@@ -73,6 +78,26 @@ class TripDetectorTest {
 
         assertEquals(TripDetector.State.ENDING, afterOldDeadline.state)
         assertNull(afterOldDeadline.event)
+    }
+
+    @Test fun `forward telemetry gap discards stop evidence without ending`() {
+        val detector = recordingDetector()
+        detector.add(snapshot(6_000L, 0f, parked = true))
+
+        val afterGap = detector.add(snapshot(126_000L, 0f, parked = true))
+
+        assertEquals(TripDetector.State.ENDING, afterGap.state)
+        assertNull(afterGap.event)
+    }
+
+    @Test fun `forward telemetry gap discards start evidence`() {
+        val detector = TripDetector()
+        detector.add(snapshot(0L, 10f))
+
+        val afterGap = detector.add(snapshot(60_000L, 10f))
+
+        assertEquals(TripDetector.State.ARMED, afterGap.state)
+        assertNull(afterGap.event)
     }
 
     @Test fun `bounce around start threshold never flaps into recording`() {
@@ -111,6 +136,24 @@ class TripDetectorTest {
     private fun recordingDetector() = TripDetector().also { detector ->
         detector.add(snapshot(0L, 10f))
         assertEquals(TripDetector.Event.START, detector.add(snapshot(5_000L, 10f)).event)
+    }
+
+    private fun sustainStop(
+        detector: TripDetector,
+        fromMs: Long,
+        throughMs: Long,
+        parked: Boolean? = null,
+        chargePortConnected: Boolean? = null,
+    ): TripDetector.Result {
+        var result = TripDetector.Result(detector.state)
+        var timestampMs = fromMs
+        while (timestampMs <= throughMs) {
+            result = detector.add(
+                snapshot(timestampMs, 0f, parked, chargePortConnected)
+            )
+            timestampMs += 1_000L
+        }
+        return result
     }
 
     private fun snapshot(

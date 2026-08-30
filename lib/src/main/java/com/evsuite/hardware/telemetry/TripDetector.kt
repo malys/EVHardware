@@ -23,15 +23,13 @@ class TripDetector {
     fun add(snapshot: EnergySnapshot): Result {
         val timestampMs = snapshot.timestampMs
         val previousTimestamp = lastTimestampMs
-        if (previousTimestamp != null && timestampMs <= previousTimestamp) {
-            // A clock discontinuity invalidates every debounce window. Never end a recording
-            // because time moved backwards; return it to the state that needs fresh evidence.
-            state = if (state == State.RECORDING || state == State.ENDING) {
-                State.RECORDING
-            } else {
-                State.IDLE
-            }
-            stateSinceMs = null
+        if (previousTimestamp != null && (
+                timestampMs <= previousTimestamp ||
+                    timestampMs - previousTimestamp > MAX_OBSERVATION_GAP_MS
+                )) {
+            // Debounce proves sustained observations, not merely elapsed wall time. A clock
+            // discontinuity or telemetry hole invalidates partial evidence in either direction.
+            invalidatePartialEvidence()
         }
         lastTimestampMs = timestampMs
 
@@ -105,6 +103,15 @@ class TripDetector {
         stateSinceMs = timestampMs
     }
 
+    private fun invalidatePartialEvidence() {
+        state = if (state == State.RECORDING || state == State.ENDING) {
+            State.RECORDING
+        } else {
+            State.IDLE
+        }
+        stateSinceMs = null
+    }
+
     private fun elapsed(timestampMs: Long): Long =
         stateSinceMs?.let { (timestampMs - it).coerceAtLeast(0L) } ?: 0L
 
@@ -125,5 +132,8 @@ class TripDetector {
 
         /** Longer than the ticket's 90-second traffic stop while still practical at arrival. */
         const val STOP_DEBOUNCE_MS = 120_000L
+
+        /** Five seconds tolerates scheduler jitter but cannot bridge a meaningful telemetry hole. */
+        const val MAX_OBSERVATION_GAP_MS = 5_000L
     }
 }
