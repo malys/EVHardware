@@ -44,7 +44,7 @@ same energy snapshot instead of carrying their own property ids, units and fallb
 | Vendor services | `saic.*` — the AIDL the head unit's own HVAC, charging, radio, hands-free and TTS apps use |
 | Radio | `SaicRadio` — play, silence, fail-closed play/pause toggle, FM/AM tune, station stepping (DAB included), screen |
 | Energy telemetry | `EnergyTelemetryReader`, `EnergySnapshot` — coherent nullable SOC, range, power, temperature, charging, tyre and climate reads |
-| Energy accounting | `EnergyTripAccumulator`, `ChargingSessionMeter`, `EnergyTripHistoryStore` — tested integration and atomic local persistence |
+| Energy accounting | `TripDetector`, `EnergyTripAccumulator`, `ChargingSessionMeter`, `EnergyTripHistoryStore` — tested automatic boundaries, integration and atomic local persistence |
 | Firmware | `FirmwareInfo` (detection + capability helpers), `FirmwareGen` |
 | Models | `DrivingProfile`, `DriveMode`, `RegenLevel`, `ProfileBackup` |
 | Catalogue | `ConditionType`, `ActionType`, `ValueSpec`, `VehicleEnums`, `SnapshotKeys` |
