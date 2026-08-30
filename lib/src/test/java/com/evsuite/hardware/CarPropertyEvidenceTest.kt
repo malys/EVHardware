@@ -62,6 +62,7 @@ class CarPropertyEvidenceTest {
                     firmware,
                 ),
             )
+            assertNull(CarPropertyEvidence.batteryPowerEvidence(firmware))
         }
     }
 }

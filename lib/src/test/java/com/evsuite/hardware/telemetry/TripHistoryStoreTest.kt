@@ -1,5 +1,6 @@
 package com.evsuite.hardware.telemetry
 
+import com.evsuite.hardware.BatteryPowerEvidence
 import com.evsuite.hardware.FirmwareInfo
 import com.google.gson.Gson
 import org.junit.Assert.assertEquals
@@ -87,6 +88,19 @@ class TripHistoryStoreTest {
         assertNull(restored.batteryTempCelsius)
         assertNull(restored.climateAcOn)
         assertNull(restored.climateFanLevel)
+    }
+
+    @Test fun `battery power evidence survives a history round trip`() {
+        val directory = tempDirectory()
+        val store = EnergyTripHistoryStore(File(directory, "trips.json"))
+        val evidence = BatteryPowerEvidence(
+            firmware = FirmwareInfo.Gen.SWI68,
+            conversionVersion = BatteryPowerEvidence.OUTPUT_POSITIVE_MW_V1,
+        )
+
+        assertTrue(store.append(summary(1L).copy(batteryPowerEvidence = evidence)))
+
+        assertEquals(evidence, store.readSummaries().single().batteryPowerEvidence)
     }
 
     @Test fun `tracks are evicted before trips are`() {

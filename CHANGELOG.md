@@ -11,7 +11,9 @@ All notable changes to this project are documented here. Format follows
 - **Vehicle-validated telemetry is catalogued per signal and firmware generation.** Battery
   power starts unvalidated everywhere; CP-003 must add each generation only after its unit,
   scale, sign and cadence have on-vehicle evidence. Consumers can therefore distinguish an
-  unproven signal from a property that is genuinely absent.
+  unproven signal from a property that is genuinely absent. Trip energy integrated from a
+  validated signal carries the exact firmware and conversion version; legacy or mismatched
+  totals can therefore be excluded from later models without growing the stored sample track.
 
 ## [1.11.0] - 2026-08-29
 

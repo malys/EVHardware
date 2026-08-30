@@ -1,5 +1,21 @@
 package com.evsuite.hardware
 
+/** Exact interpretation used when a trip integrates a validated battery-power signal. */
+data class BatteryPowerEvidence(
+    val firmware: FirmwareInfo.Gen,
+    val conversionVersion: Int,
+) {
+    init {
+        require(firmware != FirmwareInfo.Gen.UNKNOWN) { "power evidence names a known firmware" }
+        require(conversionVersion > 0) { "power conversion version is positive" }
+    }
+
+    companion object {
+        /** EV_INSTANTANEOUS_CHARGE_RATE mW × -1e-6: battery output positive. */
+        const val OUTPUT_POSITIVE_MW_V1 = 1
+    }
+}
+
 /**
  * What a `CarPropertyValue` proves, and what it only appears to prove.
  *
@@ -55,10 +71,15 @@ object CarPropertyEvidence {
      * must never be generalized to another. CP-003 adds generations here one by one.
      */
     fun isValidated(signal: Signal, firmware: FirmwareInfo.Gen): Boolean = when (signal) {
-        Signal.BATTERY_POWER_KW -> firmware in batteryPowerValidatedFirmwares
+        Signal.BATTERY_POWER_KW -> batteryPowerEvidence(firmware) != null
     }
 
-    private val batteryPowerValidatedFirmwares: Set<FirmwareInfo.Gen> = emptySet()
+    /** Null until CP-003 proves the exact generation and conversion. */
+    fun batteryPowerEvidence(firmware: FirmwareInfo.Gen): BatteryPowerEvidence? =
+        batteryPowerEvidenceByFirmware[firmware]
+
+    private val batteryPowerEvidenceByFirmware: Map<FirmwareInfo.Gen, BatteryPowerEvidence> =
+        emptyMap()
 }
 
 /**

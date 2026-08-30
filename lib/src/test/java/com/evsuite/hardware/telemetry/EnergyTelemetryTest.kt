@@ -1,5 +1,6 @@
 package com.evsuite.hardware.telemetry
 
+import com.evsuite.hardware.BatteryPowerEvidence
 import com.evsuite.hardware.FirmwareInfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -9,6 +10,18 @@ import org.junit.Test
 import java.nio.file.Files
 
 class EnergyTelemetryTest {
+    @Test fun `trip carries the exact evidence used for power integration`() {
+        val evidence = BatteryPowerEvidence(
+            FirmwareInfo.Gen.SWI68,
+            BatteryPowerEvidence.OUTPUT_POSITIVE_MW_V1,
+        )
+        val trip = EnergyTripAccumulator(0L, 80f, batteryPowerEvidence = evidence)
+        trip.add(snapshot(0L, 50f, 10f))
+        trip.add(snapshot(1_000L, 50f, 10f))
+
+        assertEquals(evidence, trip.snapshot(1_000L).batteryPowerEvidence)
+    }
+
     @Test fun `reader keeps unknowns null and rejects invalid physical values`() {
         val source = FakeSignals(soc = 120f, range = -1f, power = 18f)
         val snapshot = EnergyTelemetryReader(source).read(42L)

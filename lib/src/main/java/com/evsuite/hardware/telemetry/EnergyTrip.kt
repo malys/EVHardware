@@ -1,5 +1,8 @@
 package com.evsuite.hardware.telemetry
 
+import com.evsuite.hardware.BatteryPowerEvidence
+import com.evsuite.hardware.CarPropertyEvidence
+
 data class EnergyTripSummary(
     val startedAtMs: Long,
     val endedAtMs: Long,
@@ -20,6 +23,8 @@ data class EnergyTripSummary(
      * exists, so an unreadable signal can no longer masquerade as 0 km.
      */
     val distanceAvailable: Boolean? = null,
+    /** Null for legacy or unvalidated records; models must not reuse their energy totals. */
+    val batteryPowerEvidence: BatteryPowerEvidence? = null,
 ) {
     val recordedDistanceKm: Double?
         get() = distanceKm.takeIf { distanceAvailable != false }
@@ -41,6 +46,7 @@ class EnergyTripAccumulator(
     private val startedAtMs: Long,
     private val startSocPercent: Float?,
     private val track: TripSampleTrack = TripSampleTrack(),
+    private val batteryPowerEvidence: BatteryPowerEvidence? = null,
 ) {
     private var last: EnergySnapshot? = null
     private var distanceKm = 0.0
@@ -86,6 +92,7 @@ class EnergyTripAccumulator(
         consumedKwh = consumedKwh.takeIf { hasPowerInterval },
         regeneratedKwh = regeneratedKwh.takeIf { hasPowerInterval },
         distanceAvailable = hasSpeedInterval,
+        batteryPowerEvidence = batteryPowerEvidence.takeIf { hasPowerInterval },
     )
 
     private companion object { const val MAX_SAMPLE_GAP_MS = 5_000L }
@@ -98,7 +105,11 @@ object EnergyTripSession {
 
     @Synchronized fun start(sample: EnergySnapshot) {
         if (accumulator != null) return
-        accumulator = EnergyTripAccumulator(sample.timestampMs, sample.socPercent)
+        accumulator = EnergyTripAccumulator(
+            sample.timestampMs,
+            sample.socPercent,
+            batteryPowerEvidence = CarPropertyEvidence.batteryPowerEvidence(sample.firmware),
+        )
             .also { it.add(sample) }
     }
     @Synchronized fun add(sample: EnergySnapshot) = accumulator?.add(sample)
