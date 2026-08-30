@@ -18,6 +18,9 @@ package com.evsuite.hardware
  */
 object CarPropertyEvidence {
 
+    /** Signals whose scale and semantics require per-firmware vehicle evidence. */
+    enum class Signal { BATTERY_POWER_KW }
+
     /** `CarPropertyValue.STATUS_AVAILABLE` — the vehicle stands behind this value. */
     const val STATUS_AVAILABLE = 0
 
@@ -43,6 +46,19 @@ object CarPropertyEvidence {
         STATUS_ERROR -> "error"
         else -> "status $status"
     }
+
+    /**
+     * True only after CP-003 has captured and reviewed this signal on this exact generation.
+     *
+     * The catalogue deliberately starts empty. A public property declaration and a finite
+     * runtime value do not prove the scale or sign on an MG4, and evidence from one generation
+     * must never be generalized to another. CP-003 adds generations here one by one.
+     */
+    fun isValidated(signal: Signal, firmware: FirmwareInfo.Gen): Boolean = when (signal) {
+        Signal.BATTERY_POWER_KW -> firmware in batteryPowerValidatedFirmwares
+    }
+
+    private val batteryPowerValidatedFirmwares: Set<FirmwareInfo.Gen> = emptySet()
 }
 
 /**

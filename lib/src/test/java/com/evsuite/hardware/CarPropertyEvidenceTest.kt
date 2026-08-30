@@ -51,6 +51,19 @@ class CarPropertyEvidenceTest {
         assertEquals("error", CarPropertyEvidence.describe(CarPropertyEvidence.STATUS_ERROR))
         assertEquals("status 7", CarPropertyEvidence.describe(7))
     }
+
+    @Test
+    fun `battery power remains unvalidated until vehicle evidence names a generation`() {
+        FirmwareInfo.Gen.values().forEach { firmware ->
+            assertFalse(
+                firmware.name,
+                CarPropertyEvidence.isValidated(
+                    CarPropertyEvidence.Signal.BATTERY_POWER_KW,
+                    firmware,
+                ),
+            )
+        }
+    }
 }
 
 /**
