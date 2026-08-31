@@ -65,6 +65,19 @@ class CarPropertyEvidenceTest {
             assertNull(CarPropertyEvidence.batteryPowerEvidence(firmware))
         }
     }
+
+    @Test
+    fun `battery temperature remains unvalidated until vehicle evidence names a generation`() {
+        FirmwareInfo.Gen.values().forEach { firmware ->
+            assertFalse(
+                firmware.name,
+                CarPropertyEvidence.isValidated(
+                    CarPropertyEvidence.Signal.BATTERY_TEMPERATURE_CELSIUS,
+                    firmware,
+                ),
+            )
+        }
+    }
 }
 
 /**

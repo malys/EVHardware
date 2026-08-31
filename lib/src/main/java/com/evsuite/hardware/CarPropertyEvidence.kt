@@ -35,7 +35,10 @@ data class BatteryPowerEvidence(
 object CarPropertyEvidence {
 
     /** Signals whose scale and semantics require per-firmware vehicle evidence. */
-    enum class Signal { BATTERY_POWER_KW }
+    enum class Signal {
+        BATTERY_POWER_KW,
+        BATTERY_TEMPERATURE_CELSIUS,
+    }
 
     /** `CarPropertyValue.STATUS_AVAILABLE` — the vehicle stands behind this value. */
     const val STATUS_AVAILABLE = 0
@@ -72,6 +75,7 @@ object CarPropertyEvidence {
      */
     fun isValidated(signal: Signal, firmware: FirmwareInfo.Gen): Boolean = when (signal) {
         Signal.BATTERY_POWER_KW -> batteryPowerEvidence(firmware) != null
+        Signal.BATTERY_TEMPERATURE_CELSIUS -> firmware in batteryTemperatureFirmware
     }
 
     /** Null until CP-003 proves the exact generation and conversion. */
@@ -80,6 +84,9 @@ object CarPropertyEvidence {
 
     private val batteryPowerEvidenceByFirmware: Map<FirmwareInfo.Gen, BatteryPowerEvidence> =
         emptyMap()
+
+    /** Exact generations whose battery-temperature unit and semantics CP-003 has proved. */
+    private val batteryTemperatureFirmware: Set<FirmwareInfo.Gen> = emptySet()
 }
 
 /**
