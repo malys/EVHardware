@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-08-31
+
 ### Added
 
 - **Vehicle-validated telemetry is catalogued per signal and firmware generation.** Battery
