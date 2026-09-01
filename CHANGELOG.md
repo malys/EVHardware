@@ -6,6 +6,15 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Driver-specific energy modelling is bounded and evidence-gated.** A compact least-squares
+  fit learns rolling, aerodynamic speed-squared and outside-temperature terms from retained trip
+  samples only when their exact firmware/conversion evidence matches. It uses constant working
+  memory, caps training at 50,000 samples, rejects sparse/noisy fits and all extrapolation, and
+  returns only provenance-labelled estimates with residual-derived uncertainty. One atomic
+  16 KiB model file stores coefficients and envelope; raw tracks are never duplicated.
+
 ## [1.12.0] - 2026-08-31
 
 ### Added
