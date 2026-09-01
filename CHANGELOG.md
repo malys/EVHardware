@@ -8,6 +8,16 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Read-only route guidance listener for the head unit's own navigation.** The map adapter
+  answers no synchronous question about a trip, but its general service fans remaining distance,
+  remaining time, guidance status and road name out to registered listeners. `SaicNavGuidance`
+  registers for that fan-out and folds it into a nullable `NavGuidance`. The callbacks are not
+  `oneway` and the adapter holds its callback-list lock while broadcasting, so the listener does
+  one parcel read and one volatile write and nothing else — a slow listener would stall the
+  instrument cluster. Registration is additive and displaces no other consumer. Distances carry
+  no proven unit and status codes no proven meaning, so nothing is converted and nothing is
+  displayable: this is CP-040 evidence, not a value. Costs no Android permission and no network.
+
 - **Post-trip energy attribution preserves uncertainty and gaps.** Measured trip consumption is
   reconciled against modelled traction, regeneration, climate-conditioned residual groups and an
   explicit unmodelled discrepancy. Every attributed value requires a band; values inside model
