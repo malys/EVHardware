@@ -8,6 +8,12 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Post-trip energy attribution preserves uncertainty and gaps.** Measured trip consumption is
+  reconciled against modelled traction, regeneration, climate-conditioned residual groups and an
+  explicit unmodelled discrepancy. Every attributed value requires a band; values inside model
+  noise are marked indistinguishable from zero, and negative residuals remain visible as model
+  error. No per-consumer vehicle counter is claimed.
+
 - **Driver-specific energy modelling is bounded and evidence-gated.** A compact least-squares
   fit learns rolling, aerodynamic speed-squared and outside-temperature terms from retained trip
   samples only when their exact firmware/conversion evidence matches. It uses constant working
