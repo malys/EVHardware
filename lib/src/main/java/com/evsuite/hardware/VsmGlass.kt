@@ -90,10 +90,17 @@ object VsmGlass {
     /**
      * One window's position, 0 closed to [VALUE_MAX] open, or null when there is no reading.
      *
-     * Null covers two cases that must not be told apart by guessing: the method is absent, or
-     * the motor has no position sensor and answers a fixed value off the scale. The standard
-     * trim is the second one, and calling its sentinel "closed" would let a close skip a
-     * window that is wide open.
+     * Null means the method is absent, the call threw, or the answer fell outside `0..`
+     * [VALUE_MAX] — which is how the sensorless trims seen so far report having no position.
+     *
+     * **What this cannot rule out.** A motor that answers a constant *inside* the scale is
+     * indistinguishable from one reporting a real position, from a single read, and 0 is the
+     * obvious candidate for such a constant — it would read as "fully closed" on a window that
+     * is wide open. Nothing here can settle that, and guessing at it would be the same mistake
+     * the raw hub setter made. [GlassProbe] is what settles it on a car: it holds a command and
+     * watches this value change, so a car with [GlassEvidence] recorded has been shown to
+     * report positions that move. A car without it has not, and a caller deciding whether to
+     * skip a close should weigh the reading accordingly.
      */
     fun value(area: Int): Int? {
         val vsm = vsm() ?: return null
@@ -122,9 +129,15 @@ object VsmGlass {
      * a position read can see. A command that is an order rather than a switch is unharmed by
      * being repeated, which is what lets [GlassProbe] sweep both kinds the same way.
      *
-     * Blocking for [durationMs] — call it off the main thread. The standstill gate is checked
-     * once, before the first write: a hold is one gesture, and abandoning it halfway would
-     * leave the glass part-way up with nothing on the way to finish it.
+     * Blocking for [durationMs] — call it off the main thread.
+     *
+     * The gate is re-checked before every pulse, not only before the first. Glass is
+     * standstill-gated outright on this project (see the 1.6.0 note: with the direction of a
+     * command unknown, an unknown direction is not one to allow at speed), and a hold that
+     * checked once wrote for five more seconds after the car started moving — five seconds in
+     * which the policy said no and the glass kept travelling. On refusal the command is
+     * released with [Command.STOP] rather than simply abandoned, so the motor stops where it
+     * is instead of continuing on the last command it received.
      */
     fun hold(
         areas: List<Int>,
@@ -133,9 +146,34 @@ object VsmGlass {
         sleep: (Long) -> Unit = { Thread.sleep(it) },
     ): Boolean {
         val targets = gate(areas, command) ?: return false
+        return runHold(
+            targets = targets,
+            command = command,
+            durationMs = durationMs,
+            nowMs = System::currentTimeMillis,
+            allowed = { VehicleWriteGate.allow("VSM setVehicleWindowStatus (hold)") },
+            write = ::write,
+            sleep = sleep,
+        )
+    }
+
+    /** Hardware-free seam proving a moving/unreadable transition stops and releases the glass. */
+    internal fun runHold(
+        targets: List<Int>,
+        command: Int,
+        durationMs: Long,
+        nowMs: () -> Long,
+        allowed: () -> Boolean,
+        write: (Int, Int) -> Boolean,
+        sleep: (Long) -> Unit,
+    ): Boolean {
         var ok = true
-        val deadline = System.currentTimeMillis() + durationMs
-        while (System.currentTimeMillis() < deadline) {
+        val deadline = nowMs() + durationMs
+        while (nowMs() < deadline) {
+            if (!allowed()) {
+                ok = false
+                break
+            }
             targets.forEach { if (!write(it, command)) ok = false }
             sleep(PULSE_MS)
         }
