@@ -6,7 +6,7 @@
 [![Security](https://github.com/malys/EVHardware/actions/workflows/security.yml/badge.svg)](https://github.com/malys/EVHardware/actions/workflows/security.yml)
 [![Publish](https://github.com/malys/EVHardware/actions/workflows/publish.yml/badge.svg)](https://github.com/malys/EVHardware/actions/workflows/publish.yml)
 [![Release](https://img.shields.io/github/v/release/malys/EVHardware?include_prereleases&amp;sort=semver)](https://github.com/malys/EVHardware/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue.svg)](LICENSE)
 
 > ⚠️ **This library reads and writes a car's settings.** It runs inside apps installed on
 > an MG4 head unit. Read [DISCLAIMER.md](DISCLAIMER.md) before depending on it.
@@ -200,5 +200,6 @@ what would break without them. Anything touching the interface follows
 [DESIGN.md](DESIGN.md).
 
 ## Legal
-MIT — see [LICENSE](LICENSE) and [LICENSE.md](LICENSE.md). Runs on a vehicle; see
+Source-available under the PolyForm Noncommercial License 1.0.0. Commercial use is not
+permitted. See [LICENSE](LICENSE) and [LICENSE.md](LICENSE.md). Runs on a vehicle; see
 [DISCLAIMER.md](DISCLAIMER.md).

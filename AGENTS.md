@@ -8,6 +8,9 @@ normative workspace `DESIGN.md` apply; this file defines library-specific invari
 
 Commit author: malys.training@gmail.com
 
+License exception: EVHardware's own sources use PolyForm Noncommercial 1.0.0, not the
+workspace MIT default.
+
 ## Why this exists
 
 One implementation of the reflection hardware layer, the 0 km/h gate, the models, and the
