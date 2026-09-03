@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-09-03
+
 ### Changed
 
 - **Radio band, frequency and playback became one catalogue entry.** `SELECT_RADIO_BAND` is
