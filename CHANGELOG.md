@@ -23,9 +23,10 @@ All notable changes to this project are documented here. Format follows
 
 - **A generated catalogue document.** `docs/catalogue.md` lists every `ConditionType` and every
   `ActionType` with its English label, what it asks for, whether it is refused while moving and
-  the generations it is declared on. Rendered from the enums by `CatalogueDocTest`, which fails
-  on a stale committed copy — the hand-written list it replaces had gone a year without
-  mentioning twenty entries and still promised an "AM or FM only" tune action.
+  the generations it is declared on. Rendered from the enums by `CatalogueDocTest`, which
+  rewrites it on every test run exactly as `FirmwareSupportTest` does for the matrix — the
+  hand-written list it replaces had gone a year without mentioning twenty entries and still
+  promised an "AM or FM only" tune action.
 
 - **Read-only route guidance listener for the head unit's own navigation.** The map adapter
   answers no synchronous question about a trip, but its general service fans remaining distance,

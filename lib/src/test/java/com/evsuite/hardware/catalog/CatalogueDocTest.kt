@@ -153,8 +153,13 @@ class CatalogueDocTest {
     }
 
     /**
-     * Regenerates the catalogue and fails if the committed copy is stale — the same contract
-     * the firmware matrix has, so one test run repairs both.
+     * Rewrites the catalogue from the enums — the same contract the firmware matrix has, so
+     * one test run repairs both.
+     *
+     * It **repairs** rather than fails: a stale copy is written back and the assertion then
+     * passes, which is why running the tests is what keeps the file honest and why the file
+     * has to be committed with the change that moved it. The assertion is there for the write
+     * itself — a read-only checkout, or a path that moved, must not pass silently.
      */
     @Test
     fun `the catalogue document is up to date`() {
