@@ -134,6 +134,20 @@ object SnapshotKeys {
      */
     const val KEY_WEATHER_TEXT     = "weatherText"
 
+    /**
+     * Whether the *tuner* is playing, from `RadioBean.state`.
+     *
+     * Not a duplicate of [KEY_MEDIA_PLAYING], and the difference is the reason this exists:
+     * `AudioManager.isMusicActive` is **false while the radio plays**, the tuner's stream not
+     * being the music one. So the media key answers "no" on a car with the radio on, and no
+     * rule could ask about the radio at all.
+     *
+     * A vendor service reading, so it carries a firmware annotation where the media one does
+     * not. Absent when the service will not answer — never false, which would read as a radio
+     * that is off.
+     */
+    const val KEY_RADIO_PLAYING    = "radioPlaying"
+
     // ── Platform context (no vehicle involved) ───────────────────────────────
     // Read from Android, not from the car, so they carry no firmware annotation. Absent
     // still means unreadable: a head unit whose audio state cannot be read leaves the

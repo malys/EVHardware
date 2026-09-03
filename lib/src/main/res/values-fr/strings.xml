@@ -156,13 +156,12 @@
     <string name="act_charge_window">Plage de charge</string>
     <string name="act_battery_preheat">Préchauffage de la batterie</string>
     <string name="act_play_radio">Mettre la radio</string>
-    <string name="act_tune_radio">Régler la radio</string>
+    <string name="act_tune_radio">Bande et station radio</string>
     <string name="act_radio_next_station">Station radio suivante</string>
     <string name="act_radio_prev_station">Station radio précédente</string>
     <string name="act_pause_radio">Couper la radio</string>
     <string name="act_radio_play_pause">Radio : lecture/pause</string>
     <string name="act_open_radio_screen">Ouvrir l’écran radio</string>
-    <string name="act_select_radio_band">Bande radio</string>
     <string name="radio_band_am">AM</string>
     <string name="radio_band_fm">FM</string>
     <string name="radio_band_dab">DAB</string>
@@ -202,6 +201,7 @@
     <string name="charging_done">Charge terminée</string>
     <string name="charging_fault">Défaut de charge</string>
     <string name="cond_media_playing">Lecture en cours</string>
+    <string name="cond_radio_playing">Radio allumée</string>
     <string name="cond_wifi_ssid">Réseau Wi-Fi</string>
     <string name="cond_wifi_ssid_hint">ex. Maison</string>
     <string name="cond_in_call">Appel en cours</string>

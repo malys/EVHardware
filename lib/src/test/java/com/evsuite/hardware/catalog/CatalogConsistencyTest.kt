@@ -359,8 +359,10 @@ class CatalogConsistencyTest {
             .filter { it.spec.kind == ValueKind.ENUM && it != ConditionType.FIRMWARE_GEN }
             .forEach { assertTrue("${it.name} : ENUM sans option", it.spec.options.isNotEmpty()) }
 
+        // RADIO dessine aussi une liste déroulante — celle des bandes — donc la même règle
+        // s'applique : sans option, l'action ne peut nommer aucune bande.
         ActionType.entries
-            .filter { it.spec.kind == ValueKind.ENUM }
+            .filter { it.spec.kind == ValueKind.ENUM || it.spec.kind == ValueKind.RADIO }
             .forEach { assertTrue("${it.name} : ENUM sans option", it.spec.options.isNotEmpty()) }
     }
 

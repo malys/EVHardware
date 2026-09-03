@@ -198,8 +198,14 @@ object SaicRadio {
      * DAB is addressed here by its **block frequency**, which is a real frequency in Band III,
      * not by an ensemble and service id. That is why a band switch can reach DAB while
      * [tune] from a driver's typed text cannot.
+     *
+     * [andPlay] carries the caller's "enable radio" the same way [tune] does, and for the same
+     * reason: the vendor `tune` takes the audio focus from inside itself, so a caller that
+     * wants the band without the sound has to say so here rather than by not asking to play.
+     * [BandResult.ALREADY_ON_BAND] sends nothing at all, playing or silent included — the
+     * tuner is where it was asked to be, and a rule that also wants sound has [play] behind it.
      */
-    fun selectBand(band: Int): BandResult {
+    fun selectBand(band: Int, andPlay: Boolean = true): BandResult {
         if (!isKnownBand(band)) return BandResult.UNSUPPORTED_BAND
         val current = currentStation() ?: return BandResult.STATE_UNKNOWN
         RadioBandMemory.remember(current.band, current.frequencyKhz)
@@ -207,7 +213,7 @@ object SaicRadio {
 
         val remembered = RadioBandMemory.frequencyFor(band)
         val target = remembered ?: bandFloorKhz(band)
-        if (!tune(band, target, andPlay = true)) return BandResult.REFUSED
+        if (!tune(band, target, andPlay = andPlay)) return BandResult.REFUSED
         // Nothing was remembered, so the tuner is sitting at the bottom of the band, which is
         // where stations are not. Stepping finds the first one the car itself lists.
         if (remembered == null) nextStation()

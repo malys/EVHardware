@@ -81,6 +81,18 @@ enum class ValueKind {
      * `Condition` already has both.
      */
     LOCATION,
+    /**
+     * A tuner setting: the band in `number` ([ValueSpec.options]), an optional frequency in
+     * `text`, and whether the radio starts playing in `flag`.
+     *
+     * One kind rather than three actions, because they are three halves of the same sentence:
+     * "put the radio on FM 103.5 and play it" is what a driver means, and splitting it made
+     * the band reachable only through an action that could not carry a station. The frequency
+     * is optional — naming a band alone is a complete instruction, and on **DAB** it is the
+     * only one possible, a DAB service being addressed by ensemble and service id rather than
+     * by anything a driver could type.
+     */
+    RADIO,
     /** Physical button + short/long event, edited with two dropdowns. */
     PHYSICAL_BUTTON,
     /** Nothing to enter. */

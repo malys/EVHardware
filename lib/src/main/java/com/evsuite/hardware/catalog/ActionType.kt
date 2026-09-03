@@ -413,31 +413,52 @@ enum class ActionType(
     ),
 
     /**
-     * Tunes a station, leaving the audio source alone — [PLAY_RADIO] is what starts playback.
+     * Puts the tuner where the rule says: a **band**, an optional **frequency**, and whether
+     * the radio then **plays**.
      *
-     * A free-text frequency rather than a band picker plus a slider: the driver knows their
-     * station as "103.5", and an FM slider covering 87.5–108.0 in 50 kHz steps is 410
-     * positions to drag past on a touchscreen. The text is parsed leniently — "103.5",
-     * "FM 103.5", "103,5", "1080 AM" all land — and a value that parses to nothing is
-     * reported as unsupported with what was typed, so the history names the typo.
+     * The three used to be two actions and a switch, and that split was the wrong seam. A
+     * band alone could not carry a station, a frequency alone could not reach **DAB**, and a
+     * driver saying "put the radio on FM 103.5" was made to write two rows. They are one
+     * instruction, so they are one entry.
      *
-     * Bands are AM (522–1620 kHz, 9 kHz steps) and FM (87.5–108.0 MHz, 50 kHz steps), from
-     * `RadioConstants.AM_RANGE` / `FM_RANGE`. DAB is out: `tuneDab` takes a service and
-     * ensemble id, not a frequency, so there is nothing here for a driver to type.
+     * `Action.number` is the band ([VehicleEnums.RADIO_BANDS], the vendor `RadioType` values),
+     * `Action.text` the frequency, and `Action.flag` the "enable radio" switch. `0` is the
+     * band of every rule saved before the merge: it means "whatever the frequency says", which
+     * is exactly what those rules did.
+     *
+     * The frequency is free text rather than a slider: the driver knows their station as
+     * "103.5", and an FM slider covering 87.5–108.0 in 50 kHz steps is 410 positions to drag
+     * past on a touchscreen. It is parsed leniently — "103.5", "FM 103.5", "103,5", "1080 AM"
+     * all land — and a value that parses to nothing is reported as unsupported with what was
+     * typed, so the history names the typo. Bands are AM (522–1620 kHz) and FM (87.5–108.0
+     * MHz), from `RadioConstants.AM_RANGE` / `FM_RANGE`.
+     *
+     * **Leaving the frequency empty is not an omission**, it is the band-only instruction —
+     * `SaicRadio.selectBand` reads where the tuner is and moves it, landing on the station
+     * this car was last heard on for that band. It is the only form DAB has: `tuneDab` takes
+     * an ensemble and a service id, not a frequency, so there is nothing there for a driver to
+     * type, and the editor stops asking once DAB is chosen.
+     *
+     * Audio-only, so it is not gated: changing station or band is what the wheel's own buttons
+     * already do at speed.
      */
     @SupportedOn(SWI68, SWI165)
     TUNE_RADIO(
         R.string.act_tune_radio, ActionGroup.AUDIO,
-        ValueSpec(ValueKind.TEXT, hintRes = R.string.value_radio_hint), "TUNE_RADIO"
+        ValueSpec(
+            ValueKind.RADIO,
+            options = VehicleEnums.RADIO_BANDS,
+            hintRes = R.string.value_radio_hint
+        ),
+        "TUNE_RADIO"
     ),
 
     /**
      * Steps through the tuner's stations, on whichever band it is already on.
      *
-     * This is what reaches **DAB**, which [TUNE_RADIO] cannot: a DAB service is addressed by
-     * ensemble and service id, so there is no frequency for a driver to type. Stepping asks
-     * for neither — the tuner's own list is the right one — which makes "next station" the
-     * one radio action that works on all three bands.
+     * The one way to choose a **DAB** station: a DAB service is addressed by ensemble and
+     * service id, so there is no frequency for a driver to type. [TUNE_RADIO] reaches the DAB
+     * *band*, and this is what then moves along it — the tuner's own list is the right one.
      *
      * Separate from [ActionType.MEDIA_CONTROL] on purpose. That one skips a *track* on
      * whatever owns the audio; this one changes *station* whether or not the radio is the
@@ -453,30 +474,6 @@ enum class ActionType(
     RADIO_PREV_STATION(
         R.string.act_radio_prev_station, ActionGroup.AUDIO,
         ValueSpec.NONE, "RADIO_PREV_STATION"
-    ),
-
-    /**
-     * Puts the tuner on a band — AM, FM or **DAB**.
-     *
-     * The one radio action that reaches DAB deliberately. [TUNE_RADIO] cannot: it takes a
-     * frequency a driver typed, and a DAB *service* is addressed by ensemble and service id,
-     * so there is nothing to type. A DAB **block**, on the other hand, is a real frequency in
-     * Band III, which is what makes the band reachable at all.
-     *
-     * No band-only call in the vendor service has been observed, and a guessed transaction
-     * code is never sent to a vehicle. `SaicRadio.selectBand` composes established calls
-     * instead — read the current band from `RadioBean`, then `tune` into the requested one,
-     * since `tune` carries the band as its first argument. It lands on the station this car
-     * was last heard on for that band, or steps to the first one the tuner lists when it has
-     * never been there.
-     *
-     * Audio-only, so it is not gated: changing band is what the wheel's source button already
-     * does at speed.
-     */
-    @SupportedOn(SWI68, SWI165)
-    SELECT_RADIO_BAND(
-        R.string.act_select_radio_band, ActionGroup.AUDIO,
-        ValueSpec(ValueKind.ENUM, options = VehicleEnums.RADIO_BANDS), "SELECT_RADIO_BAND"
     ),
 
     /**
@@ -678,11 +675,16 @@ enum class ActionType(
      * most of the time and wrong the once, and the driver is the only one who knows which
      * this is. Placed first, it turns an automatic rule into a proposed one.
      *
-     * `Action.text` is the question and `Action.number` how many seconds it waits. No answer
-     * within that time counts as no — the rest of the rule needs a deliberate yes, not a
-     * driver who walked away. `0` means [ASK_CONFIRM_DEFAULT_SECONDS]: rules saved before the
-     * wait was configurable carry no value, and the field they never set must not read as an
-     * instant refusal.
+     * `Action.text` is the question and `Action.number` how many seconds it waits. `0` means
+     * [ASK_CONFIRM_DEFAULT_SECONDS]: rules saved before the wait was configurable carry no
+     * value, and the field they never set must not read as an instant refusal.
+     *
+     * Silence counts as **no** by default: the actions behind a confirmation are the ones the
+     * user did not want applied unattended. `Action.yesOnNoAnswer` turns that around for the
+     * other half of the need — a rule that acts unless it is stopped, where the question is a
+     * chance to object rather than a permission to ask for. It says nothing about a
+     * *deliberate* no: tapping "no", or leaving the question, still stops the rule, and a
+     * question that could never be put on screen still counts as no whatever the setting.
      */
     ASK_CONFIRM(
         R.string.act_ask_confirm, ActionGroup.SYSTEM,

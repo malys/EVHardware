@@ -23,6 +23,7 @@
 | ODOMETER | — | — | — | — | — | — |
 | DATA_USED_TODAY | — | — | — | — | — | — |
 | DATA_USED_MONTH | — | — | — | — | — | — |
+| RADIO_PLAYING | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | OUTSIDE_TEMP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IGNITION_STATE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | IN_PARK | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -135,7 +136,6 @@
 | TUNE_RADIO | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | RADIO_NEXT_STATION | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | RADIO_PREV_STATION | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SELECT_RADIO_BAND | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | PAUSE_RADIO | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | RADIO_PLAY_PAUSE | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | OPEN_RADIO_SCREEN | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |

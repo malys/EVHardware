@@ -32,8 +32,8 @@ a missing service call, is the actual gap.
 | A | Pause / stop the radio | **add** — `PAUSE_RADIO` | `srcPauseRadio` is implemented and unreachable. `MEDIA_CONTROL` is not a substitute: it addresses whichever source owns the audio, so it silences Bluetooth when Bluetooth is playing. "Silence the tuner" was not expressible. |
 | B | Explicit radio play/pause toggle on readable state | **add** — `RADIO_PLAY_PAUSE` | One shortcut for a driver who wants the tuner specifically, whatever the current source. Built on `isPlaying()` (`RadioBean.state`), because `AudioManager.isMusicActive` is **false while the radio plays** — a toggle driven by it would send "play" to a playing radio forever. Unknown state fails closed (see below). |
 | C | Open the radio screen | **add, gated** — `OPEN_RADIO_SCREEN` | `startRadioActivity` is implemented and unreachable. It is the one radio action that is not audio-only: throwing a full-screen app in front of a driver at speed is a distraction, so it takes the standstill gate and is refused when speed is unreadable. |
-| D | Select a band | **added** (2026-08-29, reversed) | Originally rejected because the binding contract exposes no band-only call. The owner asked for DAB support anyway, and the rejection turned out to be answering the wrong question: a band action does not need a band-only *call*, because `tune(band, frequencyKhz)` already carries the band as its first argument. `SELECT_RADIO_BAND` composes what is established — read the current band from `RadioBean`, tune into the requested one — and guesses no transaction code. The frequency it lands on is the station this car was last heard on for that band (`RadioBandMemory`), or the band floor followed by one `nextStation()` when it has never been there, so it does not strand the driver on an empty frequency. |
-| E | Select a DAB service | **reject** (unchanged) | A DAB service is addressed by ensemble id + service id, not by a frequency, and neither is a stable identifier a driver could enter or a rule could store across a re-scan. No on-vehicle evidence establishes a portable contract. DAB is now reachable as a **band** (candidate D) and stepped through with `RADIO_NEXT_STATION` / `RADIO_PREV_STATION`; what stays out is selecting one named service directly. A DAB *block* is a real frequency in Band III, which is what a band switch tunes; a DAB *service* is not. |
+| D | Select a band | **added** (2026-08-29, reversed), **merged into `TUNE_RADIO`** (2026-09-03) | Originally rejected because the binding contract exposes no band-only call. The owner asked for DAB support anyway, and the rejection turned out to be answering the wrong question: a band action does not need a band-only *call*, because `tune(band, frequencyKhz)` already carries the band as its first argument. `SELECT_RADIO_BAND` composes what is established — read the current band from `RadioBean`, tune into the requested one — and guesses no transaction code. The frequency it lands on is the station this car was last heard on for that band (`RadioBandMemory`), or the band floor followed by one `nextStation()` when it has never been there, so it does not strand the driver on an empty frequency. It shipped as its own `SELECT_RADIO_BAND` entry and was folded into `TUNE_RADIO` a week later — see *Merge* below. |
+| E | Select a DAB service | **reject** (unchanged) | A DAB service is addressed by ensemble id + service id, not by a frequency, and neither is a stable identifier a driver could enter or a rule could store across a re-scan. No on-vehicle evidence establishes a portable contract. DAB is now reachable as a **band** (candidate D, inside `TUNE_RADIO`) and stepped through with `RADIO_NEXT_STATION` / `RADIO_PREV_STATION`; what stays out is selecting one named service directly. A DAB *block* is a real frequency in Band III, which is what a band switch tunes; a DAB *service* is not. |
 | F | Restore the last audible radio state at ignition | **already covered** | Composition, not a new action: an ignition trigger plus `PLAY_RADIO`, whose `srcPlayRadio` resumes the last station by itself. A persistent service that remembered and re-asserted state would be a background watchdog the app does not have and does not want. |
 | G | Radio artwork caching, station metadata display | **reject as an action** | Presentation, not automation. A rule cannot usefully "cache artwork"; a screen can show it. If it is ever wanted it belongs to an app's UI, reading `RadioBean`, not to the action catalogue. |
 | H | Replace or patch the OEM radio APK (the DAB+ fix's strategy) | **reject** | Out of scope by the ticket and by the suite's boundary: EVSuite talks to the vendor services the car ships. It does not swap the car's applications, and the upstream fix carries no license that would permit reuse anyway. |
@@ -63,9 +63,40 @@ was wrong: `tune` takes the band as an argument, so the band is reachable throug
 was already proven. The rejection of candidate E stands unchanged — a DAB service still has no
 identifier stable across a re-scan, and none was guessed.
 
+## Merge, 2026-09-03
+
+Candidate D shipped as an action of its own, and that was one entry too many. Band, frequency
+and playback are three parts of one instruction — "put the radio on FM 103.5 and play it" — and
+splitting them left each part unable to say the whole thing: `SELECT_RADIO_BAND` could not name
+a station, `TUNE_RADIO` could not reach DAB, and a driver who wanted both wrote two rows with a
+delay between them. They are now one entry, `TUNE_RADIO`, carrying the band in `number`, the
+frequency in `text` and playback in `flag`.
+
+Nothing about the vehicle contract changed: a frequency still goes through `tune`, a band with
+no frequency still goes through `selectBand`, and DAB is still reachable only as a band. What
+changed is which of the two a rule asks for, and that is now read off the rule rather than off
+which of two entries it picked. `selectBand` gained `andPlay` so that the merged action's
+"enable radio" switch means the same thing on both paths.
+
+Two things are refused rather than resolved. A typed frequency that disagrees with the picked
+band (`AM 103.5` under an FM picker) parses to nothing, as `AM 103.5` already did on its own —
+two things were said, and silently keeping one is how a rule lands on a station nobody chose.
+And DAB takes no frequency at all: the editor removes the field rather than accept a number it
+would have to ignore.
+
+Rules and exported files that still name `SELECT_RADIO_BAND` are rewritten on load by
+EVTasker's `LegacyRuleJson`, keeping their band and their playback — the old band switch always
+took the audio focus, so dropping playback would have silenced a rule that used to make a
+sound.
+
 ## On-vehicle evidence
 
 _(pending — CR-020 requires a run. Record, per firmware: `SaicRadio.isAvailable`, whether
 `isPlaying()` answered on FM, AM and DAB, whether `PAUSE_RADIO` silenced the tuner, whether
-`RADIO_PLAY_PAUSE` toggled in the direction the state predicted, and whether
-`OPEN_RADIO_SCREEN` was correctly refused while moving.)_
+`RADIO_PLAY_PAUSE` toggled in the direction the state predicted, whether
+`OPEN_RADIO_SCREEN` was correctly refused while moving, and whether `TUNE_RADIO` reached **DAB**
+with its frequency left empty and came back to FM on the station it had left.)_
+
+Availability is evidenced on SWI68: the 2026-08-29 diagnostic reported every radio action
+`[ OK ]`, with the radio service bound. What is still missing is the behavioural half — that
+each one does what its label says.

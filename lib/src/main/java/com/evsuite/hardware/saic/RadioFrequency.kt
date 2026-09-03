@@ -27,21 +27,29 @@ object RadioFrequency {
     private val NUMBER = Regex("""\d+(?:[.,]\d+)?""")
 
     /**
-     * @return the station, or null when [text] names none.
+     * @param text what the driver typed.
+     * @param band the band the rule picked, or null when it picked none.
+     * @return the station, or null when [text] names none on [band].
      *
-     * The band is taken from the text when it says one, and inferred from the number when it
-     * does not — the two ranges do not overlap in any unit, so "103.5" can only be FM and
-     * "1080" can only be AM. An explicit band that disagrees with its own range (`AM 103.5`)
-     * is rejected: the driver said two things, and picking one of them silently is how a
-     * rule ends up on a station nobody chose.
+     * The band is taken from the rule when it names one, then from the text when the text says
+     * one, and inferred from the number otherwise — the two ranges do not overlap in any unit,
+     * so "103.5" can only be FM and "1080" can only be AM.
+     *
+     * A band that disagrees with the text (`AM 103.5`, or a picker on AM over a typed "103.5")
+     * is rejected rather than resolved: two things were said, and silently picking one of them
+     * is how a rule ends up on a station nobody chose. Only AM and FM name a frequency at all,
+     * so a [band] of DAB never parses — the caller reaches DAB by naming the band alone.
      */
-    fun parse(text: String): Station? {
+    fun parse(text: String, band: Int? = null): Station? {
         val upper = text.uppercase()
-        val stated = when {
+        val typed = when {
             "FM" in upper -> SaicRadio.BAND_FM
             "AM" in upper -> SaicRadio.BAND_AM
             else -> null
         }
+        // Both said, and not the same thing: the disagreement is the answer.
+        if (band != null && typed != null && band != typed) return null
+        val stated = band ?: typed
         val raw = NUMBER.find(upper)?.value?.replace(',', '.')?.toDoubleOrNull() ?: return null
 
         // Megahertz or kilohertz, both written by real people: 103.5, 103500, 1080, 1.08.

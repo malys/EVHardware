@@ -1,9 +1,14 @@
 package com.evsuite.hardware.saic
 
+import com.evsuite.hardware.FirmwareGen
+import com.evsuite.hardware.FirmwareSupport
 import com.evsuite.hardware.catalog.ActionType
+import com.evsuite.hardware.catalog.ConditionType
+import com.evsuite.hardware.catalog.SnapshotKeys
 import com.evsuite.hardware.catalog.ValueKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -76,12 +81,70 @@ class RadioToggleTest {
     }
 
     @Test
-    fun `the radio family carries no value to configure, except the frequency`() {
+    fun `the radio family carries no value to configure, except the tuner setting`() {
         // A picker offering a control for an action that takes no argument asks the user for
         // something it will then ignore.
         (RADIO_ACTIONS - ActionType.TUNE_RADIO).forEach {
             assertEquals("${it.name} takes no argument", ValueKind.NONE, it.spec.kind)
         }
+    }
+
+    @Test
+    fun `band, frequency and playback are one entry`() {
+        // The merge is the point of the action: a band alone could not carry a station, a
+        // frequency alone could not reach DAB, and a driver saying "FM 103.5, and play it"
+        // had to write two rows. Splitting them again would put back both halves of the gap.
+        assertEquals(ValueKind.RADIO, ActionType.TUNE_RADIO.spec.kind)
+        assertEquals(
+            "the band picker must offer the vendor RadioType values",
+            listOf(SaicRadio.BAND_AM, SaicRadio.BAND_FM, SaicRadio.BAND_DAB),
+            ActionType.TUNE_RADIO.spec.options.map { it.value }
+        )
+        assertNull(
+            "there is no separate band action left to pick",
+            ActionType.entries.firstOrNull { it.name == "SELECT_RADIO_BAND" }
+        )
+    }
+
+    @Test
+    fun `a rule can ask whether the tuner is playing, which the media condition cannot answer`() {
+        // The whole reason the condition exists. AudioManager.isMusicActive — what
+        // MEDIA_PLAYING reads — is false while the radio plays, its stream not being the music
+        // one, so a car with the radio on reads as silent there. Two conditions, two keys, two
+        // sources: collapsing them would put that false answer behind a radio-shaped label.
+        assertEquals(ValueKind.BOOL, ConditionType.RADIO_PLAYING.spec.kind)
+        assertEquals(SnapshotKeys.KEY_RADIO_PLAYING, ConditionType.RADIO_PLAYING.snapshotKey)
+        assertNotEquals(
+            ConditionType.MEDIA_PLAYING.snapshotKey,
+            ConditionType.RADIO_PLAYING.snapshotKey
+        )
+        // A vendor-service read, so it is routed per generation — unlike the platform one,
+        // which answers on every firmware because Android answers it.
+        assertEquals(
+            setOf(FirmwareGen.SWI68, FirmwareGen.SWI165),
+            FirmwareSupport.gensOf(ConditionType.RADIO_PLAYING)
+        )
+        assertNull(FirmwareSupport.gensOf(ConditionType.MEDIA_PLAYING))
+    }
+
+    @Test
+    fun `the picked band decides the frequency, and a disagreement is refused`() {
+        // The two say the same thing, so the number needs no unit and no band prefix.
+        assertEquals(
+            RadioFrequency.Station(SaicRadio.BAND_FM, 103_500),
+            RadioFrequency.parse("103.5", SaicRadio.BAND_FM)
+        )
+        // "1080" alone is AM; asked for on FM it names no station, and inventing one is how a
+        // rule lands somewhere nobody chose.
+        assertNull(RadioFrequency.parse("1080", SaicRadio.BAND_FM))
+        assertNull(RadioFrequency.parse("AM 103.5", SaicRadio.BAND_FM))
+        // DAB names no frequency at all: the band alone is the whole instruction.
+        assertNull(RadioFrequency.parse("103.5", SaicRadio.BAND_DAB))
+        // No band picked is what every rule saved before the merge carries: read the text.
+        assertEquals(
+            RadioFrequency.Station(SaicRadio.BAND_AM, 1080),
+            RadioFrequency.parse("1080", null)
+        )
     }
 
     /** [SaicRadio.selectBand]'s decision, over a current band that may be unreadable. */

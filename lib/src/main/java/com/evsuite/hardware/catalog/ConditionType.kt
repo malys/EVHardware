@@ -125,6 +125,27 @@ enum class ConditionType(
         ValueSpec.BOOL, SnapshotKeys.KEY_MEDIA_PLAYING
     ),
     /**
+     * The **tuner** is playing — not "something is".
+     *
+     * [MEDIA_PLAYING] cannot answer this and never could: it reads
+     * `AudioManager.isMusicActive`, which is **false while the radio plays**, the tuner's
+     * stream not being the music one. So a car with the radio on reads as silent there, and
+     * "only if the radio is already on" was not expressible. This reads `RadioBean.state`, the
+     * same value [ActionType.RADIO_PLAY_PAUSE] refuses to guess at.
+     *
+     * The pair is worth having: a rule that must not talk over the driver's music wants
+     * [MEDIA_PLAYING], and a rule that changes station, silences the news on arrival or steps
+     * to the next station wants this one — those are wrong on a car playing Bluetooth.
+     *
+     * Unreadable leaves it unavailable rather than false: a radio service that has not bound
+     * is not a radio that is off.
+     */
+    @SupportedOn(SWI68, SWI165)
+    RADIO_PLAYING(
+        R.string.cond_radio_playing, ConditionGroup.CONTEXT,
+        ValueSpec.BOOL, SnapshotKeys.KEY_RADIO_PLAYING
+    ),
+    /**
      * The network the head unit is joined to, by name.
      *
      * The one context signal that says "the car is at a place it knows" without a satellite:
