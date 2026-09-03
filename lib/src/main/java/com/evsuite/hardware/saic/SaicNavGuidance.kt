@@ -56,6 +56,14 @@ object SaicNavGuidance {
     @Volatile
     private var registered: Boolean = false
 
+    /**
+     * Every transaction code the adapter sent, decoded or not.
+     *
+     * The transaction map came from an R69 build and a vehicle may run another revision, so
+     * this is what proves the map still lines up. It is read by a capture, never by a value.
+     */
+    private val census = TransactionCensus()
+
     val isAvailable: Boolean get() = binder() != null
 
     /** True once the adapter accepted this listener. */
@@ -72,6 +80,12 @@ object SaicNavGuidance {
      * which is the answer when no guidance is running, and is itself the finding CP-040 needs.
      */
     fun latest(): NavGuidance = state
+
+    /** Transaction codes seen so far, with counts. See [TransactionCensus]. */
+    fun census(): Map<Int, Int> = census.snapshot()
+
+    /** Codes the census could not index. Non-zero means the interface is not the one expected. */
+    fun censusBeyondCeiling(): Int = census.beyondCeiling
 
     /**
      * Starts listening. Idempotent.
@@ -100,6 +114,7 @@ object SaicNavGuidance {
         }
         registered = false
         state = NavGuidance.EMPTY
+        census.clear()
     }
 
     /**
@@ -111,6 +126,7 @@ object SaicNavGuidance {
      */
     private val listener = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+            census.record(code)
             if (code !in NavGuidanceReducer.KNOWN_TRANSACTIONS) {
                 reply?.writeNoException()
                 return true

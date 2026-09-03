@@ -91,3 +91,47 @@ object NavGuidanceReducer {
         return folded.copy(events = state.events + 1, updatedAtElapsedMs = atElapsedMs)
     }
 }
+
+/**
+ * How many times each transaction code arrived, decoded or not.
+ *
+ * The transaction map was read from an R69 build; a vehicle may run another revision of the
+ * same generation. If SAIC inserted a method into `IGeneralNotificationListener` between two
+ * revisions, every later code shifts by one — and a shifted map does not fail, it silently
+ * reports the wrong number as a distance. That is the one failure this instrument must not
+ * have, so the census records *every* code the adapter sends. A capture whose census shows
+ * traffic on codes this build does not decode, or silence on the ones it does, has caught the
+ * shift before anyone builds an arrival forecast on it.
+ *
+ * Counting is a bare array write on the adapter's fan-out thread: no lock, no allocation, no
+ * blocking. Callbacks may arrive on several binder threads at once and a lost increment is
+ * acceptable here — this counts what kind of traffic exists, not how much of it exactly.
+ */
+class TransactionCensus(private val ceiling: Int = DEFAULT_CEILING) {
+
+    private val counts = IntArray(ceiling)
+
+    /** Codes at or above [ceiling]. Kept separate rather than growing the array. */
+    @Volatile
+    var beyondCeiling: Int = 0
+        private set
+
+    fun record(code: Int) {
+        if (code in 0 until ceiling) counts[code]++ else beyondCeiling++
+    }
+
+    /** Codes seen at least once, with their counts. Allocates — for reporting, not the hot path. */
+    fun snapshot(): Map<Int, Int> =
+        counts.indices.filter { counts[it] > 0 }.associateWith { counts[it] }
+
+    fun clear() {
+        counts.fill(0)
+        beyondCeiling = 0
+    }
+
+    private companion object {
+        /** `IGeneralNotificationListener` declares well under this many methods on R69. */
+        const val DEFAULT_CEILING = 128
+    }
+}
+

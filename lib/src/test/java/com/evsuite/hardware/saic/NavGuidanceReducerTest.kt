@@ -72,3 +72,42 @@ class NavGuidanceReducerTest {
         assertEquals(setOf(1, 2, 3, 12, 13), NavGuidanceReducer.KNOWN_TRANSACTIONS)
     }
 }
+
+class TransactionCensusTest {
+
+    @Test fun `every code is counted, decoded or not`() {
+        val census = TransactionCensus()
+        census.record(NavGuidanceReducer.TX_REMAINING_DISTANCE_CHANGE)
+        census.record(NavGuidanceReducer.TX_REMAINING_DISTANCE_CHANGE)
+        census.record(41)
+        assertEquals(mapOf(13 to 2, 41 to 1), census.snapshot())
+        assertEquals(0, census.beyondCeiling)
+    }
+
+    @Test fun `a code past the ceiling is separated rather than dropped`() {
+        val census = TransactionCensus(ceiling = 16)
+        census.record(99)
+        census.record(-1)
+        assertEquals(emptyMap<Int, Int>(), census.snapshot())
+        assertEquals(2, census.beyondCeiling)
+    }
+
+    @Test fun `a shifted map shows as traffic on undecoded codes`() {
+        // What an inserted method one revision earlier would look like: everything this build
+        // decodes goes quiet, and the codes one above it carry the traffic instead.
+        val census = TransactionCensus()
+        listOf(2, 3, 4, 13, 14).forEach(census::record)
+        val seen = census.snapshot().keys
+        val decoded = NavGuidanceReducer.KNOWN_TRANSACTIONS
+        assertEquals(setOf(4, 14), seen - decoded)
+    }
+
+    @Test fun `clearing forgets the previous capture`() {
+        val census = TransactionCensus()
+        census.record(13)
+        census.record(999)
+        census.clear()
+        assertEquals(emptyMap<Int, Int>(), census.snapshot())
+        assertEquals(0, census.beyondCeiling)
+    }
+}
