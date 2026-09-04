@@ -8,6 +8,20 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **The col between here and there costs charge, and the forecast knows it.** CP-031 refused a
+  grade source on good grounds — no vehicle signal, no proven barometric reference, and
+  power-derived grade is circular — but every candidate it weighed described the road *behind*
+  the car. A route's elevation profile describes the road ahead, which is the only kind a
+  forecast can use. `RouteGrade` turns cumulative climb and descent into points of charge by
+  physics rather than by a fit: potential energy for a stated mass, a stated drivetrain
+  efficiency going up, a deliberately pessimistic regeneration efficiency coming down, each one
+  a declared constant inside a 40 % band and none of them tuned against data that does not
+  exist yet. A descent gives charge back and always less than the same climb spent, so a round
+  trip over a col is never a free lunch. `ChargeStopPlan` takes the term as an optional
+  argument and folds it into the rate, which means the band widens with the profile and a
+  missing profile is `null` rather than a zero quietly claiming the road is flat — a plan
+  without one is byte-for-byte the plan it was before.
+
 - **An arrival state of charge, built on what this car actually publishes.** The obvious route
   runs through the energy model — kWh/100 km, a distance, a pack capacity — and it is a dead end
   here, because the model trains on energy integrated from a battery power that never publishes.
