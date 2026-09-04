@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-09-04
+
 ### Changed
 
 - **`WEATHER_NOW` is an `ENUM`, not free text.** The condition compared the weather service's
