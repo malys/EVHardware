@@ -206,7 +206,13 @@
     <string name="act_window_rear_right">Fenster hinten rechts</string>
     <string name="cond_odometer">Kilometerstand</string>
     <string name="cond_weather">Wetter</string>
-    <string name="cond_weather_hint">z. B. Regen</string>
+    <string name="weather_clear">Klar</string>
+    <string name="weather_cloudy">Bewölkt</string>
+    <string name="weather_rain">Regen</string>
+    <string name="weather_snow">Schnee</string>
+    <string name="weather_storm">Gewitter</string>
+    <string name="weather_fog">Nebel</string>
+    <string name="weather_wind">Wind</string>
     <string name="act_esc">Stabilitätskontrolle (ESC)</string>
     <string name="act_drowsiness">Müdigkeitswarnung</string>
     <string name="act_drowsiness_sensitivity">Empfindlichkeit der Müdigkeitswarnung</string>

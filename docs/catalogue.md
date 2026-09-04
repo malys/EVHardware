@@ -20,8 +20,6 @@ Every condition a rule can test and every action it can run, straight out of `Co
 | Firmware generation | `FIRMWARE_GEN` | a list the app fills in | any |
 | Near a place | `LOCATION_WITHIN` | a point and a radius (m) | any |
 | Physical buttons | `PHYSICAL_BUTTON` | a button, short or long press | any |
-| Media playing | `MEDIA_PLAYING` | on / off | any |
-| Radio playing | `RADIO_PLAYING` | on / off | SWI68, SWI165 |
 | Wi-Fi network | `WIFI_SSID` | free text | any |
 | Call in progress | `IN_CALL` | on / off | any |
 | Drive duration | `DRIVE_DURATION` | 0…600 min (=, <, >) | any |
@@ -36,7 +34,7 @@ Every condition a rule can test and every action it can run, straight out of `Co
 | Condition | Entry | Tested against | Firmware |
 |---|---|---|---|
 | Outside temperature | `OUTSIDE_TEMP` | -30…50 °C (=, <, >) | SWI133, SWI68, SWI165, SWI69, SWI131, SWI132 |
-| Weather | `WEATHER_NOW` | free text | any |
+| Weather | `WEATHER_NOW` | Clear, Cloudy, Rain, Snow, Thunderstorm, Fog, Wind | any |
 
 ### Driving
 
@@ -92,8 +90,15 @@ Every condition a rule can test and every action it can run, straight out of `Co
 | Left seat heating | `SEAT_HEAT_LEFT` | 0…3 (=, <, >) | SWI133, SWI68, SWI165 |
 | Right seat heating | `SEAT_HEAT_RIGHT` | 0…3 (=, <, >) | SWI133, SWI68, SWI165 |
 | Steering wheel heating | `STEERING_HEAT` | on / off | SWI133, SWI68, SWI165 |
-| Media volume | `MEDIA_VOLUME` | 0…max (=, <, >) | SWI133, SWI68, SWI165, SWI69, SWI131, SWI132 |
 | Screen brightness | `SCREEN_BRIGHTNESS` | 5…100 % (=, <, >) | SWI133, SWI68, SWI165, SWI69, SWI131, SWI132 |
+
+### Audio
+
+| Condition | Entry | Tested against | Firmware |
+|---|---|---|---|
+| Media playing | `MEDIA_PLAYING` | on / off | any |
+| Radio playing | `RADIO_PLAYING` | on / off | SWI68, SWI165 |
+| Media volume | `MEDIA_VOLUME` | 0…max (=, <, >) | SWI133, SWI68, SWI165, SWI69, SWI131, SWI132 |
 
 ### Driver assistance
 

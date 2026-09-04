@@ -228,7 +228,13 @@
     <string name="act_window_rear_right">Vitre arrière droite</string>
     <string name="cond_odometer">Compteur kilométrique</string>
     <string name="cond_weather">Météo</string>
-    <string name="cond_weather_hint">ex. pluie</string>
+    <string name="weather_clear">Ciel dégagé</string>
+    <string name="weather_cloudy">Nuageux</string>
+    <string name="weather_rain">Pluie</string>
+    <string name="weather_snow">Neige</string>
+    <string name="weather_storm">Orage</string>
+    <string name="weather_fog">Brouillard</string>
+    <string name="weather_wind">Vent</string>
     <string name="act_esc">Contrôle de stabilité (ESC)</string>
     <string name="act_drowsiness">Alerte de somnolence</string>
     <string name="act_drowsiness_sensitivity">Sensibilité de l\'alerte de somnolence</string>

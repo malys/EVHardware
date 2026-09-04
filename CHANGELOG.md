@@ -6,6 +6,18 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **`WEATHER_NOW` is an `ENUM`, not free text.** The condition compared the weather service's
+  own phrase, in the head unit's language, against a string the driver had to type — a value
+  nobody can guess and that changes with the display language. It now carries one of the seven
+  states in the new `WeatherConditions`, which classifies the phrase by keyword fragments in
+  the six languages the apps ship. `SnapshotKeys.KEY_WEATHER_TEXT` became
+  `KEY_WEATHER_CONDITION` and carries that state; a phrase nothing recognises writes no key at
+  all, so the condition is unavailable rather than reported as fine weather.
+- **`ConditionGroup.AUDIO`**, the counterpart of `ActionGroup.AUDIO`. `MEDIA_PLAYING`,
+  `RADIO_PLAYING` and `MEDIA_VOLUME` moved into it from `CONTEXT` and `COMFORT`.
+
 ## [1.13.0] - 2026-09-03
 
 ### Changed

@@ -290,8 +290,10 @@ class CatalogConsistencyTest {
         listOf(ConditionType.ODOMETER, ConditionType.WEATHER_NOW).forEach {
             assertNotNull("${it.name} must read a snapshot key", it.snapshotKey)
         }
-        assertEquals(ValueKind.TEXT, ConditionType.WEATHER_NOW.spec.kind)
-        assertTrue("the weather value needs an example", ConditionType.WEATHER_NOW.spec.hintRes != 0)
+        // A list, not free text: the provider's phrase is the one value nobody can type, so
+        // the rule stores a state the catalogue owns and the reader does the classifying.
+        assertEquals(ValueKind.ENUM, ConditionType.WEATHER_NOW.spec.kind)
+        assertEquals(WeatherConditions.OPTIONS, ConditionType.WEATHER_NOW.spec.options)
         assertTrue("a rule asks for more or fewer kilometres", ConditionType.ODOMETER.comparable)
     }
 

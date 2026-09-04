@@ -22,6 +22,7 @@ enum class ConditionGroup(@StringRes val labelRes: Int) {
     ENERGY(R.string.group_energy),
     CLIMATE(R.string.group_climate),
     COMFORT(R.string.group_comfort),
+    AUDIO(R.string.group_audio),
     ADAS(R.string.group_adas)
 }
 
@@ -119,32 +120,6 @@ enum class ConditionType(
         ValueSpec(ValueKind.PHYSICAL_BUTTON), SnapshotKeys.KEY_PHYSICAL_BUTTON_EVENT,
         eventDriven = true
     ),
-    /** Something is coming out of the speakers, whichever app is playing it. */
-    MEDIA_PLAYING(
-        R.string.cond_media_playing, ConditionGroup.CONTEXT,
-        ValueSpec.BOOL, SnapshotKeys.KEY_MEDIA_PLAYING
-    ),
-    /**
-     * The **tuner** is playing — not "something is".
-     *
-     * [MEDIA_PLAYING] cannot answer this and never could: it reads
-     * `AudioManager.isMusicActive`, which is **false while the radio plays**, the tuner's
-     * stream not being the music one. So a car with the radio on reads as silent there, and
-     * "only if the radio is already on" was not expressible. This reads `RadioBean.state`, the
-     * same value [ActionType.RADIO_PLAY_PAUSE] refuses to guess at.
-     *
-     * The pair is worth having: a rule that must not talk over the driver's music wants
-     * [MEDIA_PLAYING], and a rule that changes station, silences the news on arrival or steps
-     * to the next station wants this one — those are wrong on a car playing Bluetooth.
-     *
-     * Unreadable leaves it unavailable rather than false: a radio service that has not bound
-     * is not a radio that is off.
-     */
-    @SupportedOn(SWI68, SWI165)
-    RADIO_PLAYING(
-        R.string.cond_radio_playing, ConditionGroup.CONTEXT,
-        ValueSpec.BOOL, SnapshotKeys.KEY_RADIO_PLAYING
-    ),
     /**
      * The network the head unit is joined to, by name.
      *
@@ -202,22 +177,26 @@ enum class ConditionType(
     ),
 
     /**
-     * What the head unit's weather service says the sky is doing where the car is.
+     * What the head unit's weather service says the sky is doing where the car is, as one of
+     * [WeatherConditions]' seven states.
      *
-     * Matched as a fragment, not as the whole phrase: the service answers "Light rain",
-     * "Heavy rain" and "Rain showers", and a rule about rain wants all three. So "rain" is
-     * the useful thing to type, and it is compared without regard to case.
+     * A list, not free text, and the reason is that the free-text version could not be
+     * written: the service answers a phrase of its own choosing ("Light rain", "Rain
+     * showers") in the head unit's own language, so a rule had to guess the provider's exact
+     * wording and stopped matching the day the display language changed. The phrase is
+     * classified on the way into the snapshot instead, and the rule stores a state the
+     * catalogue owns.
      *
-     * The phrase comes back in the head unit's language, so a rule written on a French car
-     * asks about "pluie". That is the provider's wording, not a vocabulary this library owns,
-     * which is why the value is free text rather than a list to choose from.
+     * A phrase no fragment recognises leaves the key absent, so the condition is
+     * **unavailable** rather than "some other weather" — same as a service that does not
+     * answer at all.
      *
      * Like [ODOMETER], no firmware annotation: it is an app service, available or not.
      */
     WEATHER_NOW(
         R.string.cond_weather, ConditionGroup.ENVIRONMENT,
-        ValueSpec(ValueKind.TEXT, hintRes = R.string.cond_weather_hint),
-        SnapshotKeys.KEY_WEATHER_TEXT
+        ValueSpec(ValueKind.ENUM, options = WeatherConditions.OPTIONS),
+        SnapshotKeys.KEY_WEATHER_CONDITION
     ),
 
     // ── Driving ──────────────────────────────────────────────────────────────
@@ -488,16 +467,47 @@ enum class ConditionType(
         ValueSpec.BOOL, SnapshotKeys.KEY_STEERING_HEAT
     ),
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
-    MEDIA_VOLUME(
-        R.string.cond_media_volume, ConditionGroup.COMFORT,
-        ValueSpec.dynamicNumber(0, VehicleEnums.MEDIA_VOLUME_FALLBACK_MAX),
-        SnapshotKeys.KEY_MEDIA_VOLUME, comparable = true
-    ),
-    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
     SCREEN_BRIGHTNESS(
         R.string.cond_brightness, ConditionGroup.COMFORT,
         number(VehicleEnums.BRIGHTNESS_MIN, VehicleEnums.BRIGHTNESS_MAX, R.string.unit_percent),
         SnapshotKeys.KEY_BRIGHTNESS, comparable = true
+    ),
+
+    // ── Audio ────────────────────────────────────────────────────────────────
+    // What is coming out of the speakers, and how loud. The picker groups them together for
+    // the same reason the action catalogue does: a rule about the radio is written next to
+    // the one about the volume, not three groups apart.
+    /** Something is coming out of the speakers, whichever app is playing it. */
+    MEDIA_PLAYING(
+        R.string.cond_media_playing, ConditionGroup.AUDIO,
+        ValueSpec.BOOL, SnapshotKeys.KEY_MEDIA_PLAYING
+    ),
+    /**
+     * The **tuner** is playing — not "something is".
+     *
+     * [MEDIA_PLAYING] cannot answer this and never could: it reads
+     * `AudioManager.isMusicActive`, which is **false while the radio plays**, the tuner's
+     * stream not being the music one. So a car with the radio on reads as silent there, and
+     * "only if the radio is already on" was not expressible. This reads `RadioBean.state`, the
+     * same value [ActionType.RADIO_PLAY_PAUSE] refuses to guess at.
+     *
+     * The pair is worth having: a rule that must not talk over the driver's music wants
+     * [MEDIA_PLAYING], and a rule that changes station, silences the news on arrival or steps
+     * to the next station wants this one — those are wrong on a car playing Bluetooth.
+     *
+     * Unreadable leaves it unavailable rather than false: a radio service that has not bound
+     * is not a radio that is off.
+     */
+    @SupportedOn(SWI68, SWI165)
+    RADIO_PLAYING(
+        R.string.cond_radio_playing, ConditionGroup.AUDIO,
+        ValueSpec.BOOL, SnapshotKeys.KEY_RADIO_PLAYING
+    ),
+    @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
+    MEDIA_VOLUME(
+        R.string.cond_media_volume, ConditionGroup.AUDIO,
+        ValueSpec.dynamicNumber(0, VehicleEnums.MEDIA_VOLUME_FALLBACK_MAX),
+        SnapshotKeys.KEY_MEDIA_VOLUME, comparable = true
     ),
 
     // ── Driver assistance ────────────────────────────────────────────────────

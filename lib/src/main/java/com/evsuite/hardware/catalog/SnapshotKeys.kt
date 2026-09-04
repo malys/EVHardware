@@ -127,12 +127,17 @@ object SnapshotKeys {
     /** Odometer in kilometres. */
     const val KEY_ODOMETER_KM      = "odometerKm"
     /**
-     * The weather service's own description of the conditions where the car is.
+     * The sky where the car is, as one of [WeatherConditions]' states.
+     *
+     * The service answers a phrase in the head unit's language; what travels here is the
+     * state that phrase was classified into, because a rule cannot be written against wording
+     * the driver has never seen. A phrase nothing recognises leaves the key **absent**, which
+     * reads as "cannot tell" rather than as fine weather.
      *
      * Now, and only now. There is no forecast key: the map service answers current conditions
      * and nothing else on this firmware — see `SaicWeather`.
      */
-    const val KEY_WEATHER_TEXT     = "weatherText"
+    const val KEY_WEATHER_CONDITION = "weatherCondition"
 
     /**
      * Whether the *tuner* is playing, from `RadioBean.state`.

@@ -206,7 +206,13 @@
     <string name="act_window_rear_right">Ventanilla trasera derecha</string>
     <string name="cond_odometer">Cuentakilómetros</string>
     <string name="cond_weather">Tiempo</string>
-    <string name="cond_weather_hint">p. ej. lluvia</string>
+    <string name="weather_clear">Despejado</string>
+    <string name="weather_cloudy">Nublado</string>
+    <string name="weather_rain">Lluvia</string>
+    <string name="weather_snow">Nieve</string>
+    <string name="weather_storm">Tormenta</string>
+    <string name="weather_fog">Niebla</string>
+    <string name="weather_wind">Viento</string>
     <string name="act_esc">Control de estabilidad (ESC)</string>
     <string name="act_drowsiness">Alerta de somnolencia</string>
     <string name="act_drowsiness_sensitivity">Sensibilidad de la alerta de somnolencia</string>
