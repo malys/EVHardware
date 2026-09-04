@@ -10,10 +10,15 @@ package com.evsuite.hardware.telemetry
  * for exactly what it is.
  *
  * **Usable, not nameplate.** State of charge spans the usable window, not the gross pack: the
- * buffers at each end are outside it. An MG4 sold as a 64 kWh car does not put 64 kWh between
- * 0 % and 100 %, and using the nameplate figure would overstate every arrival forecast by the
- * size of those buffers, in the optimistic direction. The field asks for the usable figure and
- * nothing here converts one into the other, because the relationship is not published either.
+ * buffers at each end are outside it. The MG4 Long Range is sold as a 64 kWh car and its usable
+ * capacity is 61,7 kWh — EVKX's specification sheet for that model, reviewed 2026-09-04, and a
+ * citation rather than a measurement of any particular pack. Entering the nameplate figure
+ * would overstate every arrival forecast by the size of those buffers, in the optimistic
+ * direction. The field asks for the usable figure and nothing here converts one into the other:
+ * the relationship is model-specific and this layer serves more than one model.
+ *
+ * See the workspace `AGENTS.md` for how a specification sheet may be used — it corroborates a
+ * declared figure and never stands in for on-vehicle evidence.
  *
  * **Everything derived from this is [Provenance.ESTIMATED].** A dealer's state-of-health
  * reading is itself an estimate, the usable figure is a specification rather than a

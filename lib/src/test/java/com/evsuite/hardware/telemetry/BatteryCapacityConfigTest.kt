@@ -8,7 +8,10 @@ import org.junit.Test
 
 class BatteryCapacityConfigTest {
 
-    /** The reported MG4: 64 kWh nameplate, about 61.7 kWh usable, 95 % state of health. */
+    /**
+     * The owner's MG4 Long Range: 64 kWh gross and 61,7 kWh usable per EVKX's specification
+     * sheet, at the 95 % state of health the dealer reported.
+     */
     private val mg4 = BatteryCapacityConfig.of(61.7, 95.0)!!
 
     @Test fun `state of health scales the usable pack`() {
