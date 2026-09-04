@@ -1805,6 +1805,10 @@ object EVHardware {
      * while the service behind it is bound and answering. A null here blocks power-off and
      * costs the write gate its standstill fallback, so a second source is worth having.
      */
+    /** Keeps the repeated gear and ignition states out of the bounded diagnostic log. */
+    private val sGearLog = StateChangeLog<Int>()
+    private val sIgnitionLog = StateChangeLog<Int>()
+
     fun isVehicleInPark(): Boolean? {
         val gen = FirmwareInfo.getGeneration()
         val gear = when {
@@ -1818,7 +1822,10 @@ object EVHardware {
         }.takeIf { it >= 0 }
             ?: com.evsuite.hardware.saic.SaicVehicleCondition.gearOrNull()
             ?: return null
-        AppLogger.i(TAG, "isVehicleInPark — gen=$gen gear=$gear (P=$GEAR_PARK_VALUE)")
+        // Read once a second by the telemetry sampler; only gear changes are worth a line.
+        if (sGearLog.accept(gear)) {
+            AppLogger.i(TAG, "isVehicleInPark — gen=$gen gear=$gear (P=$GEAR_PARK_VALUE)")
+        }
         return gear == GEAR_PARK_VALUE
     }
 
@@ -3511,7 +3518,12 @@ object EVHardware {
                     try {
                         val ignition = bean.javaClass.getMethod("getVehicleIgnition").invoke(bean) as? Int
                         if (ignition != null) {
-                            AppLogger.i(TAG, "  Katman5 event: ignition=$ignition (${carIgnitionName(ignition)})")
+                            // The callback repeats at about 10 Hz whether or not anything
+                            // moved. Only the transitions are logged; every event is still
+                            // dispatched, because suppressing one would change behaviour.
+                            if (sIgnitionLog.accept(ignition)) {
+                                AppLogger.i(TAG, "  Katman5 event: ignition=$ignition (${carIgnitionName(ignition)})")
+                            }
                             dispatchVehicleConditionIgnition(ignition)
                         }
                     } catch (e: Exception) {

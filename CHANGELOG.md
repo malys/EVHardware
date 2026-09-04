@@ -6,6 +6,15 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Repeated vehicle states no longer flood the diagnostic log.** The ignition condition
+  arrives about ten times a second and the gear is read once a second; both were logged every
+  time, so a 400-line retained log held under a minute of history and anything older had already
+  been evicted from the bundle a driver sends back. `StateChangeLog` lets a state through only
+  when it changed, keeping the transitions a diagnostic actually reads and dropping the repeats
+  between them. Only logging is gated — every callback is still dispatched.
+
 ## [1.14.0] - 2026-09-04
 
 ### Changed
