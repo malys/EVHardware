@@ -75,6 +75,51 @@ class ChargeStopPlanTest {
     }
 
     @Test
+    fun `a flat route plans exactly as it did before grade existed`() {
+        val flat = RouteGrade.of(0.0, 0.0, BatteryCapacityConfig(61.7, 100.0))
+        assertEquals(
+            ChargeStopPlan.of(90.0, 100.0, rate(0.4, 0.04)),
+            ChargeStopPlan.of(90.0, 100.0, rate(0.4, 0.04), grade = flat),
+        )
+    }
+
+    @Test
+    fun `a col between here and there is charge that has to be spent`() {
+        val pack = BatteryCapacityConfig(61.7, 100.0)
+        val plain = ChargeStopPlan.of(90.0, 200.0, rate(0.3, 0.02)) as ChargeStopPlan.Plan.NoStop
+        val overACol = ChargeStopPlan.of(
+            90.0, 200.0, rate(0.3, 0.02),
+            grade = RouteGrade.of(1200.0, 400.0, pack),
+        ) as ChargeStopPlan.Plan.NoStop
+
+        assertTrue("the climb costs charge", overACol.arrivalPercent < plain.arrivalPercent)
+        assertTrue("and it is less certain", overACol.bandPercent > plain.bandPercent)
+
+        // Downhill the other way, and the same route returns some of it.
+        val backDown = ChargeStopPlan.of(
+            90.0, 200.0, rate(0.3, 0.02),
+            grade = RouteGrade.of(400.0, 1200.0, pack),
+        ) as ChargeStopPlan.Plan.NoStop
+        assertTrue(backDown.arrivalPercent > plain.arrivalPercent)
+        assertTrue(
+            "the descent gives back less than the climb took",
+            backDown.arrivalPercent - plain.arrivalPercent <
+                plain.arrivalPercent - overACol.arrivalPercent,
+        )
+    }
+
+    @Test
+    fun `a climb brings the stop forward rather than leaving it where it was`() {
+        val pack = BatteryCapacityConfig(61.7, 100.0)
+        val plain = ChargeStopPlan.of(45.0, 300.0, rate(0.4, 0.02)) as ChargeStopPlan.Plan.Stop
+        val overACol = ChargeStopPlan.of(
+            45.0, 300.0, rate(0.4, 0.02),
+            grade = RouteGrade.of(1200.0, 0.0, pack),
+        ) as ChargeStopPlan.Plan.Stop
+        assertTrue(overACol.afterKm < plain.afterKm)
+    }
+
+    @Test
     fun `a car already below its reserve is told to stop immediately`() {
         val plan = ChargeStopPlan.of(8.0, 50.0, rate(0.4, 0.01))
         assertTrue(plan is ChargeStopPlan.Plan.Stop)

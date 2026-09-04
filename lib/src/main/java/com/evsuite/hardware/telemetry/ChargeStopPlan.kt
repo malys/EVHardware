@@ -1,5 +1,7 @@
 package com.evsuite.hardware.telemetry
 
+import kotlin.math.abs
+
 /**
  * Whether a route needs a charging stop, and in how many kilometres.
  *
@@ -56,12 +58,16 @@ object ChargeStopPlan {
      * @param routeKm the whole remaining route.
      * @param rate charge spent per kilometre, with its own uncertainty.
      * @param reservePercent the charge the driver refuses to go below.
+     * @param grade what the route's climb and descent cost, from [RouteGrade], or null when no
+     *   elevation profile came back. Null is not zero: a plan with no profile is exactly the
+     *   plan this made before profiles existed.
      */
     fun of(
         socPercent: Double?,
         routeKm: Double?,
         rate: SocRate?,
         reservePercent: Double = DEFAULT_RESERVE_PERCENT,
+        grade: RouteGrade.Cost? = null,
     ): Plan {
         if (socPercent == null || !socPercent.isFinite()) return Plan.Refused(Reason.NO_CHARGE)
         if (routeKm == null || !routeKm.isFinite() || routeKm <= 0.0) {
@@ -69,11 +75,12 @@ object ChargeStopPlan {
         }
         if (rate == null || rate.percentPerKm <= 0.0) return Plan.Refused(Reason.NO_RATE)
 
-        val band = 2.0 * rate.uncertaintyPercentPerKm * routeKm
+        val effective = withGrade(rate, routeKm, grade)
+        val band = 2.0 * effective.uncertaintyPercentPerKm * routeKm
         if (band > MAX_BAND_PERCENT) return Plan.Refused(Reason.BAND_TOO_WIDE)
 
         val spendable = socPercent - reservePercent
-        val needed = rate.percentPerKm * routeKm
+        val needed = effective.percentPerKm * routeKm
         if (spendable >= needed) {
             return Plan.NoStop(
                 arrivalPercent = socPercent - needed,
@@ -85,15 +92,37 @@ object ChargeStopPlan {
         // Pessimistic on purpose: the distance the car reaches if it spends at the top of the
         // band. Being told to charge earlier than strictly necessary is a cost of minutes;
         // being told to charge later is a cost of a tow truck.
-        val worstRate = rate.percentPerKm + rate.uncertaintyPercentPerKm
+        val worstRate = effective.percentPerKm + effective.uncertaintyPercentPerKm
         val reachKm = (spendable / worstRate).coerceAtLeast(0.0)
-        val bestRate = (rate.percentPerKm - rate.uncertaintyPercentPerKm).coerceAtLeast(1e-6)
+        val bestRate =
+            (effective.percentPerKm - effective.uncertaintyPercentPerKm).coerceAtLeast(1e-6)
         val optimisticKm = spendable / bestRate
         return Plan.Stop(
             afterKm = reachKm,
             bandKm = (optimisticKm - reachKm).coerceAtLeast(0.0),
             shortfallKm = routeKm - reachKm,
             bandPercent = band,
+        )
+    }
+
+    /**
+     * The rate with the climb folded into it, so the rest of the arithmetic never learns that
+     * grade exists.
+     *
+     * The profile is a total and not a position: the col may be at kilometre 10 or at 400 and
+     * this spreads it evenly over the route either way, which makes a stop before a late col
+     * slightly early and one after an early col slightly late. Early is the safe direction and
+     * the error is small next to the rate's own band; the upgrade, when a route needs it, is a
+     * per-segment profile rather than two cumulative numbers.
+     */
+    private fun withGrade(rate: SocRate, routeKm: Double, grade: RouteGrade.Cost?): SocRate {
+        if (grade == null) return rate
+        return rate.copy(
+            // Floored, not clamped away: a descent long enough to make the net rate negative
+            // would otherwise plan a car that gains charge for ever.
+            percentPerKm = (rate.percentPerKm + grade.percent / routeKm).coerceAtLeast(1e-6),
+            uncertaintyPercentPerKm = rate.uncertaintyPercentPerKm +
+                abs(grade.uncertaintyPercent) / routeKm,
         )
     }
 }
