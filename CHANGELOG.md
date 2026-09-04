@@ -8,6 +8,16 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A declared battery capacity bridges kWh and state of charge.** `INFO_EV_BATTERY_CAPACITY` is
+  declared and never published on the MG4, and deriving the pack size from an energy total needs
+  battery power, which is unvalidated — so nothing could turn a model's kWh/100 km into a state
+  of charge. `BatteryCapacityConfig` takes the figure from whoever knows it. It asks for the
+  **usable** capacity, not the nameplate one, because state of charge spans the usable window
+  and the buffers at each end sit outside it: entering 64 kWh where 61.7 is usable overstates a
+  full pack by 2.2 kWh, in the optimistic direction. Everything derived from it is `ESTIMATED`
+  with a 5 % band covering a dealer's state-of-health reading and a specification figure that
+  was never a measurement of this pack. Out-of-range input is refused, never clamped.
+
 - **A recorded distance says which speed conversion produced it.** `VehicleSpeedEvidence` is the
   counterpart of `BatteryPowerEvidence` on the distance side, and it exists because the
   conversion has already been wrong once: every trip stored before the km/h fix carries a
