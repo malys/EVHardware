@@ -8,6 +8,20 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A recorded distance says which speed conversion produced it.** `VehicleSpeedEvidence` is the
+  counterpart of `BatteryPowerEvidence` on the distance side, and it exists because the
+  conversion has already been wrong once: every trip stored before the km/h fix carries a
+  distance 3.6 times too long, and nothing in the number said so — 8.46 km for a 2.4 km route
+  reads exactly like 8.46 km for an 8.46 km route. `EnergyTripSummary.modellableDistanceKm`
+  answers only for a distance produced by the conversion believed correct today, so a model
+  refuses history it cannot vouch for instead of quietly training on it. The reported distance
+  is unchanged: a driver's own record does not silently rewrite itself.
+
+- **The odometer reads again.** `PERF_ODOMETER` is declared and never published on the MG4, so
+  total mileage showed as unavailable while the head unit knew it. The navigation adapter
+  answers it, and `getOdometerKm` now falls back to it — the same reading that gave the 3.6x
+  speed error its independent reference.
+
 - **Guidance can be read, not only waited for.** The five listener callbacks are change
   notifications, so a car standing still with a guidance already running publishes nothing —
   which made a parked capture unable to tell "the adapter says nothing" from "nothing happened

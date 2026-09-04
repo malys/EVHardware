@@ -447,9 +447,21 @@ object EVHardware {
             ?.div(1_000f)
     }
 
+    /**
+     * Total mileage in km, from whichever service answers.
+     *
+     * `PERF_ODOMETER` is declared and never published on the MG4 — every read on
+     * SWI68-29958-1300R67 came back with no `CarPropertyValue` — so the odometer read as
+     * unavailable while the head unit knew it perfectly well. The navigation adapter answers
+     * it, which is how the 3.6x speed error got an independent reference at all.
+     *
+     * The adapter needs [com.evsuite.hardware.saic.SaicNav.connect] to have been called; until
+     * then it simply answers nothing, like any other unbound service.
+     */
     fun getOdometerKm(): Float? = supportedTelemetryRead {
         getFloatPropertyCPM(PROP_ODOMETER, AREA_GLOBAL)
             ?.takeIf { it.isFinite() && it >= 0f }
+            ?: com.evsuite.hardware.saic.SaicNav.totalMileageKm()?.toFloat()
     }
 
     fun getCabinTemperatureCelsius(): Float? = supportedTelemetryRead {

@@ -144,3 +144,36 @@ class EnergyTelemetryTest {
         override fun evidenceProbes() = probes
     }
 }
+
+class TripDistanceEvidenceTest {
+
+    private fun summary(evidence: com.evsuite.hardware.VehicleSpeedEvidence?) = EnergyTripSummary(
+        startedAtMs = 0L,
+        endedAtMs = 1_000L,
+        durationMs = 1_000L,
+        distanceKm = 8.46,
+        startSocPercent = 60f,
+        endSocPercent = 59f,
+        consumedKwh = null,
+        regeneratedKwh = null,
+        distanceAvailable = true,
+        speedEvidence = evidence,
+    )
+
+    @Test fun `a legacy distance stays reported but is not modellable`() {
+        val trip = summary(evidence = null)
+        assertEquals(8.46, trip.recordedDistanceKm!!, 1e-9)
+        assertNull("a model must not train on an unversioned distance", trip.modellableDistanceKm)
+    }
+
+    @Test fun `a distance from the 3_6x conversion is not modellable`() {
+        val trip = summary(
+            com.evsuite.hardware.VehicleSpeedEvidence(
+                com.evsuite.hardware.FirmwareInfo.Gen.SWI68,
+                com.evsuite.hardware.VehicleSpeedEvidence.MPS_TIMES_3_6_V1,
+            )
+        )
+        assertEquals(8.46, trip.recordedDistanceKm!!, 1e-9)
+        assertNull(trip.modellableDistanceKm)
+    }
+}

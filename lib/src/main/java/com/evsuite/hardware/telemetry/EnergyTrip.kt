@@ -2,6 +2,7 @@ package com.evsuite.hardware.telemetry
 
 import com.evsuite.hardware.BatteryPowerEvidence
 import com.evsuite.hardware.CarPropertyEvidence
+import com.evsuite.hardware.VehicleSpeedEvidence
 
 data class EnergyTripSummary(
     val startedAtMs: Long,
@@ -25,7 +26,22 @@ data class EnergyTripSummary(
     val distanceAvailable: Boolean? = null,
     /** Null for legacy or unvalidated records; models must not reuse their energy totals. */
     val batteryPowerEvidence: BatteryPowerEvidence? = null,
+    /**
+     * Which speed conversion produced [distanceKm]. Null on records written before the
+     * conversion was versioned — their distance may carry the 3.6x error and no model may
+     * train on it. See [VehicleSpeedEvidence].
+     */
+    val speedEvidence: VehicleSpeedEvidence? = null,
 ) {
+    /**
+     * The distance, only when the conversion behind it is the one believed correct today.
+     *
+     * `recordedDistanceKm` stays what the trip reported, because history is what it is and a
+     * driver's own record should not silently change. This is the one a model may use.
+     */
+    val modellableDistanceKm: Double?
+        get() = recordedDistanceKm?.takeIf { speedEvidence?.matchesCurrent() == true }
+
     val recordedDistanceKm: Double?
         get() = distanceKm.takeIf { distanceAvailable != false }
 
@@ -47,6 +63,7 @@ class EnergyTripAccumulator(
     private val startSocPercent: Float?,
     private val track: TripSampleTrack = TripSampleTrack(),
     private val batteryPowerEvidence: BatteryPowerEvidence? = null,
+    private val speedEvidence: VehicleSpeedEvidence? = VehicleSpeedEvidence.current(),
 ) {
     private var last: EnergySnapshot? = null
     private var distanceKm = 0.0
@@ -92,6 +109,7 @@ class EnergyTripAccumulator(
         consumedKwh = consumedKwh.takeIf { hasPowerInterval },
         regeneratedKwh = regeneratedKwh.takeIf { hasPowerInterval },
         distanceAvailable = hasSpeedInterval,
+        speedEvidence = speedEvidence.takeIf { hasSpeedInterval },
         batteryPowerEvidence = batteryPowerEvidence.takeIf { hasPowerInterval },
     )
 
