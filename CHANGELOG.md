@@ -8,6 +8,19 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- **`PERF_VEHICLE_SPEED` already reports km/h on SWI68, and was being converted a second time.**
+  AAOS specifies the property in metres per second, so every read was multiplied by 3.6 — and
+  every distance integrated from it was scaled by the same factor. A 2.4 km drive was recorded
+  as 8.46 km and, on a second run, 7.69 km: 124 and 129 km/h average over four minutes of town
+  driving. Divided by 3.6 the same trips read 2.35 km at 34 km/h, which is the drive that
+  happened. `VehicleSpeedScale` makes the conversion evidence-gated per generation like every
+  other firmware-dependent read here. SWI68 is listed on the 2026-09-04 bundle from
+  SWI68-29958-1300R67; every other generation keeps the specified conversion, unproven but wrong
+  in the conservative direction, since a speed read too high makes `VehicleWriteGate` refuse
+  more often rather than less.
+
+### Fixed
+
 - **Repeated vehicle states no longer flood the diagnostic log.** The ignition condition
   arrives about ten times a second and the gear is read once a second; both were logged every
   time, so a 400-line retained log held under a minute of history and anything older had already
