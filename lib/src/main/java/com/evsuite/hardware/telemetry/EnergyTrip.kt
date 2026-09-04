@@ -39,8 +39,10 @@ data class EnergyTripSummary(
      * `recordedDistanceKm` stays what the trip reported, because history is what it is and a
      * driver's own record should not silently change. This is the one a model may use.
      */
-    val modellableDistanceKm: Double?
-        get() = recordedDistanceKm?.takeIf { speedEvidence?.matchesCurrent() == true }
+    fun modellableDistanceKm(
+        generation: com.evsuite.hardware.FirmwareInfo.Gen =
+            com.evsuite.hardware.FirmwareInfo.getGeneration(),
+    ): Double? = recordedDistanceKm?.takeIf { speedEvidence?.matchesCurrent(generation) == true }
 
     val recordedDistanceKm: Double?
         get() = distanceKm.takeIf { distanceAvailable != false }

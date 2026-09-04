@@ -17,7 +17,7 @@ class VehicleSpeedEvidenceTest {
 
     @Test fun `a distance from the old conversion never matches the current one`() {
         val old = VehicleSpeedEvidence(FirmwareInfo.Gen.SWI68, VehicleSpeedEvidence.MPS_TIMES_3_6_V1)
-        assertFalse(old.matchesCurrent())
+        assertFalse(old.matchesCurrent(FirmwareInfo.Gen.SWI68))
     }
 
     @Test fun `evidence naming an unknown firmware is refused`() {
@@ -39,7 +39,7 @@ class VehicleSpeedEvidenceTest {
 
     @Test fun `evidence for a different firmware does not match this one`() {
         val other = VehicleSpeedEvidence(FirmwareInfo.Gen.SWI69, VehicleSpeedEvidence.CURRENT)
-        assertFalse(other.matchesCurrent())
-        assertTrue(other.conversionVersion == VehicleSpeedEvidence.CURRENT)
+        assertFalse(other.matchesCurrent(FirmwareInfo.Gen.SWI68))
+        assertTrue(other.matchesCurrent(FirmwareInfo.Gen.SWI69))
     }
 }

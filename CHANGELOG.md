@@ -8,6 +8,17 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **An arrival state of charge, built on what this car actually publishes.** The obvious route
+  runs through the energy model — kWh/100 km, a distance, a pack capacity — and it is a dead end
+  here, because the model trains on energy integrated from a battery power that never publishes.
+  State of charge per kilometre needs no energy unit at all, and both its inputs read.
+  `SocRateEstimator` takes the rate from the vehicle's own range on the first reading and from
+  recorded trips once there are enough, preferring what the driver has actually driven; trips
+  whose distance the current speed conversion did not produce are never averaged in.
+  `ArrivalSocForecast` never returns a bare number: the band widens with distance, a band wider
+  than 15 points is refused rather than shown, and a negative arrival is left negative because
+  "the destination is beyond this charge" is the most useful thing it can say.
+
 - **A declared battery capacity bridges kWh and state of charge.** `INFO_EV_BATTERY_CAPACITY` is
   declared and never published on the MG4, and deriving the pack size from an energy total needs
   battery power, which is unvalidated — so nothing could turn a model's kWh/100 km into a state

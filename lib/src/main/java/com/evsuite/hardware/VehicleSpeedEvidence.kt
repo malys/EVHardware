@@ -22,9 +22,15 @@ data class VehicleSpeedEvidence(
         require(conversionVersion > 0) { "speed conversion version is positive" }
     }
 
-    /** True when this distance was produced by the conversion currently believed correct. */
-    fun matchesCurrent(): Boolean =
-        conversionVersion == CURRENT && firmware == FirmwareInfo.getGeneration()
+    /**
+     * True when this distance was produced by the conversion currently believed correct.
+     *
+     * The generation is a parameter rather than a read of [FirmwareInfo.getGeneration] so the
+     * check can be exercised off a vehicle. A correctness gate that only runs on a car is a
+     * gate nobody has tested.
+     */
+    fun matchesCurrent(generation: FirmwareInfo.Gen = FirmwareInfo.getGeneration()): Boolean =
+        conversionVersion == CURRENT && firmware == generation
 
     companion object {
         /** `PERF_VEHICLE_SPEED` read as m/s and multiplied by 3.6, as AAOS specifies. */

@@ -163,7 +163,10 @@ class TripDistanceEvidenceTest {
     @Test fun `a legacy distance stays reported but is not modellable`() {
         val trip = summary(evidence = null)
         assertEquals(8.46, trip.recordedDistanceKm!!, 1e-9)
-        assertNull("a model must not train on an unversioned distance", trip.modellableDistanceKm)
+        assertNull(
+            "a model must not train on an unversioned distance",
+            trip.modellableDistanceKm(com.evsuite.hardware.FirmwareInfo.Gen.SWI68),
+        )
     }
 
     @Test fun `a distance from the 3_6x conversion is not modellable`() {
@@ -174,6 +177,6 @@ class TripDistanceEvidenceTest {
             )
         )
         assertEquals(8.46, trip.recordedDistanceKm!!, 1e-9)
-        assertNull(trip.modellableDistanceKm)
+        assertNull(trip.modellableDistanceKm(com.evsuite.hardware.FirmwareInfo.Gen.SWI68))
     }
 }
