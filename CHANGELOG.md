@@ -6,6 +6,18 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Guidance can be read, not only waited for.** The five listener callbacks are change
+  notifications, so a car standing still with a guidance already running publishes nothing —
+  which made a parked capture unable to tell "the adapter says nothing" from "nothing happened
+  to say". `IGeneralService` answers `getGuideStatus`, `getRemainingTimes`, `getRemainingDistance`
+  and `getRoadName` synchronously on the binder already bound, so `SaicNavGuidance.readNow`
+  reports the current trip on demand. `SaicNav`'s note that the head unit answers no synchronous
+  question about a trip was read off `IMapService`; the general service does answer. A distance
+  or time of zero is treated as unreadable, as the service returns zero before any guidance has
+  run.
+
 ### Fixed
 
 - **`PERF_VEHICLE_SPEED` already reports km/h on SWI68, and was being converted a second time.**

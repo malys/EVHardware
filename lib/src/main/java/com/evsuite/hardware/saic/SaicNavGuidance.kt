@@ -44,6 +44,13 @@ object SaicNavGuidance {
     private const val TX_REGISTER_LISTENER = 1
     private const val TX_UNREGISTER_LISTENER = 2
 
+    // Synchronous getters on the same interface. SaicNav's note that the head unit answers no
+    // synchronous question about a trip was read off IMapService; IGeneralService does answer.
+    private const val TX_GET_ROAD_NAME = 29
+    private const val TX_GET_GUIDE_STATUS = 31
+    private const val TX_GET_REMAINING_TIMES = 33
+    private const val TX_GET_REMAINING_DISTANCE = 34
+
     private val service = SaicService.byComponent(PACKAGE, CLASS, "nav-guidance")
 
     /**
@@ -80,6 +87,38 @@ object SaicNavGuidance {
      * which is the answer when no guidance is running, and is itself the finding CP-040 needs.
      */
     fun latest(): NavGuidance = state
+
+    /**
+     * The current guidance, read rather than waited for.
+     *
+     * The five callbacks are change notifications: a car standing still with a guidance
+     * already running publishes nothing, because nothing changed. That made a parked capture
+     * unable to tell "the adapter says nothing" from "nothing happened to say", which is the
+     * distinction CP-040 turns on. These getters answer on demand instead.
+     *
+     * Values seen so far by the listener are kept where a getter answers nothing, so a caller
+     * gets the best of both without choosing between them.
+     */
+    fun readNow(): NavGuidance {
+        val target = binder() ?: return state
+        fun int(code: Int) = SaicAidl.callInt(target, DESCRIPTOR, code)
+        // The service initialises these to 0 and answers 0 before any guidance has run, which
+        // is the same answer an arrived route would give. Unknown is the cheaper reading: a
+        // remaining distance of exactly zero is not a case any forecast needs.
+        val distance = int(TX_GET_REMAINING_DISTANCE)?.takeIf { it > 0 }
+        val minutes = int(TX_GET_REMAINING_TIMES)?.takeIf { it > 0 }
+        val status = int(TX_GET_GUIDE_STATUS)
+        val road = SaicAidl.callString(target, DESCRIPTOR, TX_GET_ROAD_NAME)?.takeIf {
+            it.isNotBlank()
+        }
+        val seen = state
+        return seen.copy(
+            guideStatus = status ?: seen.guideStatus,
+            remainingDistanceRaw = distance ?: seen.remainingDistanceRaw,
+            remainingMinutes = minutes ?: seen.remainingMinutes,
+            road = road ?: seen.road,
+        )
+    }
 
     /** Transaction codes seen so far, with counts. See [TransactionCensus]. */
     fun census(): Map<Int, Int> = census.snapshot()
