@@ -87,6 +87,34 @@ object CarPropertyEvidence {
 
     /** Exact generations whose battery-temperature unit and semantics CP-003 has proved. */
     private val batteryTemperatureFirmware: Set<FirmwareInfo.Gen> = emptySet()
+
+    /**
+     * True where CP-003 observed the property declared by the VHAL and never published.
+     *
+     * This is a different answer from "not validated yet", and the difference is what a driver
+     * reads. An unvalidated signal may start working once someone captures it; one the vehicle
+     * never publishes will not, and saying "not yet validated" about it promises something that
+     * is not coming.
+     *
+     * A generation is listed only after repeated captures with no reading at all, never after
+     * a single quiet session.
+     */
+    fun isNeverPublished(signal: Signal, firmware: FirmwareInfo.Gen): Boolean =
+        firmware in neverPublishedByFirmware[signal].orEmpty()
+
+    /**
+     * SWI68: three diagnostic bundles from SWI68-29958-1300R67 on 2026-09-04, 51 samples
+     * between them, zero readings for either signal, and `EV_INSTANTANEOUS_CHARGE_RATE` and
+     * `EV_BATTERY_AVG_TEMP` answering `no CarPropertyValue` on every property probe.
+     *
+     * Consequence worth stating plainly: the CP-030 energy model can never train from battery
+     * power on this generation, because there is no battery power to integrate. An arrival
+     * forecast on this car has to come from state of charge per kilometre instead.
+     */
+    private val neverPublishedByFirmware: Map<Signal, Set<FirmwareInfo.Gen>> = mapOf(
+        Signal.BATTERY_POWER_KW to setOf(FirmwareInfo.Gen.SWI68),
+        Signal.BATTERY_TEMPERATURE_CELSIUS to setOf(FirmwareInfo.Gen.SWI68),
+    )
 }
 
 /**
