@@ -1,5 +1,7 @@
 package com.evsuite.hardware.saic
 
+import com.evsuite.hardware.FirmwareInfo
+
 /**
  * What the head unit's navigation stack last said about the trip in progress.
  *
@@ -31,8 +33,27 @@ data class NavGuidance(
     /** Monotonic time of the last accepted callback, or null before the first one. */
     val updatedAtElapsedMs: Long? = null,
 ) {
+    /**
+     * Remaining distance to the destination in km, when the raw value's unit is known.
+     *
+     * The adapter names no unit. A capture on 2026-09-04, SWI68-29958-1300R67, read 9788
+     * against a remaining time of 25 — and `MapService` logs that second value as
+     * `remainingMinutes`, so 9788 metres is 23,5 km/h to the destination and 9788 kilometres
+     * is not a number about a car. Metres is the only reading that survives.
+     *
+     * One observation, so this is gated per generation like every other unit here: an
+     * unlisted firmware keeps the raw value and no kilometres are claimed. A drive confirms
+     * it by comparing against the odometer span.
+     */
+    fun remainingDistanceKm(generation: FirmwareInfo.Gen): Double? =
+        remainingDistanceRaw
+            ?.takeIf { generation in REPORTS_METRES }
+            ?.let { it / 1000.0 }
     companion object {
         val EMPTY = NavGuidance()
+
+        /** Generations observed to report `getRemainingDistance` in metres. */
+        private val REPORTS_METRES = setOf(FirmwareInfo.Gen.SWI68)
     }
 }
 

@@ -111,3 +111,28 @@ class TransactionCensusTest {
         assertEquals(0, census.beyondCeiling)
     }
 }
+
+class NavGuidanceDistanceUnitTest {
+
+    /** The 2026-09-04 capture: 9788 remaining, 25 minutes, "Rue de la Fontaine". */
+    private val seen = NavGuidance(remainingDistanceRaw = 9788, remainingMinutes = 25)
+
+    @Test fun `a metres generation reports kilometres`() {
+        val km = seen.remainingDistanceKm(com.evsuite.hardware.FirmwareInfo.Gen.SWI68)!!
+        assertEquals(9.788, km, 1e-9)
+        // The reading that makes it metres: 9.788 km in 25 minutes is a plausible town route.
+        assertEquals(23.5, km / (25.0 / 60.0), 0.1)
+    }
+
+    @Test fun `an unlisted generation claims no kilometres at all`() {
+        com.evsuite.hardware.FirmwareInfo.Gen.entries
+            .filterNot { it == com.evsuite.hardware.FirmwareInfo.Gen.SWI68 }
+            .forEach { assertNull("$it", seen.remainingDistanceKm(it)) }
+    }
+
+    @Test fun `no raw distance means no kilometres`() {
+        assertNull(
+            NavGuidance.EMPTY.remainingDistanceKm(com.evsuite.hardware.FirmwareInfo.Gen.SWI68)
+        )
+    }
+}
