@@ -8,6 +8,21 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A consumption model for a car that publishes no battery power — which is this car.**
+  `CarPropertyEvidence` has recorded since 2026-09-04 that SWI68 never publishes battery power:
+  three diagnostic bundles, 51 samples, zero readings. The consequence was that the kWh model
+  could never train on it, and three finished screens stayed blank. `SocConsumptionModel` fits
+  the same shape — rolling plus aero times speed squared plus a thermal term — in **percent of
+  charge per 100 km**, from the state of charge the car does publish and the distance the speed
+  integral already gives. No pack capacity enters it, which matters because the capacity here is
+  a specification sheet rather than a measurement: fitting in percent removes an unmeasured
+  multiplier from every number instead of carrying it. Training points are whole segments of
+  road, accumulated until the charge has moved by two points, because a state of charge read
+  sample by sample is quantisation and a fit built on it would be fitting the quantiser. A hole
+  in the track ends a segment rather than being driven through, a distance recorded under a
+  conversion no longer believed contributes nothing, and a history that has only seen one
+  temperature fits two coefficients instead of inventing a third.
+
 - **The col between here and there costs charge, and the forecast knows it.** CP-031 refused a
   grade source on good grounds — no vehicle signal, no proven barometric reference, and
   power-derived grade is circular — but every candidate it weighed described the road *behind*

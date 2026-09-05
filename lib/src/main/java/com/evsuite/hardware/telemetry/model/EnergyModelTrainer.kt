@@ -40,7 +40,7 @@ class EnergyModelTrainer(
         trips: List<StoredTrip>,
         evidence: BatteryPowerEvidence,
     ): EnergyModelTrainingResult {
-        val equations = NormalEquations()
+        val equations = LeastSquares3()
         var minSpeed = Double.POSITIVE_INFINITY
         var maxSpeed = Double.NEGATIVE_INFINITY
         var minTemp = Double.POSITIVE_INFINITY
@@ -122,61 +122,6 @@ class EnergyModelTrainer(
             }
         }
         return accepted
-    }
-
-    private class NormalEquations {
-        private val matrix = Array(FEATURES) { DoubleArray(FEATURES) }
-        private val vector = DoubleArray(FEATURES)
-
-        fun add(speedKmh: Double, outsideTempCelsius: Double, consumption: Double) {
-            val speedSquared = speedKmh * speedKmh
-            val temperatureOffset = abs(outsideTempCelsius - EnergyModel.COMFORT_TEMP_CELSIUS)
-            for (row in 0 until FEATURES) {
-                val rowValue = feature(row, speedSquared, temperatureOffset)
-                vector[row] += rowValue * consumption
-                for (column in 0 until FEATURES) {
-                    matrix[row][column] += rowValue *
-                        feature(column, speedSquared, temperatureOffset)
-                }
-            }
-        }
-
-        private fun feature(index: Int, speedSquared: Double, temperatureOffset: Double) =
-            when (index) {
-                0 -> 1.0
-                1 -> speedSquared
-                else -> temperatureOffset
-            }
-
-        fun solve(): DoubleArray? {
-            val augmented = Array(FEATURES) { row ->
-                DoubleArray(FEATURES + 1) { column ->
-                    if (column == FEATURES) vector[row] else matrix[row][column]
-                }
-            }
-            for (column in 0 until FEATURES) {
-                val pivot = (column until FEATURES).maxBy { abs(augmented[it][column]) }
-                if (abs(augmented[pivot][column]) < MIN_PIVOT) return null
-                val swap = augmented[column]
-                augmented[column] = augmented[pivot]
-                augmented[pivot] = swap
-                val divisor = augmented[column][column]
-                for (index in column..FEATURES) augmented[column][index] /= divisor
-                for (row in 0 until FEATURES) {
-                    if (row == column) continue
-                    val factor = augmented[row][column]
-                    for (index in column..FEATURES) {
-                        augmented[row][index] -= factor * augmented[column][index]
-                    }
-                }
-            }
-            return DoubleArray(FEATURES) { augmented[it][FEATURES] }
-        }
-
-        companion object {
-            private const val FEATURES = 3
-            private const val MIN_PIVOT = 1e-9
-        }
     }
 
     companion object {

@@ -16,14 +16,26 @@ data class EnergyModelEnvelope(
 ) {
     fun contains(speedKmh: Double, outsideTempCelsius: Double): Boolean =
         speedKmh.isFinite() && outsideTempCelsius.isFinite() &&
-            speedKmh in minSpeedKmh..maxSpeedKmh &&
-            outsideTempCelsius in minOutsideTempCelsius..maxOutsideTempCelsius
+            speedKmh in (minSpeedKmh - EDGE_TOLERANCE)..(maxSpeedKmh + EDGE_TOLERANCE) &&
+            outsideTempCelsius in
+            (minOutsideTempCelsius - EDGE_TOLERANCE)..(maxOutsideTempCelsius + EDGE_TOLERANCE)
 
     internal fun isValid(): Boolean =
         minSpeedKmh.isFinite() && maxSpeedKmh.isFinite() && minSpeedKmh > 0.0 &&
             minSpeedKmh <= maxSpeedKmh &&
             minOutsideTempCelsius.isFinite() && maxOutsideTempCelsius.isFinite() &&
             minOutsideTempCelsius <= maxOutsideTempCelsius
+
+    private companion object {
+        /**
+         * The bounds are means of measured intervals, so an edge lands on 90.000000000000011
+         * rather than on 90. Refusing to predict the very speed the fit was trained on, by a
+         * ten-thousandth of a millionth of a km/h, is a floating-point artifact and not a
+         * statement about what the model knows. A micro-degree and a micro-km/h are nothing
+         * physically; anything wider would be a claim.
+         */
+        const val EDGE_TOLERANCE = 1e-6
+    }
 }
 
 /**
