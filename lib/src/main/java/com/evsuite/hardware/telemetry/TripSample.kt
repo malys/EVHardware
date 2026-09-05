@@ -71,12 +71,21 @@ class TripSampleTrack(
 
     fun samples(): List<TripSample> = samples.toList()
 
-    /** Halves the track in place and doubles the interval, keeping first and last. */
+    /**
+     * Halves the track in place and doubles the interval, keeping first and last.
+     *
+     * The last sample is kept explicitly rather than by parity. Decimation is triggered by the
+     * sample that has just been added, and on an even-sized track that sample sits at an odd
+     * index — taking every second one from the start would throw away the newest moment of the
+     * trip at every doubling, which is the one a model is least able to do without.
+     */
     private fun decimate() {
+        val newest = samples.lastIndex
         var write = 0
         for (read in samples.indices) {
-            if (read % 2 == 0) samples[write++] = samples[read]
+            if (read % 2 == 0 && read != newest) samples[write++] = samples[read]
         }
+        samples[write++] = samples[newest]
         while (samples.size > write) samples.removeAt(samples.size - 1)
         intervalMs *= 2
     }

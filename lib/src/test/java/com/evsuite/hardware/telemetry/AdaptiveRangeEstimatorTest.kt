@@ -26,7 +26,36 @@ class AdaptiveRangeEstimatorTest {
 
         assertEquals(Provenance.ESTIMATED, estimate.provenance)
         assertEquals(200.0, estimate.value!!, 1e-9)
-        assertEquals(0.0, estimate.uncertainty!!, 1e-9)
+        // Trips that happened to agree do not make the model certain: the band falls back to
+        // its floor rather than to zero, which would read as a measurement.
+        assertEquals(20.0, estimate.uncertainty!!, 1e-9)
+    }
+
+    @Test fun `an estimate never claims a band narrower than the model's floor`() {
+        val estimate = estimator.estimate(
+            snapshot(energyKwh = 40f), null,
+            listOf(trip(20.0, 3L), trip(20.0, 2L), trip(20.0, 1L)),
+        )
+
+        assertEquals(
+            estimate.value!! * AdaptiveRangeEstimator.MIN_RELATIVE_UNCERTAINTY,
+            estimate.uncertainty!!,
+            1e-9,
+        )
+        assertTrue(estimate.uncertainty!! > 0.0)
+    }
+
+    @Test fun `a momentarily unreadable power signal does not blank a settled estimate`() {
+        val history = listOf(trip(20.0, 3L), trip(20.0, 2L), trip(20.0, 1L))
+        val withPower = snapshot(energyKwh = 40f)
+        val withoutPower = withPower.copy(batteryPowerKw = null)
+
+        assertEquals(Provenance.ESTIMATED, estimator.estimate(withPower, null, history).provenance)
+        // The capability was established a sample ago and the car has not lost it since; the
+        // estimate depends on stored trips and pack charge, neither of which moved.
+        val next = estimator.estimate(withoutPower, null, history)
+        assertEquals(Provenance.ESTIMATED, next.provenance)
+        assertEquals(200.0, next.value!!, 1e-9)
     }
 
     @Test fun `volatile consumption widens the band without moving the estimate`() {
@@ -74,7 +103,7 @@ class AdaptiveRangeEstimatorTest {
         )
 
         assertEquals(200.0, estimate.value!!, 1e-9)
-        assertEquals(0.0, estimate.uncertainty!!, 1e-9)
+        assertEquals(20.0, estimate.uncertainty!!, 1e-9)
     }
 
     private fun trip(consumption: Double, endedAtMs: Long): EnergyTripSummary {

@@ -6,6 +6,39 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **A momentarily unreadable battery power no longer blanks a settled range estimate.**
+  `AdaptiveRangeEstimator` gated on the live power reading, so one sample the firmware failed to
+  answer erased a figure computed from stored trips and the pack's charge — neither of which had
+  moved. The question the gate asks is "can this firmware measure power at all", and that answer
+  does not change between two polls, so it is latched: a firmware that has never published power
+  still refuses to borrow another firmware's history, and one that published it a second ago is
+  not treated as having lost the ability since.
+
+- **An estimate no longer claims a band of exactly zero.** Eight of one driver's trips that
+  happened to agree produced "266,7 ± 0,0 km", which reads as a measurement — the one thing
+  provenance exists to stop an estimate doing. The spread of a handful of trips is not the error
+  of extrapolating to a whole pack: terrain, load, weather and speed all sit outside the fit. The
+  band now has a floor of ten percent of the estimate.
+
+- **A corrupt trip history no longer multiplies itself.** `EnergyTripHistoryStore.quarantine`
+  copied the unreadable file aside and left the original in place, so the next read failed to
+  parse it again and wrote another copy — one file per read, unbounded, in storage the driver
+  cannot see. The original now goes, by rename or by copy-then-delete, and a copy that itself
+  fails is removed rather than left behind.
+
+- **Ending a drive no longer re-encodes the whole history once per evicted track.** Bounding the
+  file measured every remaining trip again after each step, over as many as two hundred trips of
+  four thousand samples, on the path that closes a trip. The envelope's size is arithmetic —
+  empty envelope, plus each trip, plus one comma between each pair — so eviction now subtracts as
+  it goes and each trip is serialised once.
+
+- **Decimating a track no longer throws away the newest sample.** `TripSampleTrack` halves itself
+  when the sample just added overflows it, and on an even-sized track that sample sits at an odd
+  index: taking every second one from the start discarded the most recent moment of the trip at
+  every doubling. It is now kept explicitly.
+
 ### Added
 
 - **`SaicNav.probeTransaction` — what a navigation transaction replies, recorded rather than

@@ -1,5 +1,6 @@
 package com.evsuite.hardware.telemetry
 
+import kotlin.math.max
 import kotlin.math.sqrt
 
 /**
@@ -13,6 +14,16 @@ class AdaptiveRangeEstimator(
     private val maxConsumptionSamples: Int = MAX_CONSUMPTION_SAMPLES,
     private val minimumConsumptionSamples: Int = MINIMUM_CONSUMPTION_SAMPLES,
 ) {
+    /**
+     * Whether this vehicle has ever published battery power to this instance.
+     *
+     * The capability question is "can this firmware measure power at all", and the answer does
+     * not change between two polls. Asking the live reading instead made a single unreadable
+     * sample blank an estimate computed from stored trips and the pack's charge — neither of
+     * which had moved — so the figure flickered for a reason that had nothing to do with it.
+     */
+    private var powerEverPublished = false
+
     init {
         require(minimumConsumptionSamples >= 2) { "at least two samples are needed for spread" }
         require(maxConsumptionSamples >= minimumConsumptionSamples) {
@@ -23,8 +34,9 @@ class AdaptiveRangeEstimator(
     /**
      * Estimates remaining range without replacing [EnergySnapshot.rangeKm].
      *
-     * A current power reading is the capability gate. A firmware that cannot publish battery
-     * power must never reuse another firmware's stored history to claim an adaptive range.
+     * Battery power is the capability gate, latched rather than sampled: a firmware that has
+     * never published it must not reuse another firmware's stored history to claim an adaptive
+     * range, but one that published it a second ago has not lost the ability since.
      */
     fun estimate(
         snapshot: EnergySnapshot,
@@ -32,9 +44,8 @@ class AdaptiveRangeEstimator(
         recentTrips: List<EnergyTripSummary>,
         missingReason: UnavailableReason = UnavailableReason.SIGNAL_ABSENT,
     ): Provenanced<Double> {
-        if (snapshot.batteryPowerKw?.isFinite() != true) {
-            return Provenanced.unavailable(missingReason)
-        }
+        if (snapshot.batteryPowerKw?.isFinite() == true) powerEverPublished = true
+        if (!powerEverPublished) return Provenanced.unavailable(missingReason)
 
         val samples = consumptionSamples(currentTrip, recentTrips)
         if (samples.size < minimumConsumptionSamples) {
@@ -55,8 +66,13 @@ class AdaptiveRangeEstimator(
             delta * delta
         } / (samples.size - 1).toDouble()
         val consumptionSpread = sqrt(variance)
-        val rangeUncertaintyKm = estimatedKm * consumptionSpread / meanConsumption
-        if (!rangeUncertaintyKm.isFinite()) return Provenanced.unavailable(missingReason)
+        val observedBandKm = estimatedKm * consumptionSpread / meanConsumption
+        if (!observedBandKm.isFinite()) return Provenanced.unavailable(missingReason)
+        // A floor, because the spread of at most eight of one driver's trips is not the model's
+        // error. Trips that happened to agree produce a band of exactly zero, and "266.7 ± 0.0
+        // km" reads as a measurement — the one thing Provenance exists to stop an estimate
+        // doing. The floor is what the model cannot claim to know better than.
+        val rangeUncertaintyKm = max(observedBandKm, estimatedKm * MIN_RELATIVE_UNCERTAINTY)
         return Provenanced.estimated(estimatedKm, rangeUncertaintyKm)
     }
 
@@ -95,5 +111,14 @@ class AdaptiveRangeEstimator(
 
         /** Three observations permit a centre and a non-degenerate observed spread. */
         const val MINIMUM_CONSUMPTION_SAMPLES = 3
+
+        /**
+         * The narrowest band this model is allowed to claim, as a fraction of the estimate.
+         *
+         * Eight trips of one driver do not measure the error of extrapolating to a whole pack:
+         * terrain, load, weather and speed all sit outside the fit. Ten percent is the width
+         * below which the figure would invite more trust than the method can carry.
+         */
+        const val MIN_RELATIVE_UNCERTAINTY = 0.10
     }
 }

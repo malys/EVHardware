@@ -105,31 +105,62 @@ class EnergyTripHistoryStore(
         val trips: List<StoredTrip>? = null,
     )
 
-    /** The unreadable file keeps its contents under a new name; the history starts again. */
+    /**
+     * The unreadable file keeps its contents under a new name; the history starts again.
+     *
+     * The original has to go, by rename or by copy-then-delete. Leaving it in place made every
+     * later read fail to parse it again and write another quarantine copy — one file per read,
+     * without a bound, in storage the driver cannot see. When even the copy fails the partial
+     * is removed rather than left behind: nothing was preserved, so nothing should accumulate.
+     */
     private fun quarantine() {
         val kept = File(target.parentFile, "${target.name}.quarantine.${System.currentTimeMillis()}")
-        if (!target.renameTo(kept)) {
-            runCatching { target.copyTo(kept, overwrite = true) }
-        }
+        if (target.renameTo(kept)) return
+        if (runCatching { target.copyTo(kept, overwrite = true) }.isSuccess) target.delete()
+        else kept.delete()
     }
 
+    /**
+     * Applies the three bounds, costing one serialisation per trip rather than one per step.
+     *
+     * The envelope is `{...,"trips":[t1,t2,...]}`, so its size is the empty envelope plus every
+     * trip's own JSON plus one comma between each pair. Keeping that arithmetic lets eviction
+     * subtract as it goes. Measuring the whole file again after every dropped track re-encoded
+     * a graph of up to two hundred trips and four thousand samples each, once per step, on the
+     * path that ends a drive.
+     */
     private fun bound(trips: List<StoredTrip>): List<StoredTrip> {
-        var candidate = trips.take(maxTrips.coerceAtLeast(1))
+        val candidate = trips.take(maxTrips.coerceAtLeast(1)).toMutableList()
+        val sizes = candidate.mapTo(ArrayList()) { sizeOf(it) }
+        var total = totalOf(sizes)
+
         // Tracks first: a trip without its track is still a trip, a missing trip is not.
-        while (sizeOf(candidate) > maxBytes && candidate.any { it.samples != null }) {
+        while (total > maxBytes) {
             val oldest = candidate.indexOfLast { it.samples != null }
-            candidate = candidate.toMutableList().also {
-                it[oldest] = it[oldest].copy(samples = null)
-            }
+            if (oldest < 0) break
+            val stripped = candidate[oldest].copy(samples = null)
+            candidate[oldest] = stripped
+            sizes[oldest] = sizeOf(stripped)
+            total = totalOf(sizes)
         }
-        while (sizeOf(candidate) > maxBytes && candidate.size > 1) {
-            candidate = candidate.dropLast(1)
+        while (total > maxBytes && candidate.size > 1) {
+            candidate.removeAt(candidate.lastIndex)
+            sizes.removeAt(sizes.lastIndex)
+            total = totalOf(sizes)
         }
         return candidate
     }
 
-    private fun sizeOf(trips: List<StoredTrip>): Int =
-        gson.toJson(TripHistoryFile(trips = trips)).toByteArray(Charsets.UTF_8).size
+    /** Empty envelope, plus every trip, plus the comma between each pair. */
+    private fun totalOf(sizes: List<Int>): Int =
+        emptyEnvelopeBytes + sizes.sum() + (sizes.size - 1).coerceAtLeast(0)
+
+    private val emptyEnvelopeBytes: Int by lazy {
+        gson.toJson(TripHistoryFile(trips = emptyList())).toByteArray(Charsets.UTF_8).size
+    }
+
+    private fun sizeOf(trip: StoredTrip): Int =
+        gson.toJson(trip).toByteArray(Charsets.UTF_8).size
 
     private fun write(file: TripHistoryFile): Boolean {
         val bytes = gson.toJson(file).toByteArray(Charsets.UTF_8)
