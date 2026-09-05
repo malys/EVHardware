@@ -37,15 +37,37 @@ class PlanDriftTest {
     }
 
     @Test
-    fun `spending twice the band past the plan, and short of the reserve, drifts`() {
-        // 0,26 %/km: 0,06 past the plan, about twice the two bands added. Arrival lands at 4 %.
-        val verdict = PlanDrift.check(plan, drivenKm = 100.0, socNowPercent = socAfter(100.0, 0.26))
+    fun `spending well past the plan, and short of the reserve, drifts`() {
+        // 0,30 %/km: half again what the plan assumed, so the arrival lands on empty.
+        val verdict = PlanDrift.check(plan, drivenKm = 100.0, socNowPercent = socAfter(100.0, 0.30))
         val short = verdict as PlanDrift.Verdict.Short
-        assertEquals(0.26, short.reading.observedPercentPerKm, 1e-9)
-        assertEquals(12.0, short.reading.arrivalPercent, 1e-9)
+        assertEquals(0.30, short.reading.observedPercentPerKm, 1e-9)
+        assertEquals(0.0, short.reading.arrivalPercent, 1e-9)
         assertTrue(short.shortfallPercent > 0.0)
-        // The shortfall is measured at the pessimistic edge, so it is wider than 10 − 12.
-        assertEquals(plan.reservePercent - (12.0 - short.reading.bandPercent), short.shortfallPercent, 1e-9)
+        // The shortfall is measured at the pessimistic edge, so it is wider than 10 − 0.
+        assertEquals(
+            plan.reservePercent - (0.0 - short.reading.bandPercent),
+            short.shortfallPercent,
+            1e-9,
+        )
+    }
+
+    /**
+     * The gauge steps a tenth, not a whole percent, and that is the difference between a companion
+     * that speaks here and one that does not. At 0,26 %/km the arrival lands at 12 % against a
+     * 10 % reserve; the measurement's own band on that arrival is 0,72 points, so the reserve is
+     * still clear and there is nothing to say. A whole-percent gauge would have made the band 2,5
+     * points, crossed the reserve on quantisation alone, and raised a line the drive never earned.
+     */
+    @Test
+    fun `an arrival two points above the reserve is not short at a tenth-percent gauge`() {
+        val verdict = PlanDrift.check(plan, drivenKm = 100.0, socNowPercent = socAfter(100.0, 0.26))
+        val holding = verdict as PlanDrift.Verdict.Holding
+        assertEquals(12.0, holding.reading.arrivalPercent, 1e-9)
+        assertTrue(
+            holding.reading.bandPercent.toString(),
+            holding.reading.bandPercent < 1.0,
+        )
     }
 
     @Test
@@ -80,13 +102,14 @@ class PlanDriftTest {
     }
 
     @Test
-    fun `a charge en route is refused, a descent of one point is not`() {
+    fun `a charge en route is refused, a col's worth of regeneration is not`() {
+        // 97 % after leaving at 90 %: seven points back is more than a descent gives.
         assertEquals(
             PlanDrift.Verdict.Unavailable(PlanDrift.Reason.CHARGED_EN_ROUTE),
-            PlanDrift.check(plan, drivenKm = 100.0, socNowPercent = 95.0),
+            PlanDrift.check(plan, drivenKm = 100.0, socNowPercent = 97.0),
         )
-        // 91 % after 100 km: one point above departure, which is the gauge's own step.
-        val recovered = PlanDrift.check(plan, drivenKm = 100.0, socNowPercent = 91.0)
+        // 94 % after 100 km: four points above departure, which a long descent can give back.
+        val recovered = PlanDrift.check(plan, drivenKm = 100.0, socNowPercent = 94.0)
         val holding = recovered as PlanDrift.Verdict.Holding
         assertEquals(0.0, holding.reading.observedPercentPerKm, 1e-9)
     }

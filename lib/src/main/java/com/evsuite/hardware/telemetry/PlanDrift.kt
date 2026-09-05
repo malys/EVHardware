@@ -14,8 +14,8 @@ package com.evsuite.hardware.telemetry
  * somewhere else.
  *
  * **The alarm sits outside the model's own band, never on a point.** The rate a drive is actually
- * spending is measured through two quantised instruments — a gauge that steps a whole percent and
- * an odometer that answers whole kilometres — so it arrives with a band of its own, and the plan
+ * spending is measured through two quantised instruments — a gauge that steps a tenth of a
+ * percent and an odometer that answers whole kilometres — so it arrives with a band of its own, and the plan
  * arrived with one too. Drift is the two bands failing to overlap. Anything narrower would fire on
  * a hill.
  *
@@ -29,13 +29,34 @@ object PlanDrift {
     /**
      * Below this the instruments' own steps dominate whatever they measured.
      *
-     * At 15 km a whole percent of gauge is already 0,07 %/km of band — about a third of what this
-     * car spends — and under it the measurement says less than the plan it would be contradicting.
+     * The odometer sets this, not the gauge: at 15 km its whole kilometre is already 0,015 %/km
+     * of band at this car's rate, and under that the measurement says less than the plan it would
+     * be contradicting.
      */
     const val MIN_DISTANCE_KM = 15.0
 
-    /** The finest step the charge gauge publishes. Two readings differ by at most this. */
-    const val SOC_RESOLUTION_PERCENT = 1.0
+    /**
+     * The finest step the charge gauge publishes. Two readings differ by at most this.
+     *
+     * Measured, not assumed: the 2026-09-05 drive on SWI68 recorded 457 samples stepping between
+     * 53,9 % and 52,9 % in tenths, refreshed every 25 s or so. A whole percent — the figure this
+     * started with — would have widened every band tenfold and made the companion deaf.
+     */
+    const val SOC_RESOLUTION_PERCENT = 0.1
+
+    /**
+     * A rise past this is a charging session rather than a long descent.
+     *
+     * Deliberately not [SOC_RESOLUTION_PERCENT]: quantisation and regeneration are different
+     * quantities, and sharing one constant would make every descent look like a charge. Regen down
+     * a col gives back single-figure percent on this pack; the shortest plausible plug-in gives
+     * back far more, so anything between the two separates them.
+     *
+     * Wrong low, a long descent silences the line until the gauge falls back under the departure
+     * figure. Wrong high, a real mid-drive charge leaves the departure figure anchoring nothing.
+     * The first failure is quiet and the second is not, which is why this sits nearer the descent.
+     */
+    const val MAX_REGEN_RECOVERY_PERCENT = 5.0
 
     /** The adapter's odometer answers whole kilometres, so a difference of them carries one. */
     const val ODOMETER_RESOLUTION_KM = 1.0
@@ -131,10 +152,12 @@ object PlanDrift {
         if (drivenKm < MIN_DISTANCE_KM) return Verdict.Unavailable(Reason.TOO_SOON)
 
         val spent = plan.socAtDeparturePercent - socNowPercent
-        // A gauge that rose by a point down a long descent is a gauge, not a charging session.
-        // Anything past its own step means the car was plugged in and the departure figure
-        // stopped anchoring anything.
-        if (spent < -SOC_RESOLUTION_PERCENT) return Verdict.Unavailable(Reason.CHARGED_EN_ROUTE)
+        // A gauge that rose down a long descent is regeneration, not a charging session. Only a
+        // rise bigger than a descent can give back means the car was plugged in and the departure
+        // figure stopped anchoring anything.
+        if (spent < -MAX_REGEN_RECOVERY_PERCENT) {
+            return Verdict.Unavailable(Reason.CHARGED_EN_ROUTE)
+        }
 
         val remaining = remainingKm?.takeIf { it.isFinite() } ?: (plan.legKm - drivenKm)
         if (remaining <= 0.0) return Verdict.Unavailable(Reason.ARRIVED)

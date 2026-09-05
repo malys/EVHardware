@@ -6,6 +6,19 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **`PlanDrift` now measures the charge gauge at a tenth of a percent, not a whole one.** The
+  2026-09-05 drive on SWI68 recorded 457 samples stepping between 53,9 % and 52,9 % in tenths and
+  refreshing every 25 s or so, which is ten times finer than the figure the arithmetic started
+  with. Every band it derives narrows by the same ten, and the odometer's whole kilometre — not
+  the gauge — is now what sets `MIN_DISTANCE_KM`. An arrival two points above the reserve no
+  longer reads as short on quantisation alone.
+- **A charge en route is separated from regeneration.** The guard used to reuse the gauge's own
+  step, so any rise above the departure figure looked like a plug-in. It now has its own
+  `MAX_REGEN_RECOVERY_PERCENT`: a col's worth of regen is not a charging session, and the
+  shortest plausible plug-in gives back far more than a descent can.
+
 ### Added
 
 - **`PlanDrift` — whether the plan the driver chose is still the plan they are driving.** Charge
