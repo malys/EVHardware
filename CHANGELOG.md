@@ -8,6 +8,19 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **`PlanDrift` — whether the plan the driver chose is still the plan they are driving.** Charge
+  and the odometer are already read once a second and the plan was written down when it was
+  picked, so noticing that a trip has stopped matching it is a division: no request, no quota, no
+  network. The alarm is deliberately hard to trip. It fires only when the rate actually being
+  spent has left the band the plan admitted to *and* the arrival no longer clears the reserve,
+  because a driver going faster than the row they chose and still arriving at 30 % does not need
+  telling, and a companion that speaks then is one nobody reads when it matters. Both instruments
+  quantise — a gauge that steps a whole percent, an odometer that answers whole kilometres — so
+  the measurement carries its own band, which is also why it refuses under 15 km of road.
+- `ChargeStopPlan.effectiveRate` is public. It was the private fold of the climb into the rate;
+  `PlanDrift` has to compare a drive against the rate the plan was *actually* made with, and a
+  second copy of that arithmetic would have drifted away from the one that planned.
+
 - **`NavigationHandoff` — the first write this library builds towards the car.** Everything else
   here reads. This composes a `geo:` URI so a route the driver has chosen can be handed to the
   car's own navigation instead of retyped, and it is separated from the sending because the

@@ -75,7 +75,7 @@ object ChargeStopPlan {
         }
         if (rate == null || rate.percentPerKm <= 0.0) return Plan.Refused(Reason.NO_RATE)
 
-        val effective = withGrade(rate, routeKm, grade)
+        val effective = effectiveRate(rate, routeKm, grade)
         val band = 2.0 * effective.uncertaintyPercentPerKm * routeKm
         if (band > MAX_BAND_PERCENT) return Plan.Refused(Reason.BAND_TOO_WIDE)
 
@@ -114,8 +114,11 @@ object ChargeStopPlan {
      * slightly early and one after an early col slightly late. Early is the safe direction and
      * the error is small next to the rate's own band; the upgrade, when a route needs it, is a
      * per-segment profile rather than two cumulative numbers.
+     *
+     * Public because [PlanDrift] has to compare a drive against the rate the plan was actually
+     * made with, and a second copy of this fold would drift away from the one that planned.
      */
-    private fun withGrade(rate: SocRate, routeKm: Double, grade: RouteGrade.Cost?): SocRate {
+    fun effectiveRate(rate: SocRate, routeKm: Double, grade: RouteGrade.Cost?): SocRate {
         if (grade == null) return rate
         return rate.copy(
             // Floored, not clamped away: a descent long enough to make the net rate negative
