@@ -46,4 +46,44 @@ object SaicNav {
      */
     fun totalMileageKm(): Int? =
         SaicAidl.callInt(binder(), DESCRIPTOR, TX_GET_TOTAL_MILEAGE)?.takeIf { it > 0 }
+
+    /**
+     * The two transactions CP-040 saw declared on this interface and never called.
+     *
+     * They are the candidates for "where is the driver already going", which would remove the
+     * typed address, the keyboard and a geocoding request from the charge-stop screen.
+     */
+    val DESTINATION_TRANSACTIONS = listOf(38, 39)
+
+    /**
+     * What a transaction actually replies, recorded rather than interpreted.
+     *
+     * CP-051 exists because the transaction numbers are known and the answer is not. Reading
+     * the reply as a typed value would be guessing the shape; a latitude read as a longitude
+     * routes to the wrong continent and looks like an ordinary number while doing it. So this
+     * returns the bytes, and a session at a desk decides what they mean.
+     *
+     * **The reply may contain the destination that is set in the car's navigation.** That is
+     * the point of the probe, and it is why the artifact carrying this says so — the file
+     * leaves the car on a USB stick.
+     *
+     * @return one line, always: unbound, unanswered, or the payload in hex.
+     */
+    fun probeTransaction(code: Int, maxBytes: Int = MAX_PROBE_BYTES): String {
+        val target = binder() ?: return "tx=$code unbound"
+        return SaicAidl.callParcel(target, DESCRIPTOR, code) { reply ->
+            val start = reply.dataPosition()
+            val available = reply.dataAvail()
+            val hex = runCatching {
+                reply.marshall()
+                    .drop(start)
+                    .take(maxBytes)
+                    .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
+            }.getOrElse { "unmarshallable(${it.javaClass.simpleName})" }
+            "tx=$code answered bytes=$available hex=$hex"
+        } ?: "tx=$code no answer"
+    }
+
+    /** Enough for a coordinate pair, a name and their headers; not enough to be a log dump. */
+    private const val MAX_PROBE_BYTES = 128
 }

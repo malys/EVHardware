@@ -8,6 +8,16 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **`SaicNav.probeTransaction` — what a navigation transaction replies, recorded rather than
+  interpreted.** CP-040 saw transactions 38 and 39 declared on `IMapService` and never called
+  them; CP-051 wants to know whether they carry the destination the driver has already entered
+  in the car's own navigation, because that destination costs no keyboard and no geocoding
+  request. The probe returns the reply's bytes and its length, and refuses to read them as a
+  typed value: a latitude read as a longitude routes to the wrong continent while looking like
+  an ordinary number. Read-only, capped at 128 bytes, and it answers "unbound" or "no answer"
+  as plainly as it answers with a payload. Called only by the unstable channel's validation
+  probe (CP-055).
+
 - **A consumption model for a car that publishes no battery power — which is this car.**
   `CarPropertyEvidence` has recorded since 2026-09-04 that SWI68 never publishes battery power:
   three diagnostic bundles, 51 samples, zero readings. The consequence was that the kWh model
