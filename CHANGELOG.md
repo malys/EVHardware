@@ -6,6 +6,20 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- **`NavigationHandoff` — the first write this library builds towards the car.** Everything else
+  here reads. This composes a `geo:` URI so a route the driver has chosen can be handed to the
+  car's own navigation instead of retyped, and it is separated from the sending because the
+  format is the part that can be wrong and the part a JVM test can settle without a head unit.
+  It refuses coordinates that are not a place on Earth — latitude and longitude are two doubles
+  of the same type and a swap routes to the wrong continent while looking like an ordinary
+  number — and it formats in `Locale.ROOT`, because a head unit set to French writes 43.5 as
+  `43,5` and a comma is a field separator in this URI. A label from a geocoder or a charger
+  dataset is reduced to letters, digits, spaces and hyphens: it is text this project did not
+  write, and a parenthesis in it would end the label early. `geo:` carries one point and no
+  waypoints, which is a limit the caller has to show the driver rather than paper over.
+
 ### Fixed
 
 - **A momentarily unreadable battery power no longer blanks a settled range estimate.**
