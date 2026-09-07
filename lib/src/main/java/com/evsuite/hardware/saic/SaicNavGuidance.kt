@@ -126,6 +126,9 @@ object SaicNavGuidance {
     /** Codes the census could not index. Non-zero means the interface is not the one expected. */
     fun censusBeyondCeiling(): Int = census.beyondCeiling
 
+    /** The last parcel size seen on each code. See [TransactionCensus.payloadBytes]. */
+    fun censusPayloadBytes(): Map<Int, Int> = census.payloadBytes()
+
     /**
      * Starts listening. Idempotent.
      *
@@ -165,7 +168,10 @@ object SaicNavGuidance {
      */
     private val listener = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-            census.record(code)
+            // The size before anything is read: `dataPosition` is zero here, so this is the whole
+            // parcel. Recorded for every code, decoded or not — the undecoded ones are exactly
+            // the ones whose shape nobody knows.
+            census.record(code, runCatching { data.dataSize() }.getOrDefault(-1))
             if (code !in NavGuidanceReducer.KNOWN_TRANSACTIONS) {
                 reply?.writeNoException()
                 return true

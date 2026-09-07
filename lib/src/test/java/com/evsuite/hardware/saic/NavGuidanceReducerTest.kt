@@ -104,11 +104,27 @@ class TransactionCensusTest {
 
     @Test fun `clearing forgets the previous capture`() {
         val census = TransactionCensus()
-        census.record(13)
+        census.record(13, payloadBytes = 48)
         census.record(999)
         census.clear()
         assertEquals(emptyMap<Int, Int>(), census.snapshot())
+        assertEquals(emptyMap<Int, Int>(), census.payloadBytes())
         assertEquals(0, census.beyondCeiling)
+    }
+
+    /**
+     * The 2026-09-07 capture read a remaining distance of zero while guidance was running, and
+     * nothing in it could say whether the car meant zero or this build read the wrong shape. The
+     * size does say: a parcel of one int is the descriptor plus four bytes.
+     */
+    @Test fun `the last parcel size is kept per code, and an unmeasured code has none`() {
+        val census = TransactionCensus()
+        census.record(13, payloadBytes = 48)
+        census.record(13, payloadBytes = 96)
+        census.record(11, payloadBytes = 0)
+        census.record(12)
+        assertEquals(mapOf(11 to 0, 13 to 96), census.payloadBytes())
+        assertEquals(mapOf(11 to 1, 12 to 1, 13 to 2), census.snapshot())
     }
 }
 

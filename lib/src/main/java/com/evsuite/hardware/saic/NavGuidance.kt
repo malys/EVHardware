@@ -132,27 +132,52 @@ class TransactionCensus(private val ceiling: Int = DEFAULT_CEILING) {
 
     private val counts = IntArray(ceiling)
 
+    /**
+     * The size of the last parcel seen on each code, or -1 for a code never seen.
+     *
+     * A count says a code exists; a size says whether this build reads it correctly. The
+     * 2026-09-07 capture is why: with guidance running, code 13 decoded as a remaining distance
+     * of zero, and nothing in the artifact could tell a genuine zero from a payload of the wrong
+     * shape read as an int. A parcel carrying one int is the descriptor plus four bytes, and
+     * anything larger settles it without decoding a single field.
+     *
+     * A byte count is not a place. This is the whole reason it can be exported.
+     */
+    private val lastBytes = IntArray(ceiling) { UNSEEN }
+
     /** Codes at or above [ceiling]. Kept separate rather than growing the array. */
     @Volatile
     var beyondCeiling: Int = 0
         private set
 
-    fun record(code: Int) {
-        if (code in 0 until ceiling) counts[code]++ else beyondCeiling++
+    fun record(code: Int, payloadBytes: Int = UNSEEN) {
+        if (code !in 0 until ceiling) {
+            beyondCeiling++
+            return
+        }
+        counts[code]++
+        if (payloadBytes >= 0) lastBytes[code] = payloadBytes
     }
 
     /** Codes seen at least once, with their counts. Allocates — for reporting, not the hot path. */
     fun snapshot(): Map<Int, Int> =
         counts.indices.filter { counts[it] > 0 }.associateWith { counts[it] }
 
+    /** The same codes, with the size of the last parcel each carried. Absent when never measured. */
+    fun payloadBytes(): Map<Int, Int> =
+        lastBytes.indices.filter { lastBytes[it] >= 0 }.associateWith { lastBytes[it] }
+
     fun clear() {
         counts.fill(0)
+        lastBytes.fill(UNSEEN)
         beyondCeiling = 0
     }
 
     private companion object {
         /** `IGeneralNotificationListener` declares well under this many methods on R69. */
         const val DEFAULT_CEILING = 128
+
+        const val UNSEEN = -1
     }
 }
 

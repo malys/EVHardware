@@ -6,6 +6,16 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- **The guidance census records the size of the last parcel on each transaction code.** The
+  2026-09-07 capture is why: with guidance running on the car's own navigation, code 13 decoded
+  as a remaining distance of zero and code 12 as a remaining time of zero, while an undecoded
+  code 11 carried 98 callbacks in the same window. Nothing in the artifact could tell a genuine
+  zero from a payload of a shape this build reads as an int. A parcel of one int is the
+  descriptor plus four bytes; a larger one settles it without decoding a field, and a byte count
+  is not a place, which is why it can travel on the stick.
+
 ### Changed
 
 - **`PlanDrift` now measures the charge gauge at a tenth of a percent, not a whole one.** The
