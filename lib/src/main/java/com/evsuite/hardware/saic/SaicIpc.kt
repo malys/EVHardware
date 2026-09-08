@@ -149,7 +149,24 @@ object SaicAidl {
         descriptor: String,
         code: Int,
         readReply: (Parcel) -> T,
-    ): T? = transact(binder, descriptor, code, emptyArray(), readReply)
+    ): T? = transact(binder, descriptor, code, {}, readReply)
+
+    /**
+     * For the arguments a vararg cannot carry: a typed list of a vendor bean, which has to be
+     * written field by field in the order that bean's own `writeToParcel` reads them.
+     *
+     * The mirror image of [callParcel] and the same liability, confined the same way: the
+     * caller owns the layout, a mismatch throws inside [transact], and the call reads as
+     * unanswered rather than as a half-written argument the service tries to interpret.
+     *
+     * @return true when the call reached the service and it did not throw.
+     */
+    fun callWriting(
+        binder: IBinder?,
+        descriptor: String,
+        code: Int,
+        writeData: (Parcel) -> Unit,
+    ): Boolean = transact(binder, descriptor, code, writeData) { true } ?: false
 
     private fun <T> transact(
         binder: IBinder?,
@@ -157,24 +174,34 @@ object SaicAidl {
         code: Int,
         args: Array<out Any?>,
         readReply: (Parcel) -> T,
+    ): T? = transact(binder, descriptor, code, { data ->
+        args.forEach { arg ->
+            when (arg) {
+                is Int -> data.writeInt(arg)
+                is Boolean -> data.writeInt(if (arg) 1 else 0)
+                is Float -> data.writeFloat(arg)
+                is String -> data.writeString(arg)
+                is Double -> data.writeDouble(arg)
+                // A callback binder, for the one service here that answers asynchronously.
+                is IBinder -> data.writeStrongBinder(arg)
+                else -> error("unsupported AIDL argument: $arg")
+            }
+        }
+    }, readReply)
+
+    private fun <T> transact(
+        binder: IBinder?,
+        descriptor: String,
+        code: Int,
+        writeData: (Parcel) -> Unit,
+        readReply: (Parcel) -> T,
     ): T? {
         val target = binder ?: return null
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         return try {
             data.writeInterfaceToken(descriptor)
-            args.forEach { arg ->
-                when (arg) {
-                    is Int -> data.writeInt(arg)
-                    is Boolean -> data.writeInt(if (arg) 1 else 0)
-                    is Float -> data.writeFloat(arg)
-                    is String -> data.writeString(arg)
-                    is Double -> data.writeDouble(arg)
-                    // A callback binder, for the one service here that answers asynchronously.
-                    is IBinder -> data.writeStrongBinder(arg)
-                    else -> error("unsupported AIDL argument: $arg")
-                }
-            }
+            writeData(data)
             if (!target.transact(code, data, reply, 0)) {
                 AppLogger.d(TAG, "$descriptor#$code: transact returned false")
                 return null

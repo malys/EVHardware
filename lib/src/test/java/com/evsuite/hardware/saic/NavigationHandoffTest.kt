@@ -70,4 +70,40 @@ class NavigationHandoffTest {
         assertEquals("geo:-90.000000,-180.000000?q=-90.000000,-180.000000", NavigationHandoff.geoUri(-90.0, -180.0))
         assertEquals("geo:0.000000,0.000000?q=0.000000,0.000000", NavigationHandoff.geoUri(0.0, 0.0))
     }
+
+    @Test fun `a point keeps its name as the driver reads it, not as a uri would`() {
+        // The URI form replaces the parenthesis and escapes the space; the adapter form is a
+        // parcel field and must not, or the map shows a name nobody wrote.
+        assertEquals(
+            NavigationHandoff.Poi(43.343, 3.215, "Ionity Beziers Est (A75)"),
+            NavigationHandoff.poi(43.343, 3.215, "Ionity Beziers Est (A75)"),
+        )
+    }
+
+    @Test fun `a name that is only whitespace falls back to the point itself`() {
+        assertEquals("43.343000,3.215000", NavigationHandoff.poi(43.343, 3.215, "   ")?.name)
+        assertEquals("43.343000,3.215000", NavigationHandoff.poi(43.343, 3.215)?.name)
+    }
+
+    @Test fun `control characters and doubled spaces cannot travel in a name`() {
+        assertEquals("A B", NavigationHandoff.poi(43.0, 3.0, "A\u0000 \n B")?.name)
+    }
+
+    @Test fun `a point that is not on Earth is refused, exactly as the uri form refuses it`() {
+        assertNull(NavigationHandoff.poi(91.0, 3.0, "north of the pole"))
+        assertNull(NavigationHandoff.poi(43.0, 181.0, "past the date line"))
+        assertNull(NavigationHandoff.poi(Double.NaN, 3.0, "nowhere"))
+    }
+
+    @Test fun `a name longer than a label is cut before it becomes a payload`() {
+        val long = "x".repeat(200)
+        assertEquals(48, NavigationHandoff.poi(43.0, 3.0, long)?.name?.length)
+    }
+
+    @Test fun `the pathway is capped rather than refused`() {
+        val stops = List(20) { NavigationHandoff.Poi(43.0, 3.0, "stop $it") }
+        assertEquals(NavigationHandoff.MAX_PATHWAY_POINTS, NavigationHandoff.pathway(stops).size)
+        // The cap keeps the first stops: a plan is in the order it is driven.
+        assertEquals("stop 0", NavigationHandoff.pathway(stops).first().name)
+    }
 }

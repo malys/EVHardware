@@ -15,6 +15,10 @@ import com.evsuite.hardware.AppLogger
  * registered. This is that registration, and it is the only read-only route source found on
  * the vehicle that costs no Android permission and no network.
  *
+ * It is also, since the owner scoped the read-only rule to the car's driving and safety
+ * settings, where a route goes *out* to the navigation app: [startNavFromEvRoute] is the one
+ * call in this object that sends. Everything else here listens or asks.
+ *
  * **The service does not wait politely.** `IGeneralNotificationListener` is not `oneway` —
  * the proxy calls `transact(code, data, reply, 0)` and then `readException()`, and the
  * adapter fans out to every listener while holding the lock on its callback list. A slow
@@ -50,6 +54,9 @@ object SaicNavGuidance {
     private const val TX_GET_GUIDE_STATUS = 31
     private const val TX_GET_REMAINING_TIMES = 33
     private const val TX_GET_REMAINING_DISTANCE = 34
+
+    // The one transaction here that sends rather than asks. See [startNavFromEvRoute].
+    private const val TX_START_NAV_FROM_EV_ROUTE = 48
 
     private val service = SaicService.byComponent(PACKAGE, CLASS, "nav-guidance")
 
@@ -118,6 +125,63 @@ object SaicNavGuidance {
             remainingMinutes = minutes ?: seen.remainingMinutes,
             road = road ?: seen.road,
         )
+    }
+
+    /**
+     * Hands a planned route to whichever navigation app this head unit runs.
+     *
+     * **The one write in this object, and it is not a vehicle write.** `VehicleWriteGate` exists
+     * for the settings that change how the car behaves under the driver — AEB, ELK, ACC/TJA, the
+     * drive mode — and gates them on standstill. A destination is not one of those any more than
+     * the comfort writes that gate already exempts: it moves a map, and the driver asked for it.
+     *
+     * **It is a call in, not an impersonation.** `IMapNotificationListener` is the channel the
+     * head unit uses to *command* the navigation app, and registering on it to send one
+     * destination would mean claiming to be a navigation provider. This is the other end of the
+     * same wire: `IGeneralService` transaction 48 hands the points to `GeneralService`, which
+     * forwards to `MapService`, which fans them out over its `RemoteCallbackList` to the app
+     * that did register. The navigation app stays the navigation app.
+     *
+     * **What leaves the car.** Two lists of latitude, longitude and name — the pathway, then the
+     * destination — and nothing else; `EVRoutPoiInfo` has no other field. They do not leave the
+     * *car*, in fact: this is one binder transaction to a service on the same head unit.
+     * **The adapter logs them.** `MapService.startNavFromEVRout` writes the whole of both lists
+     * to the head unit's own logcat before fanning out. That is the vendor's log, not this
+     * app's, and it is the one place a destination appears in text — worth knowing, not worth
+     * refusing a working handoff over.
+     *
+     * **Call it off the main thread.** The transaction is not `oneway`, and the service fans out
+     * to every registered listener, synchronously, while holding the lock on its callback list.
+     *
+     * @param destination where the driver is going.
+     * @param pathway points to pass through on the way — the charging stop, in this app's case.
+     *   Capped by [NavigationHandoff.pathway] before it gets here.
+     * @return true when the adapter took the call. It does not mean the map drew a route: the
+     *   fan-out swallows whatever the navigation app throws, so a listener that refused the
+     *   points is indistinguishable from one that followed them. Only the driver can say.
+     */
+    fun startNavFromEvRoute(
+        destination: NavigationHandoff.Poi,
+        pathway: List<NavigationHandoff.Poi> = emptyList(),
+    ): Boolean = SaicAidl.callWriting(binder(), DESCRIPTOR, TX_START_NAV_FROM_EV_ROUTE) { data ->
+        data.writeEvRoutPoiList(pathway)
+        data.writeEvRoutPoiList(listOf(destination))
+    }
+
+    /**
+     * A `List<EVRoutPoiInfo>` as `Parcel.writeTypedList` lays it out: the count, then per item a
+     * non-null marker and the bean's own three fields in the order its `writeToParcel` wrote
+     * them. Written by hand because the bean is the vendor's class and this module does not
+     * carry it — the layout is three lines and depending on a decompiled class would be worse.
+     */
+    internal fun Parcel.writeEvRoutPoiList(pois: List<NavigationHandoff.Poi>) {
+        writeInt(pois.size)
+        pois.forEach { poi ->
+            writeInt(1)
+            writeDouble(poi.latitude)
+            writeDouble(poi.longitude)
+            writeString(poi.name)
+        }
     }
 
     /** Transaction codes seen so far, with counts. See [TransactionCensus]. */

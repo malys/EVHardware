@@ -8,6 +8,36 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A planned route can be handed to the car's own navigation, waypoints included.** Two drives
+  proved that nothing on SWI68 declares a filter for `geo:` or `google.navigation:`: the map
+  opened at its default view and the driver typed the address in again. The head unit has its own
+  channel and it was hiding in plain sight — `IGeneralService` transaction 48,
+  `startNavFromEVRout(pathway, destination)`, on the same `GeneralService` this module already
+  binds for guidance. It forwards to `MapService`, which fans the points out over its
+  `RemoteCallbackList` to whichever navigation app registered. `SaicNavGuidance.startNavFromEvRoute`
+  is that call.
+
+  **It is not an impersonation and not a vehicle write.** `IMapNotificationListener` is the
+  channel the head unit uses to *command* the navigation app; registering on it to send one
+  destination would mean claiming to be a navigation provider, and this is the other end of that
+  wire. `VehicleWriteGate` is untouched and stays untouched: it exists for the settings that
+  change how the car behaves under the driver — AEB, ELK, ACC/TJA, the drive mode — and a
+  destination is no more one of those than the comfort writes it already exempts.
+
+  **What travels is three fields.** `NavigationHandoff.poi` validates a point the same way the
+  `geo:` form does — a swap of latitude and longitude routes to another continent while looking
+  like an ordinary number — and keeps the name as a parcel field rather than a URI label, because
+  a parenthesis cannot end a parcel field early and stripping it would only mangle what the driver
+  reads on the map. `NavigationHandoff.pathway` caps the waypoints. The list is written by hand,
+  since this module does not carry the vendor's `EVRoutPoiInfo`, and `EvRoutPoiParcelTest` proves
+  the framing byte-for-byte against what Android's own `writeTypedList` produces for a bean with
+  the same three fields.
+
+  **Two things a caller has to know.** The transaction is not `oneway` and the service fans out
+  synchronously while holding a lock, so it must not be called on the main thread; and
+  `MapService` writes both point lists to the head unit's own logcat before fanning out, which is
+  the vendor's log rather than this app's and the one place a destination appears in text.
+
 - **The guidance census records the size of the last parcel on each transaction code.** The
   2026-09-07 capture is why: with guidance running on the car's own navigation, code 13 decoded
   as a remaining distance of zero and code 12 as a remaining time of zero, while an undecoded
