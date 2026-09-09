@@ -3,11 +3,13 @@ package com.evsuite.hardware.saic
 /**
  * A trip driven one leg at a time, because the command that starts guidance carries one point.
  *
- * **Why a chain exists at all.** [SaicNavGuidance.goTo] is the only call on this interface that
- * has ever been seen to *start* guidance, and it takes a single point. The route handoff takes a
- * pathway and a destination, and on SWI68 it draws them without driving them. So a plan with a
- * charging stop on the way cannot be handed over in one go: the car is sent to the stop, and the
- * destination is sent afterwards, when the first leg is over.
+ * **Why a chain exists at all.** A plan with a charging stop is a stop and then a destination, and
+ * nothing on this head unit has been seen to drive both from one handover.
+ * [SaicNavGuidance.goTo] takes a single point by construction. [SaicNavGuidance.startNavFromEvRoute]
+ * takes a pathway and a destination and, on SWI68 on 2026-09-09, is the channel that actually
+ * starts guidance — but whether Telenav drives *through* the pathway or straight to the last point
+ * is not known, and no drive with a charging stop has happened yet to say. The chain covers both:
+ * if the map drives the whole route, guidance never stops early and this sends nothing.
  *
  * **What "over" means here.** The navigation app's own flag — `isMapNavigating` — going false
  * after having been true for this leg. That is arrival in every ordinary case, and it is the only
@@ -56,7 +58,7 @@ class NavLegChain(legs: List<NavigationHandoff.Poi>) {
     /** Whether guidance has been seen running for [index]. Nothing chains before it has. */
     private var sawGuidance = false
 
-    /** Consecutive ticks with no guidance while none has ever been seen for this leg. */
+    /** Consecutive readings with no guidance — the grace before a start, the settle after one. */
     private var silentTicks = 0
 
     private var done: Step.Done? = null
@@ -82,6 +84,13 @@ class NavLegChain(legs: List<NavigationHandoff.Poi>) {
             silentTicks++
             return if (silentTicks >= GIVE_UP_TICKS) finish(arrived = false) else Step.Wait
         }
+        // One false reading is not an arrival. The drive of 2026-09-09 16:34 watched a route
+        // handed over through `startNavFromEVRout` run for twenty-five minutes while the adapter
+        // stopped answering a remaining distance seven minutes in and its notification listener
+        // heard nothing at all. Whether the guiding flag itself is that shaky is not yet known,
+        // and the cost of being wrong is a car sent onward from a charger it is still driving to.
+        // Consecutive readings cost seconds; a genuine arrival stays false for the rest of the day.
+        if (++silentTicks < SETTLE_TICKS) return Step.Wait
         index++
         if (index > legs.lastIndex) return finish(arrived = true)
         sawGuidance = false
@@ -101,5 +110,8 @@ class NavLegChain(legs: List<NavigationHandoff.Poi>) {
          * nobody followed does not sit waiting for the rest of the drive.
          */
         const val GIVE_UP_TICKS = 24
+
+        /** Consecutive readings with no guidance before a leg that was running counts as over. */
+        const val SETTLE_TICKS = 3
     }
 }

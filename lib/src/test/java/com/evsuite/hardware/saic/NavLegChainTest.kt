@@ -17,10 +17,44 @@ class NavLegChainTest {
 
     private fun chain() = NavLegChain(listOf(stop, destination))
 
+    /** Drives a leg to its end: guidance running, then the settle window of silence. */
+    private fun NavLegChain.arrive(): NavLegChain.Step {
+        tick(guiding = true)
+        repeat(NavLegChain.SETTLE_TICKS - 1) {
+            assertEquals(NavLegChain.Step.Wait, tick(guiding = false))
+        }
+        return tick(guiding = false)
+    }
+
     @Test fun `the second leg goes out when guidance for the first one ends`() {
         val chain = chain()
         assertEquals(NavLegChain.Step.Wait, chain.tick(guiding = true))
         assertEquals(NavLegChain.Step.Wait, chain.tick(guiding = true))
+        repeat(NavLegChain.SETTLE_TICKS - 1) {
+            assertEquals(NavLegChain.Step.Wait, chain.tick(guiding = false))
+        }
+        assertEquals(
+            NavLegChain.Step.Send(destination, number = 2, count = 2),
+            chain.tick(guiding = false),
+        )
+    }
+
+    /**
+     * The reading that must not move the car. On 2026-09-09 the adapter's remaining distance went
+     * to nothing seven minutes into a route it was still guiding; a single false from its sibling
+     * flag would otherwise send the car onward from a charger it is still driving to.
+     */
+    @Test fun `one lone false reading is not an arrival`() {
+        val chain = chain()
+        chain.tick(guiding = true)
+        repeat(NavLegChain.SETTLE_TICKS - 1) {
+            assertEquals(NavLegChain.Step.Wait, chain.tick(guiding = false))
+        }
+        assertEquals(NavLegChain.Step.Wait, chain.tick(guiding = true))
+        // The window starts again from nothing, so the blip cost the leg no ground at all.
+        repeat(NavLegChain.SETTLE_TICKS - 1) {
+            assertEquals(NavLegChain.Step.Wait, chain.tick(guiding = false))
+        }
         assertEquals(
             NavLegChain.Step.Send(destination, number = 2, count = 2),
             chain.tick(guiding = false),
@@ -46,14 +80,13 @@ class NavLegChainTest {
         assertEquals(NavLegChain.Step.Wait, chain.tick(guiding = true))
         assertEquals(
             NavLegChain.Step.Send(destination, number = 2, count = 2),
-            chain.tick(guiding = false),
+            chain.arrive(),
         )
     }
 
     @Test fun `the leg handed over gets its own grace before it is given up on`() {
         val chain = chain()
-        chain.tick(guiding = true)
-        chain.tick(guiding = false)
+        chain.arrive()
         // The car was just sent somewhere; the map has not come up yet. That silence is not a
         // refusal until the grace runs out again, and it must run out again in full.
         repeat(NavLegChain.GIVE_UP_TICKS - 1) {
@@ -64,28 +97,17 @@ class NavLegChainTest {
 
     @Test fun `the last leg ending ends the chain, and every later tick says so`() {
         val chain = chain()
-        chain.tick(guiding = true)
-        chain.tick(guiding = false)
-        chain.tick(guiding = true)
-        assertEquals(NavLegChain.Step.Done(arrived = true), chain.tick(guiding = false))
+        chain.arrive()
+        assertEquals(NavLegChain.Step.Done(arrived = true), chain.arrive())
         assertEquals(NavLegChain.Step.Done(arrived = true), chain.tick(guiding = true))
     }
 
     @Test fun `three legs are driven one after the other, in order`() {
         val second = NavigationHandoff.Poi(44.128, 4.081, "Ales")
         val chain = NavLegChain(listOf(stop, second, destination))
-        chain.tick(guiding = true)
-        assertEquals(
-            NavLegChain.Step.Send(second, number = 2, count = 3),
-            chain.tick(guiding = false),
-        )
-        chain.tick(guiding = true)
-        assertEquals(
-            NavLegChain.Step.Send(destination, number = 3, count = 3),
-            chain.tick(guiding = false),
-        )
-        chain.tick(guiding = true)
-        assertEquals(NavLegChain.Step.Done(arrived = true), chain.tick(guiding = false))
+        assertEquals(NavLegChain.Step.Send(second, number = 2, count = 3), chain.arrive())
+        assertEquals(NavLegChain.Step.Send(destination, number = 3, count = 3), chain.arrive())
+        assertEquals(NavLegChain.Step.Done(arrived = true), chain.arrive())
     }
 
     @Test fun `a trip with one point has nothing to chain`() {
@@ -104,10 +126,6 @@ class NavLegChainTest {
         val legs = mutableListOf(stop, destination)
         val chain = NavLegChain(legs)
         legs.clear()
-        chain.tick(guiding = true)
-        assertEquals(
-            NavLegChain.Step.Send(destination, number = 2, count = 2),
-            chain.tick(guiding = false),
-        )
+        assertEquals(NavLegChain.Step.Send(destination, number = 2, count = 2), chain.arrive())
     }
 }

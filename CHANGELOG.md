@@ -8,6 +8,14 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A leg is not over on one reading.** `NavLegChain` needs three consecutive answers of "not
+  guiding" before it treats a leg as finished. The drive of 2026-09-09 16:34 is why: a route
+  handed over through `startNavFromEVRout` guided for twenty-five minutes while the adapter's
+  remaining distance went to nothing seven minutes in and its notification listener heard nothing
+  at all. Whether the guiding flag is as shaky as its siblings is not yet known, and the cost of
+  being wrong is a car sent onward from a charger it is still driving to. Three readings cost
+  seconds; a real arrival stays false for the rest of the day.
+
 - **A trip can now be driven one leg at a time.** `NavLegChain` holds the points of a plan and
   hands the next one over when the current one is done — done being the navigation app's own
   `isMapNavigating` flag going false after having been true. It exists because the only call ever
