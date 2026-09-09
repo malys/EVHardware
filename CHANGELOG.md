@@ -8,6 +8,16 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A trip can now be driven one leg at a time.** `NavLegChain` holds the points of a plan and
+  hands the next one over when the current one is done — done being the navigation app's own
+  `isMapNavigating` flag going false after having been true. It exists because the only call ever
+  seen to *start* guidance on this head unit, `goTo`, carries a single point: a plan with a
+  charging stop on the way has to be sent as the stop, then the destination. Pure and
+  Android-free, so the whole of its behaviour is proven on the JVM rather than on a road. Its
+  ceiling is written down in its own documentation: a driver who cancels guidance mid-leg looks
+  the same as one who arrived, so the next leg starts under them — and cancelling that one too
+  ends the chain.
+
 - **The car can now say whether guidance actually started.** `SaicNavGuidance.isMapNavigating` is
   `IGeneralService` transaction 18, and what it returns is not an inference: `MapService` holds
   the flag and the navigation app sets it itself through `IMapService.isMapNavigating(boolean)`.
