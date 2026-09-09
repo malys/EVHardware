@@ -8,6 +8,13 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **The car can now say whether guidance actually started.** `SaicNavGuidance.isMapNavigating` is
+  `IGeneralService` transaction 18, and what it returns is not an inference: `MapService` holds
+  the flag and the navigation app sets it itself through `IMapService.isMapNavigating(boolean)`.
+  A command accepted by the adapter only ever meant the adapter took it — the fan-out swallows a
+  refusal — so this is the difference between "sent" and "started", and it lets a caller try one
+  channel, ask the car, and move to the next.
+
 - **Guidance can be started, not only drawn.** The route handoff put the destination on the map
   and stopped there: the driver saw the place and no guidance ever ran. `SaicNavGuidance.goTo` is
   the command that runs it — `IGeneralService` transaction 23, which `GeneralService` turns into

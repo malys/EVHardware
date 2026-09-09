@@ -50,6 +50,7 @@ object SaicNavGuidance {
 
     // Synchronous getters on the same interface. SaicNav's note that the head unit answers no
     // synchronous question about a trip was read off IMapService; IGeneralService does answer.
+    private const val TX_IS_MAP_NAVIGATING = 18
     private const val TX_GET_ROAD_NAME = 29
     private const val TX_GET_GUIDE_STATUS = 31
     private const val TX_GET_REMAINING_TIMES = 33
@@ -127,6 +128,20 @@ object SaicNavGuidance {
             road = road ?: seen.road,
         )
     }
+
+    /**
+     * Whether the head unit is guiding, as the navigation app itself says so.
+     *
+     * Not an inference from a distance or a road name: `MapService` keeps this flag and the
+     * navigation app sets it through `IMapService.isMapNavigating(boolean)`, its own report of
+     * its own state. That makes it the one thing on this interface that can confirm a handoff
+     * worked — a command accepted by the adapter says only that the adapter took it, and the
+     * fan-out swallows a refusal, so this flag is the difference between "sent" and "started".
+     *
+     * @return null when the adapter is not there to ask.
+     */
+    fun isMapNavigating(): Boolean? =
+        SaicAidl.callBoolean(binder(), DESCRIPTOR, TX_IS_MAP_NAVIGATING)
 
     /**
      * Asks the navigation app to guide to one point — the vendor's own "take me there".
