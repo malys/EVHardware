@@ -8,6 +8,16 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Guidance can be started, not only drawn.** The route handoff put the destination on the map
+  and stopped there: the driver saw the place and no guidance ever ran. `SaicNavGuidance.goTo` is
+  the command that runs it — `IGeneralService` transaction 23, which `GeneralService` turns into
+  `MapService.goToPoi(null, address, null, latitude, longitude)`, the same call the head unit's
+  voice assistant makes when someone says "take me there". One point and no pathway, because the
+  interface has room for nothing else: a plan with a charging stop guides to the stop, which is
+  the leg being driven. Same boundary as `startNavFromEvRoute` — a navigation write, not a
+  vehicle write — and the same two cautions: the adapter logs the point, and the fan-out is
+  synchronous, so it must not run on the main thread.
+
 - **A planned route can be handed to the car's own navigation, waypoints included.** Two drives
   proved that nothing on SWI68 declares a filter for `geo:` or `google.navigation:`: the map
   opened at its default view and the driver typed the address in again. The head unit has its own

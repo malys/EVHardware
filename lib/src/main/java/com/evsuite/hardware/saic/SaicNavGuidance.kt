@@ -55,7 +55,8 @@ object SaicNavGuidance {
     private const val TX_GET_REMAINING_TIMES = 33
     private const val TX_GET_REMAINING_DISTANCE = 34
 
-    // The one transaction here that sends rather than asks. See [startNavFromEvRoute].
+    // The two transactions here that send rather than ask. See [goTo], [startNavFromEvRoute].
+    private const val TX_GO_TO = 23
     private const val TX_START_NAV_FROM_EV_ROUTE = 48
 
     private val service = SaicService.byComponent(PACKAGE, CLASS, "nav-guidance")
@@ -125,6 +126,40 @@ object SaicNavGuidance {
             remainingMinutes = minutes ?: seen.remainingMinutes,
             road = road ?: seen.road,
         )
+    }
+
+    /**
+     * Asks the navigation app to guide to one point — the vendor's own "take me there".
+     *
+     * **Why this exists beside [startNavFromEvRoute].** The route handoff put the destination on
+     * the map and left it there: the driver saw the place and no guidance ever started. `goTo` is
+     * the other command, and it is the one the head unit's voice assistant uses — `GeneralService`
+     * turns it into `MapService.goToPoi(null, address, null, latitude, longitude)`, the same call
+     * `IVoiceVuiService` makes when someone says "emmène-moi à". Where the route handoff hands
+     * over points to draw, this one names a destination to drive to.
+     *
+     * **One point, no pathway.** The interface has room for nothing else, so a plan with a
+     * charging stop must choose: guide to the stop, which is the leg being driven, and leave the
+     * rest of the plan to the screen that planned it.
+     *
+     * Same boundary as [startNavFromEvRoute] — a navigation write, not a vehicle write — and the
+     * same two cautions: the adapter logs the point, and this is a synchronous fan-out that must
+     * not run on the main thread.
+     *
+     * @return true when the adapter took the call, which is not the map confirming it obeyed.
+     */
+    fun goTo(point: NavigationHandoff.Poi): Boolean =
+        SaicAidl.callWriting(binder(), DESCRIPTOR, TX_GO_TO) { data -> data.writeGoTo(point) }
+
+    /**
+     * `goTo(String address, double latitude, double longitude)`, in the order the adapter's stub
+     * reads it. Latitude before longitude, and the name first: swap any two and the car drives to
+     * a place nobody asked for, which no compiler and no crash would have said.
+     */
+    internal fun Parcel.writeGoTo(point: NavigationHandoff.Poi) {
+        writeString(point.name)
+        writeDouble(point.latitude)
+        writeDouble(point.longitude)
     }
 
     /**

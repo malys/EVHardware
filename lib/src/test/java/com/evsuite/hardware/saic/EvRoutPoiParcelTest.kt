@@ -3,6 +3,7 @@ package com.evsuite.hardware.saic
 import android.os.Parcel
 import android.os.Parcelable
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -74,5 +75,25 @@ class EvRoutPoiParcelTest {
     @Test fun `an accented name survives the framing`() {
         val pois = listOf(NavigationHandoff.Poi(43.6, 3.9, "Alès Centre"))
         assertArrayEquals(framework(pois), handWritten(pois))
+    }
+
+    /**
+     * `goTo` writes three plain values, and the only way to get them wrong is the order. Read
+     * back exactly as `IGeneralService.Stub` reads them: `readString`, then latitude, then
+     * longitude. A latitude and a longitude both fit in a double, so nothing else would catch it.
+     */
+    @Test fun `goTo names the place first, then latitude, then longitude`() {
+        val parcel = Parcel.obtain()
+        try {
+            with(SaicNavGuidance) {
+                parcel.writeGoTo(NavigationHandoff.Poi(43.5583, 1.5333, "Auzielle"))
+            }
+            parcel.setDataPosition(0)
+            assertEquals("Auzielle", parcel.readString())
+            assertEquals(43.5583, parcel.readDouble(), 0.0)
+            assertEquals(1.5333, parcel.readDouble(), 0.0)
+        } finally {
+            parcel.recycle()
+        }
     }
 }
