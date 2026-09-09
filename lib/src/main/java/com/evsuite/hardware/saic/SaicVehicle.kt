@@ -190,7 +190,11 @@ object SaicClimate {
  *
  * `ChargingCloseSoc` is the charge limit in percent, `ReserChrg*` the scheduled window, and
  * `DrivingBatteryHeat` the battery pre-heat switch — the three things the vehicle's own
- * screen offers and the only ones exposed here.
+ * screen offers.
+ *
+ * The same binder also answers the energy counters the vehicle keeps for itself, which is the
+ * only measured kilowatt-hour on a car that publishes no battery power. They are reads; this
+ * object writes nothing but the charging settings the stock screen already writes.
  *
  * Binding contract: `VehicleChargingManager` and `IVehicleChargingService`.
  */
@@ -218,6 +222,18 @@ object SaicCharging {
     private const val TX_SET_RESERVE_STOP_MINUTE = 28
     private const val TX_GET_BATTERY_HEAT = 37
     private const val TX_SET_BATTERY_HEAT = 38
+    private const val TX_GET_CONSUMPTION_PER_KM = 66
+    private const val TX_GET_CONSUMPTION_PER_KM_VALID = 67
+    private const val TX_GET_CONSUMPTION_PER_KM_LIST = 68
+    private const val TX_GET_ACC_CONSUMPTION_AFTER_CHARGE = 73
+    private const val TX_GET_ACC_CONSUMPTION_AFTER_START = 74
+    private const val TX_GET_TOTAL_CONSUMPTION_AFTER_CHARGE = 75
+    private const val TX_GET_TOTAL_CONSUMPTION_AFTER_START = 76
+    private const val TX_GET_TOTAL_REGEN_AFTER_CHARGE = 77
+    private const val TX_GET_TOTAL_REGEN_AFTER_START = 78
+
+    /** The service's own `*V` companion signals: 1 is a value it stands behind. */
+    private const val SIGNAL_VALID = 1
 
     val isAvailable: Boolean get() = binder() != null
 
@@ -264,6 +280,77 @@ object SaicCharging {
     fun batteryPreheatOn(): Boolean? = read(TX_GET_BATTERY_HEAT)?.let { it == 1 }
     fun setBatteryPreheat(on: Boolean): Boolean =
         SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_BATTERY_HEAT, if (on) 1 else 0)
+
+    /**
+     * Energy the car itself counted since the last ignition-on, in kWh.
+     *
+     * This is not derived from battery power, and that is the point: SWI68 publishes no
+     * `EV_BATTERY_INSTANTANEOUS_CHARGE_RATE`, so every kWh figure in EVSuite has had to be
+     * modelled or refused. The charging service keeps its own counters, fed by the vehicle's
+     * energy properties, and hands them out over the same binder the charge limit uses. A
+     * counter read at the start of a trip and again at the end gives measured kilowatt-hours
+     * with no pack capacity assumed and nothing integrated.
+     *
+     * The counter resets at ignition-on, so a trip that spans a stop cannot be measured by
+     * subtracting the ends: the second reading starts again from zero and the difference goes
+     * negative. Callers must treat a drop as a reset, not as regeneration.
+     */
+    fun consumedKwhSinceStart(): Float? = energy(TX_GET_TOTAL_CONSUMPTION_AFTER_START)
+
+    /** Same counter, reset at the end of the last charge rather than at ignition-on. */
+    fun consumedKwhSinceCharge(): Float? = energy(TX_GET_TOTAL_CONSUMPTION_AFTER_CHARGE)
+
+    fun regeneratedKwhSinceStart(): Float? = energy(TX_GET_TOTAL_REGEN_AFTER_START)
+    fun regeneratedKwhSinceCharge(): Float? = energy(TX_GET_TOTAL_REGEN_AFTER_CHARGE)
+
+    /**
+     * The `AccConsumption` counter, alongside `TotalConsumption`, over the same period.
+     *
+     * **What this counts is not established.** The service validates it against the same
+     * bounds as the total and names it no further, so `Acc` reads equally as *accessory* —
+     * the auxiliary share the total also contains, which would be a measured climate figure —
+     * or as *accumulated*, a second framing of the same energy. The two readings differ by
+     * everything: one is a breakdown, the other is a duplicate.
+     *
+     * Until a drive with the climate off and a drive with it on are compared on the car, this
+     * is exposed as the raw counter under the vehicle's own name and nothing is attributed to
+     * it. Naming it `climateKwh` here would be inventing the evidence.
+     */
+    fun accCounterKwhSinceStart(): Float? = energy(TX_GET_ACC_CONSUMPTION_AFTER_START)
+    fun accCounterKwhSinceCharge(): Float? = energy(TX_GET_ACC_CONSUMPTION_AFTER_CHARGE)
+
+    /**
+     * Consumption per kilometre as the cluster shows it, or null when the car disowns it.
+     *
+     * The value carries a companion validity signal, and the service answers the last value
+     * it held whatever that signal says. Reading one without the other reports a stale number
+     * as a current one, so both are read and a value the car does not stand behind is dropped.
+     */
+    fun consumptionPerKm(): Float? =
+        if (read(TX_GET_CONSUMPTION_PER_KM_VALID) != SIGNAL_VALID) null
+        else SaicAidl.callFloat(binder(), DESCRIPTOR, TX_GET_CONSUMPTION_PER_KM)
+            ?.takeIf { it.isFinite() && it >= 0f }
+
+    /**
+     * The last fifty per-kilometre readings, oldest first — the cluster's own history.
+     *
+     * The service persists them as a JSON array of floats and drops the oldest past fifty, so
+     * this is a window the car maintains, not a series this app has to record.
+     */
+    fun consumptionPerKmHistory(): List<Float> =
+        parseHistory(SaicAidl.callString(binder(), DESCRIPTOR, TX_GET_CONSUMPTION_PER_KM_LIST))
+
+    /** Kept apart from the binder so the car's own wire format can be tested without one. */
+    internal fun parseHistory(json: String?): List<Float> {
+        if (json.isNullOrBlank()) return emptyList()
+        return json.trim().removeSurrounding("[", "]")
+            .split(',')
+            .mapNotNull { it.trim().toFloatOrNull()?.takeIf(Float::isFinite) }
+    }
+
+    /** A counter the car never started is 0, and a negative one is not a counter. */
+    private fun energy(code: Int): Float? =
+        SaicAidl.callFloat(binder(), DESCRIPTOR, code)?.takeIf { it.isFinite() && it >= 0f }
 
     private fun read(code: Int): Int? =
         SaicAidl.callInt(binder(), DESCRIPTOR, code)?.takeIf { it >= 0 }
