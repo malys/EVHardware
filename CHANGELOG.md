@@ -8,6 +8,18 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **The head unit can now be asked what it publishes.** `RuntimeInterfaceProbe` walks the
+  adapter's service codes and the vehicle hub's service names, reads back the interface
+  descriptor of every binder that answers, and records one of three verdicts per interface:
+  absent, reached-and-refused, or answered. The distinction is the whole point. Half the `RI-`
+  questions are currently open because nobody knows whether an interface is missing from this
+  head unit or merely closed to an unprivileged caller, and those two answers lead to opposite
+  decisions. Reading a binder's own descriptor is not a call into it, so nothing of unknown
+  meaning is invoked, and no setter is referenced anywhere in the file — several of these
+  binders would move a car. Typed reads follow only for the two bind points already known: the
+  vehicle option getters and the screen's power mode. Nothing in production calls any of it;
+  it exists to be run once from an unstable capture and turned into answers.
+
 - **A leg is not over on one reading.** `NavLegChain` needs three consecutive answers of "not
   guiding" before it treats a leg as finished. The drive of 2026-09-09 16:34 is why: a route
   handed over through `startNavFromEVRout` guided for twenty-five minutes while the adapter's
