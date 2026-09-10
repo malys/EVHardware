@@ -105,20 +105,25 @@ object RuntimeInterfaceProbe {
     )
 
     /**
-     * RI-004, the half that has a host: `getCurrentPowerMode` on the hub's screen sub-service.
+     * RI-004: the head unit's own power state, on the hub's `carPower` sub-service.
      *
-     * Only the read. The sleep and wake transactions live on this same binder and are
-     * deliberately absent. RI-004's other half, the head unit's own power mode, has no host we
-     * can name: the hub does not publish it and no service on this platform has been found to
-     * answer for it, so there is nothing to bind. That is the ticket's answer for the power
-     * half, not a gap in this probe.
+     * Three reads and no more. This binder also carries a shutdown request, a restart request
+     * and a backlight switch; none is named here. The backlight *status* is a boolean over the
+     * wire and arrives as `0` or `1`, which is why it reads through the same integer path as
+     * the other two.
+     *
+     * The screen sub-service is deliberately not probed. It publishes no getter at all — every
+     * transaction it answers either moves the screen or registers a callback — so there is
+     * nothing on it a read-only survey may call, and guessing a code to find out is the exact
+     * thing this file must not do. Observing screen state needs a listener, which is a larger
+     * change than a survey and belongs to RI-004's follow-up rather than here.
      */
-    fun vehicleScreen(): InterfaceProbe = readInts(
-        label = "IScreenManagerService",
-        descriptor = DESC_SCREEN,
-        binder = SaicHub.service(HUB_SCREEN),
-        calls = mapOf("getCurrentPowerMode" to TX_SCREEN_POWER_MODE),
-        note = "hub:vehiclescreen; read only, the sleep and wake transactions are not called",
+    fun carPower(): InterfaceProbe = readInts(
+        label = "ICarPowerService",
+        descriptor = DESC_CAR_POWER,
+        binder = SaicHub.service(HUB_CAR_POWER),
+        calls = POWER_CALLS,
+        note = "hub:carPower; reads only, the shutdown, restart and backlight writes are not called",
     )
 
     /**
@@ -138,7 +143,7 @@ object RuntimeInterfaceProbe {
         addAll(adapterClientMap())
         addAll(hubServiceMap())
         add(carConfig())
-        add(vehicleScreen())
+        add(carPower())
     }
 
     /**
@@ -184,18 +189,37 @@ object RuntimeInterfaceProbe {
      */
     private val CODE_SWEEP = (0x0..0x12).toList()
 
+    /**
+     * Every sub-service name the hub is known to resolve.
+     *
+     * `vehicleproperty` is the one to watch: a typed property channel reached by name rather
+     * than through the reflection path EVHardware uses on SWI133, which is the question RI-003
+     * opens with. Whether it answers on the VSM generations is the whole of that ticket.
+     */
     private val HUB_NAMES = listOf(
-        "aircondition", "vehiclecharging", "vehiclecondition",
-        "vehiclecontrol", "vehiclesetting", "vehiclescreen",
+        "aircondition", "carPower", "vehicleAudio", "vehiclecharging", "vehiclecondition",
+        "vehiclecontrol", "vehicleproperty", "vehiclescreen", "vehiclesetting", "vehicleTbox",
     )
 
-    private const val HUB_SCREEN = "vehiclescreen"
+    private const val HUB_CAR_POWER = "carPower"
     private const val CODE_CONFIG = 0x2
 
     private const val DESC_CONFIG = "com.saicmotor.carapi.config.ICarConfigService"
-    private const val DESC_SCREEN = "com.saicmotor.sdk.screen.IScreenManagerService"
+    private const val DESC_CAR_POWER = "com.saicmotor.sdk.vehiclesettings.ICarPowerService"
 
-    private const val TX_SCREEN_POWER_MODE = 6
+    /**
+     * The transactions on the power interface that change something: the backlight switch, a
+     * shutdown request and a restart request. Named here only so a test can prove [POWER_CALLS]
+     * stays clear of them — nothing calls them.
+     */
+    val POWER_WRITES = setOf(1, 4, 5)
+
+    /** RI-004's reads. Every other transaction on this interface changes something. */
+    val POWER_CALLS = mapOf(
+        "getBackLightStatus" to 2,
+        "getBootReason" to 3,
+        "getCurrentPowerMode" to 11,
+    )
 
     /** The option getters RI-001 names as decisive, with their transaction codes. */
     val CONFIG_CALLS = mapOf(

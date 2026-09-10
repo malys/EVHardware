@@ -17,8 +17,10 @@ All notable changes to this project are documented here. Format follows
   decisions. Reading a binder's own descriptor is not a call into it, so nothing of unknown
   meaning is invoked, and no setter is referenced anywhere in the file — several of these
   binders would move a car. Typed reads follow only for the two bind points already known: the
-  vehicle option getters and the screen's power mode. Nothing in production calls any of it;
-  it exists to be run once from an unstable capture and turned into answers.
+  vehicle option getters and the head unit's power state. The screen sub-service is bound but
+  never read: it publishes no getter at all, and guessing a code to find one is exactly what
+  this file exists not to do. Nothing in production calls any of it; it exists to be run once
+  from an unstable capture and turned into answers.
 
 - **A leg is not over on one reading.** `NavLegChain` needs three consecutive answers of "not
   guiding" before it treats a leg as finished. The drive of 2026-09-09 16:34 is why: a route
