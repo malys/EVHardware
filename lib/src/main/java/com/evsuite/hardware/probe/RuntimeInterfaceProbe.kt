@@ -6,6 +6,7 @@ import com.evsuite.hardware.EVHardware
 import com.evsuite.hardware.FirmwareInfo
 import com.evsuite.hardware.saic.SaicAidl
 import com.evsuite.hardware.saic.SaicHub
+import com.evsuite.hardware.saic.SaicService
 
 /**
  * What happened when we asked a vendor interface whether it exists.
@@ -51,7 +52,7 @@ data class InterfaceProbe(
 object RuntimeInterfaceProbe {
 
     /**
-     * Bind the vehicle hub, then let it come up before surveying.
+     * Bind both hubs, then let them come up before surveying.
      *
      * Without this every hub name reads [BindVerdict.ABSENT], which is the one false negative
      * this exercise cannot afford: it looks exactly like "this head unit does not publish the
@@ -59,7 +60,10 @@ object RuntimeInterfaceProbe {
      * a survey run in the same breath as this call still reads absent — leave a moment, or run
      * it from a capture that has been up for a while.
      */
-    fun connect(context: Context) = SaicHub.connect(context)
+    fun connect(context: Context) {
+        SaicHub.connect(context)
+        engMode.connect(context)
+    }
 
     /**
      * `queryClient(code)` across [CODE_SWEEP], recording the interface descriptor of whatever
@@ -96,7 +100,7 @@ object RuntimeInterfaceProbe {
      * fails, so it cannot be read as a not-fitted code — a probe that mapped these to booleans
      * would turn a dead service into "no options fitted".
      */
-    fun carConfig(): InterfaceProbe = readInts(
+    fun carConfig(): InterfaceProbe = read(
         label = "ICarConfigService",
         descriptor = DESC_CONFIG,
         binder = EVHardware.a9ClientBinder(CODE_CONFIG),
@@ -118,12 +122,53 @@ object RuntimeInterfaceProbe {
      * thing this file must not do. Observing screen state needs a listener, which is a larger
      * change than a survey and belongs to RI-004's follow-up rather than here.
      */
-    fun carPower(): InterfaceProbe = readInts(
+    fun carPower(): InterfaceProbe = read(
         label = "ICarPowerService",
         descriptor = DESC_CAR_POWER,
         binder = SaicHub.service(HUB_CAR_POWER),
         calls = POWER_CALLS,
         note = "hub:carPower; reads only, the shutdown, restart and backlight writes are not called",
+    )
+
+    /**
+     * RI-005: what the head unit says its own part numbers are.
+     *
+     * `FirmwareGen` keys every branch in this library off a generation the project inferred
+     * from a build string. These four are identity the vehicle asserts instead, and the reason
+     * to read them is not to replace the generation model but to find out whether the two move
+     * together. Two cars on one inferred generation with different software part numbers would
+     * mean the label is coarser than the behaviour it gates.
+     *
+     * Reached through the engineering-mode hub, which is a plausible place for an unprivileged
+     * caller to be refused. [BindVerdict.DENIED] is a legitimate answer here, not a failure.
+     */
+    fun deviceIdentity(): InterfaceProbe = read(
+        label = "IDIDManager",
+        descriptor = DESC_DID,
+        binder = engModeService(ENG_DID),
+        calls = DID_CALLS,
+        note = "engmode hub:did; an engineering interface may legitimately refuse us",
+    )
+
+    /**
+     * RI-008: a second opinion on vehicle speed.
+     *
+     * [VehicleWriteGate][com.evsuite.hardware.VehicleWriteGate] refuses writes on a moving car
+     * and fails closed when speed is unreadable, off one source whose scale CP-003 settled. One
+     * settled source is not a corroborated one. This one reports speed as a float where the
+     * existing source is integral, which either confirms the scale independently or exposes a
+     * rounding assumption nobody has had to question.
+     *
+     * The other three reads come along because they cost one transaction each and describe the
+     * same moment the speed was taken in — a speed without its gear and power state is harder
+     * to interpret afterwards than one with them.
+     */
+    fun evsVehicleState(): InterfaceProbe = read(
+        label = "ICarEvsService",
+        descriptor = DESC_EVS,
+        binder = EVHardware.a9ClientBinder(CODE_EVS),
+        calls = EVS_CALLS,
+        note = "queryClient(0x3); speed is a float here and integral in the existing source",
     )
 
     /**
@@ -142,8 +187,11 @@ object RuntimeInterfaceProbe {
         )
         addAll(adapterClientMap())
         addAll(hubServiceMap())
+        addAll(engModeMap())
         add(carConfig())
         add(carPower())
+        add(deviceIdentity())
+        add(evsVehicleState())
     }
 
     /**
@@ -161,24 +209,56 @@ object RuntimeInterfaceProbe {
         else -> BindVerdict.DENIED
     }
 
+    /**
+     * The engineering-mode hub's own sub-services, surveyed the same way as the vehicle hub's.
+     *
+     * A second hub, with the same shape and a different bind point. Only `did` is asked for a
+     * value; the rest are named so that the map records whether they are there, which is what
+     * makes a later ticket about any of them answerable without another drive.
+     */
+    fun engModeMap(): List<InterfaceProbe> = ENG_NAMES.map { name ->
+        describe("engmode:$name", engModeService(name))
+    }
+
+    /** The engineering hub resolves sub-services by name, exactly as the vehicle hub does. */
+    private fun engModeService(name: String): IBinder? =
+        SaicAidl.callBinder(engMode.binder(), DESC_ENG_MODE, TX_ENG_GET_SERVICE, name)
+
+    private val engMode = SaicService(ENG_PACKAGE, ENG_ACTION, "EV_RI_ENGMODE")
+
     /** A binder that will not name itself was reached and refused, which is not the same as absent. */
     private fun describe(label: String, binder: IBinder?): InterfaceProbe {
         val descriptor = binder?.let { runCatching { it.interfaceDescriptor }.getOrNull() }
         return InterfaceProbe(label, descriptor, verdictFor(binder != null, listOf(descriptor)))
     }
 
-    /** Call each named transaction for an int and record what came back. */
-    private fun readInts(
+    /** How a reply is laid out. A wrong choice here reads a valid parcel as nonsense. */
+    internal enum class ReadAs { INT, FLOAT, STRING }
+
+    /** One transaction worth calling, and how to read what it sends back. */
+    internal data class Call(val code: Int, val readAs: ReadAs = ReadAs.INT)
+
+    /**
+     * Call each named transaction and record what came back, as text.
+     *
+     * Booleans go through [ReadAs.INT] on purpose: AIDL puts them on the wire as `0` or `1`,
+     * and recording the wire value keeps the capture one step away from an interpretation.
+     */
+    private fun read(
         label: String,
         descriptor: String,
         binder: IBinder?,
-        calls: Map<String, Int>,
+        calls: Map<String, Call>,
         note: String,
     ): InterfaceProbe {
         val target = binder
             ?: return InterfaceProbe(label, descriptor, BindVerdict.ABSENT, note = note)
-        val values = calls.mapValues { (_, code) ->
-            SaicAidl.callInt(target, descriptor, code)?.toString()
+        val values = calls.mapValues { (_, call) ->
+            when (call.readAs) {
+                ReadAs.INT -> SaicAidl.callInt(target, descriptor, call.code)?.toString()
+                ReadAs.FLOAT -> SaicAidl.callFloat(target, descriptor, call.code)?.toString()
+                ReadAs.STRING -> SaicAidl.callString(target, descriptor, call.code)
+            }
         }
         return InterfaceProbe(label, descriptor, verdictFor(true, values.values), values, note)
     }
@@ -201,35 +281,65 @@ object RuntimeInterfaceProbe {
         "vehiclecontrol", "vehicleproperty", "vehiclescreen", "vehiclesetting", "vehicleTbox",
     )
 
+    /** The engineering hub's sub-services. Only `did` is read; the rest are mapped. */
+    private val ENG_NAMES = listOf(
+        "avm", "did", "log", "system_hardware", "system_setting", "tuner",
+    )
+
+    private const val ENG_PACKAGE = "com.saicmotor.service.engmode"
+    private const val ENG_ACTION = "com.saicmotor.service.engmode.EngineeringModeService"
+    private const val ENG_DID = "did"
+    private const val TX_ENG_GET_SERVICE = 1
+
     private const val HUB_CAR_POWER = "carPower"
     private const val CODE_CONFIG = 0x2
+    private const val CODE_EVS = 0x3
 
     private const val DESC_CONFIG = "com.saicmotor.carapi.config.ICarConfigService"
     private const val DESC_CAR_POWER = "com.saicmotor.sdk.vehiclesettings.ICarPowerService"
+    private const val DESC_ENG_MODE = "com.saicmotor.sdk.engmode.IEngineeringMode"
+    private const val DESC_DID = "com.saicmotor.sdk.engmode.IDIDManager"
+    private const val DESC_EVS = "com.saicmotor.carapi.evs.ICarEvsService"
 
     /**
      * The transactions on the power interface that change something: the backlight switch, a
      * shutdown request and a restart request. Named here only so a test can prove [POWER_CALLS]
      * stays clear of them — nothing calls them.
      */
-    val POWER_WRITES = setOf(1, 4, 5)
+    internal val POWER_WRITES = setOf(1, 4, 5)
 
     /** RI-004's reads. Every other transaction on this interface changes something. */
-    val POWER_CALLS = mapOf(
-        "getBackLightStatus" to 2,
-        "getBootReason" to 3,
-        "getCurrentPowerMode" to 11,
+    internal val POWER_CALLS = mapOf(
+        "getBackLightStatus" to Call(2),
+        "getBootReason" to Call(3),
+        "getCurrentPowerMode" to Call(11),
+    )
+
+    /** RI-005's four identity strings. */
+    private val DID_CALLS = mapOf(
+        "getAssemblyPartNum" to Call(1, ReadAs.STRING),
+        "getHardwarePartNum" to Call(2, ReadAs.STRING),
+        "getSoftwarePartNum" to Call(3, ReadAs.STRING),
+        "getProductSerialNum" to Call(4, ReadAs.STRING),
+    )
+
+    /** RI-008's speed, and the three reads that say what moment it was taken in. */
+    internal val EVS_CALLS = mapOf(
+        "getVehicleSpeed" to Call(38, ReadAs.FLOAT),
+        "getReverseReq" to Call(13),
+        "getSteeringAngle" to Call(16),
+        "getSystemPowerState" to Call(37),
     )
 
     /** The option getters RI-001 names as decisive, with their transaction codes. */
-    val CONFIG_CALLS = mapOf(
-        "getTpmsConfigData" to 1,
-        "getHvacConfigData" to 7,
-        "getCarModelConfigData" to 8,
-        "getWheelPosition" to 9,
-        "getSeatHeatingConfigData" to 23,
-        "getCarRegionConfig" to 28,
-        "getAmbientLightConfig" to 41,
-        "getOnePedalConfig" to 43,
+    internal val CONFIG_CALLS = mapOf(
+        "getTpmsConfigData" to Call(1),
+        "getHvacConfigData" to Call(7),
+        "getCarModelConfigData" to Call(8),
+        "getWheelPosition" to Call(9),
+        "getSeatHeatingConfigData" to Call(23),
+        "getCarRegionConfig" to Call(28),
+        "getAmbientLightConfig" to Call(41),
+        "getOnePedalConfig" to Call(43),
     )
 }

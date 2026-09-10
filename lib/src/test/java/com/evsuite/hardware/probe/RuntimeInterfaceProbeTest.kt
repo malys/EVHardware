@@ -54,13 +54,21 @@ class RuntimeInterfaceProbeTest {
     @Test
     fun `the survey never names a transaction that changes something`() {
         val calls = RuntimeInterfaceProbe.POWER_CALLS
-        val writes = calls.filterValues { it in RuntimeInterfaceProbe.POWER_WRITES }
-        assertEquals(emptyMap<String, Int>(), writes)
+        val writes = calls.filterValues { it.code in RuntimeInterfaceProbe.POWER_WRITES }
+        assertEquals(emptyMap<String, RuntimeInterfaceProbe.Call>(), writes)
+    }
+
+    @Test
+    fun `vehicle speed is read as a float`() {
+        assertEquals(
+            RuntimeInterfaceProbe.ReadAs.FLOAT,
+            RuntimeInterfaceProbe.EVS_CALLS.getValue("getVehicleSpeed").readAs,
+        )
     }
 
     @Test
     fun `each config getter has its own transaction code`() {
         val calls = RuntimeInterfaceProbe.CONFIG_CALLS
-        assertEquals(calls.size, calls.values.toSet().size)
+        assertEquals(calls.size, calls.values.map { it.code }.toSet().size)
     }
 }
