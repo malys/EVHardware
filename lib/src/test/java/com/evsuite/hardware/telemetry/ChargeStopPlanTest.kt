@@ -1,6 +1,8 @@
 package com.evsuite.hardware.telemetry
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -125,5 +127,91 @@ class ChargeStopPlanTest {
         assertTrue(plan is ChargeStopPlan.Plan.Stop)
         plan as ChargeStopPlan.Plan.Stop
         assertEquals(0.0, plan.afterKm, 0.001)
+    }
+
+    // --- chain ----------------------------------------------------------------------------
+
+    @Test
+    fun `Auzielle to Paris is two stops where one plan refused the whole trip`() {
+        // 680 km at 0,28 +- 0,028 %/km: the single-stop plan measures its band over all of it,
+        // 2 x 0,028 x 680 = 38 %, and refuses. Each leg is a third of that road.
+        val whole = ChargeStopPlan.of(80.0, 680.0, rate(0.28, 0.028))
+        assertTrue(whole is ChargeStopPlan.Plan.Refused)
+        assertEquals(
+            ChargeStopPlan.Reason.BAND_TOO_WIDE,
+            (whole as ChargeStopPlan.Plan.Refused).reason,
+        )
+
+        val chain = ChargeStopPlan.chain(80.0, 680.0, rate(0.28, 0.028))
+        assertNull("the chain reaches Paris", chain.refusal)
+        assertTrue("and stops twice on the way", chain.stops.size >= 2)
+        assertNotNull(chain.arrival)
+        // Every stop is somewhere on the road, in the order they are driven.
+        var previous = 0.0
+        for (stop in chain.stops) {
+            assertTrue(stop.endKm > previous)
+            assertTrue(stop.endKm < 680.0)
+            previous = stop.endKm
+        }
+        // A stop leaves with the declared charge, not with a full pack.
+        assertEquals(
+            ChargeStopPlan.DEFAULT_DEPARTURE_PERCENT,
+            chain.legs[1].startPercent,
+            0.001,
+        )
+    }
+
+    @Test
+    fun `a route one charge covers is the plan of already made`() {
+        val single = ChargeStopPlan.of(90.0, 200.0, rate(0.3, 0.02)) as ChargeStopPlan.Plan.NoStop
+        val chain = ChargeStopPlan.chain(90.0, 200.0, rate(0.3, 0.02))
+        assertEquals(1, chain.legs.size)
+        assertEquals(single, chain.arrival)
+        assertEquals(0.0, chain.legs[0].startKm, 0.001)
+        assertEquals(200.0, chain.legs[0].endKm, 0.001)
+    }
+
+    @Test
+    fun `a last leg too uncertain to vouch for refuses itself and not the legs before it`() {
+        // 414 km at 0,3 +- 0,06 %/km — the fifth the vehicle's own range figure is worth. The
+        // leg to the stop is 194 km and its band holds; the 220 km left after it are reachable
+        // on the charge the stop leaves with, and arriving there is a 26 % wide claim.
+        val chain = ChargeStopPlan.chain(80.0, 414.0, rate(0.3, 0.06))
+        assertEquals(ChargeStopPlan.Reason.BAND_TOO_WIDE, chain.refusal)
+        assertEquals("the stop before it still reads", 1, chain.stops.size)
+        assertTrue(chain.stops.all { it.plan is ChargeStopPlan.Plan.Stop })
+    }
+
+    @Test
+    fun `a departure charge that buys no distance is refused rather than looped over`() {
+        // Leaving a stop on the reserve itself: the next leg reaches nowhere, for ever.
+        val chain = ChargeStopPlan.chain(
+            80.0, 900.0, rate(0.3, 0.01), reservePercent = 10.0, departurePercent = 10.0,
+        )
+        assertEquals(ChargeStopPlan.Reason.NO_PROGRESS, chain.refusal)
+        assertEquals("the first leg was still driveable", 1, chain.stops.size)
+    }
+
+    @Test
+    fun `a trip needing more legs than the cap is refused as one`() {
+        val chain = ChargeStopPlan.chain(80.0, 4000.0, rate(0.3, 0.01))
+        assertEquals(ChargeStopPlan.Reason.TOO_MANY_LEGS, chain.refusal)
+        assertEquals(ChargeStopPlan.MAX_LEGS, chain.stops.size)
+    }
+
+    @Test
+    fun `the refusals about the trip are answered by a chain of one leg`() {
+        assertEquals(
+            ChargeStopPlan.Reason.NO_CHARGE,
+            ChargeStopPlan.chain(null, 100.0, rate(0.3, 0.01)).refusal,
+        )
+        assertEquals(
+            ChargeStopPlan.Reason.NO_ROUTE,
+            ChargeStopPlan.chain(80.0, null, rate(0.3, 0.01)).refusal,
+        )
+        assertEquals(
+            ChargeStopPlan.Reason.NO_RATE,
+            ChargeStopPlan.chain(80.0, 100.0, null).refusal,
+        )
     }
 }
