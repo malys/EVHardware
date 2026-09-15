@@ -13,6 +13,16 @@ data class BatteryPowerEvidence(
     companion object {
         /** EV_INSTANTANEOUS_CHARGE_RATE mW × -1e-6: battery output positive. */
         const val OUTPUT_POSITIVE_MW_V1 = 1
+
+        /**
+         * `BMS_PACK_VOL` × `BMS_PACK_CRNT` ÷ 1000, discharge positive — the pack pair, not a
+         * property a drive has confirmed.
+         *
+         * A separate version because it is a separate interpretation. A model trained on this
+         * must not be mistaken for one trained on a validated signal, and must be thrown away
+         * the day one arrives.
+         */
+        const val PACK_PAIR_DERIVED_V2 = 2
     }
 }
 
@@ -84,6 +94,32 @@ object CarPropertyEvidence {
 
     private val batteryPowerEvidenceByFirmware: Map<FirmwareInfo.Gen, BatteryPowerEvidence> =
         emptyMap()
+
+    /**
+     * What a model may be trained on — a different question from what a screen may call measured.
+     *
+     * [batteryPowerEvidence] stays empty until a drive proves a conversion, and that is what
+     * keeps the power figure on the dashboard labelled derived rather than measured. But on
+     * SWI68 that figure is pack volts times pack amps, off the same vendor block as the state of
+     * charge this app already trusts, and the product of two readings is arithmetic rather than
+     * an interpretation — no vehicle has to prove that watts are volts times amps.
+     *
+     * Refusing to train on it left the speed comparison and the model-based energy breakdown
+     * permanently empty on the only generation this project runs on. An estimate whose
+     * provenance says what it is made of is a better answer to the driver than a dash that never
+     * resolves.
+     *
+     * The version number is the rail. A stored model carries the evidence that produced it and
+     * is discarded when the two stop matching, so the day a validated conversion arrives the
+     * pack-pair model is retrained from scratch instead of quietly surviving underneath it.
+     */
+    fun powerModelEvidence(firmware: FirmwareInfo.Gen): BatteryPowerEvidence? =
+        batteryPowerEvidence(firmware) ?: packPairEvidenceByFirmware[firmware]
+
+    private val packPairEvidenceByFirmware: Map<FirmwareInfo.Gen, BatteryPowerEvidence> = mapOf(
+        FirmwareInfo.Gen.SWI68 to
+            BatteryPowerEvidence(FirmwareInfo.Gen.SWI68, BatteryPowerEvidence.PACK_PAIR_DERIVED_V2),
+    )
 
     /** Exact generations whose battery-temperature unit and semantics CP-003 has proved. */
     private val batteryTemperatureFirmware: Set<FirmwareInfo.Gen> = emptySet()

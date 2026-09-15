@@ -44,7 +44,10 @@ class EvHardwareEnergySignalSource(context: Context) : EnergySignalSource {
             ?: EVHardware.getStandardRangeKm()
             ?: EVHardware.getVendorRangeKm()?.toFloat()
     override fun speedKmh() = EVHardware.getVehicleSpeedKmh()
-    override fun batteryPowerKw() = EVHardware.getBatteryPowerKw()
+    // The standard property first, the vendor pack pair second: SWI68 answers no
+    // EV_INSTANTANEOUS_CHARGE_RATE but does publish the voltage and the current it is made of.
+    override fun batteryPowerKw() =
+        EVHardware.getBatteryPowerKw() ?: EVHardware.getVendorBatteryPowerKw()
     override fun outsideTempCelsius() =
         SaicClimate.outsideTempCelsius() ?: EVHardware.getOutsideTempCelsius()
     override fun cabinTempCelsius() = EVHardware.getCabinTemperatureCelsius()
@@ -77,7 +80,13 @@ class EvHardwareEnergySignalSource(context: Context) : EnergySignalSource {
         fanLevelMax = SaicClimate.fanLevelMax(),
         driverTargetCelsius = SaicClimate.driverTemp()?.toFloat()
             ?: EVHardware.getTemperatureSetCelsius(),
-        passengerTargetCelsius = SaicClimate.passengerTemp()?.toFloat(),
+        // The passenger setpoint is its own signal only when the car publishes one: the vendor
+        // service reads it with a default of 68, which its own converter maps to -1, and -1 is
+        // dropped upstream. With a single zone the driver's setpoint is what both seats get,
+        // so that is what the passenger reads — the same number, because it is the same air.
+        passengerTargetCelsius = SaicClimate.passengerTemp()?.toFloat()
+            ?: SaicClimate.driverTemp()?.toFloat()
+            ?: EVHardware.getTemperatureSetCelsius(),
     )
 }
 

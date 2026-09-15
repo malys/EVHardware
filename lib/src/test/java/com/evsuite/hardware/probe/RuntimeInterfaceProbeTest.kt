@@ -59,6 +59,26 @@ class RuntimeInterfaceProbeTest {
     }
 
     @Test
+    fun `the property survey names no setter`() {
+        val writes = RuntimeInterfaceProbe.VEHICLE_PROPERTY_CALLS
+            .filterValues { it.code in RuntimeInterfaceProbe.PROPERTY_WRITES }
+        assertEquals(emptyMap<String, RuntimeInterfaceProbe.Call>(), writes)
+    }
+
+    @Test
+    fun `the charging survey never starts, stops or limits a charge`() {
+        val writes = RuntimeInterfaceProbe.CHARGING_CALLS
+            .filterValues { it.code in RuntimeInterfaceProbe.CHARGING_WRITES }
+        assertEquals(emptyMap<String, RuntimeInterfaceProbe.Call>(), writes)
+    }
+
+    @Test
+    fun `every property read carries the id it is asking for`() {
+        val idless = RuntimeInterfaceProbe.VEHICLE_PROPERTY_CALLS.filterValues { it.args.size != 1 }
+        assertEquals(emptyMap<String, RuntimeInterfaceProbe.Call>(), idless)
+    }
+
+    @Test
     fun `vehicle speed is read as a float`() {
         assertEquals(
             RuntimeInterfaceProbe.ReadAs.FLOAT,

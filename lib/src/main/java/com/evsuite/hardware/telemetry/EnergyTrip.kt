@@ -128,7 +128,7 @@ object EnergyTripSession {
         accumulator = EnergyTripAccumulator(
             sample.timestampMs,
             sample.socPercent,
-            batteryPowerEvidence = CarPropertyEvidence.batteryPowerEvidence(sample.firmware),
+            batteryPowerEvidence = CarPropertyEvidence.powerModelEvidence(sample.firmware),
         )
             .also { it.add(sample) }
     }

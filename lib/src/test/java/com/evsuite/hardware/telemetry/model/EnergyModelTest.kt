@@ -30,18 +30,34 @@ class EnergyModelTest {
         assertEquals(Provenance.ESTIMATED, model.predict(80.0, 10.0).provenance)
     }
 
-    @Test fun `sparse data and an unvalidated production firmware stay unavailable`() {
+    @Test fun `sparse data and a firmware with no power interpretation stay unavailable`() {
         val sparse = syntheticTrip().copy(samples = syntheticTrip().samples?.take(10))
 
         assertEquals(
             UnavailableReason.INSUFFICIENT_SAMPLES,
             (trainer.fit(listOf(sparse), evidence) as EnergyModelTrainingResult.Unavailable).reason,
         )
+        // A generation whose battery power has neither a validated conversion nor a pack pair to
+        // derive one from: nothing to train on, and it says so rather than fitting a guess.
         assertEquals(
             UnavailableReason.UNVALIDATED_FIRMWARE,
-            (trainer.train(listOf(syntheticTrip()), FirmwareInfo.Gen.SWI68)
+            (trainer.train(listOf(syntheticTrip()), FirmwareInfo.Gen.SWI69)
                 as EnergyModelTrainingResult.Unavailable).reason,
         )
+    }
+
+    @Test fun `SWI68 trains on the pack pair rather than refusing`() {
+        // The car this project runs on has no validated power conversion and will not get one
+        // from a desk. Refusing to train left the speed comparison permanently empty; the model
+        // is stamped with the derived interpretation instead, so a validated one supersedes it.
+        val trip = storedTrip(
+            syntheticTrip().samples,
+            BatteryPowerEvidence(FirmwareInfo.Gen.SWI68, BatteryPowerEvidence.PACK_PAIR_DERIVED_V2),
+        )
+        val model = ready(trainer.train(listOf(trip), FirmwareInfo.Gen.SWI68))
+
+        assertEquals(BatteryPowerEvidence.PACK_PAIR_DERIVED_V2, model.evidence.conversionVersion)
+        assertEquals(Provenance.ESTIMATED, model.predict(80.0, 10.0).provenance)
     }
 
     @Test fun `prediction band covers held-out truth and extrapolation is refused`() {
@@ -104,7 +120,10 @@ class EnergyModelTest {
         return storedTrip(samples)
     }
 
-    private fun storedTrip(samples: List<TripSample>) = StoredTrip(
+    private fun storedTrip(
+        samples: List<TripSample>?,
+        evidence: BatteryPowerEvidence = this.evidence,
+    ) = StoredTrip(
         summary = EnergyTripSummary(
             startedAtMs = 1L,
             endedAtMs = 2L,

@@ -31,7 +31,7 @@ class EnergyModelTrainer(
         if (firmware == FirmwareInfo.Gen.UNKNOWN) {
             return EnergyModelTrainingResult.Unavailable(UnavailableReason.UNSUPPORTED_FIRMWARE)
         }
-        val evidence = CarPropertyEvidence.batteryPowerEvidence(firmware)
+        val evidence = CarPropertyEvidence.powerModelEvidence(firmware)
             ?: return EnergyModelTrainingResult.Unavailable(UnavailableReason.UNVALIDATED_FIRMWARE)
         return fit(trips, evidence)
     }

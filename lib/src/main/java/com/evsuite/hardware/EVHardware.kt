@@ -406,6 +406,28 @@ object EVHardware {
     private const val PROP_TIRE_PRESSURE = 0x17600309                // kPa, per wheel
     private const val PROP_EV_BATTERY_PCT_SWI68 = 0x2160F404         // vendor float %
     private const val PROP_EV_RANGE_KM_SWI68 = 0x2140F41C            // vendor int km
+    private const val PROP_BMS_PACK_VOLT_SWI68 = 0x2160F406          // vendor float V
+    private const val PROP_BMS_PACK_CURRENT_SWI68 = 0x2160F407       // vendor float A
+
+    /**
+     * `HVAC_AMBIENT_TEMPERATURE`, the one in-car candidate left on this firmware.
+     *
+     * The vendor map declares it beside `HVAC_TEMPERATURE_OUTCAR`, which rules out its being
+     * a second name for the outside sensor, and no OEM app on the unit reads it. Declared and
+     * unread proves nothing — `EV_BATTERY_AVG_TEMP` is declared too and never publishes — so
+     * this is probed and not read: a wrong guess here puts the outside temperature in the
+     * cabin tile, which is worse than the dash that is there now.
+     */
+    private const val PROP_HVAC_AMBIENT_TEMP_SWI68 = 0x1560252A      // vendor float °C
+
+    /**
+     * What the vehicle's own charging service treats as an impossible pack current, so a
+     * reading past it is a signal that never arrived rather than a car drawing that much.
+     */
+    private const val MAX_PACK_CURRENT_A = 2276.75f
+
+    /** A 400 V pack under load; outside this the pair is not the pair we think it is. */
+    private val PACK_VOLTAGE_RANGE = 200f..500f
 
     /** Battery power in kW: positive traction/accessory draw, negative charging/regen. */
     fun getBatteryPowerKw(): Float? = supportedTelemetryRead {
@@ -489,6 +511,30 @@ object EVHardware {
                 ?.takeIf { it.isFinite() && it in 0f..100f }
         } else null
 
+    /**
+     * Battery power from the pack's own voltage and current, in kW — SWI68 only.
+     *
+     * SWI68 publishes no `EV_BATTERY_INSTANTANEOUS_CHARGE_RATE`, which is why every kWh figure
+     * in EVSuite has had to be modelled or refused. It does publish the two signals the product
+     * is made of: `BMS_PACK_VOL` and `BMS_PACK_CRNT`, in the same vendor block as
+     * `BMS_PACK_SOC_DSP` — the property this app already reads the charge from on this car. The
+     * vehicle's own charging service reads both and bounds the current at
+     * [MAX_PACK_CURRENT_A]; the bounds here are that service's, not a guess.
+     *
+     * **Sign.** Positive is taken as draw and negative as charge, matching the rest of EVSuite.
+     * Which way the vehicle signs its current is not proven — settling it needs one charge
+     * session with a reading on screen — so a caller must publish this as derived, never as a
+     * measurement, until it is.
+     */
+    fun getVendorBatteryPowerKw(): Float? {
+        if (FirmwareInfo.getGeneration() != FirmwareInfo.Gen.SWI68) return null
+        val volts = getFloatPropertyCPM(PROP_BMS_PACK_VOLT_SWI68, AREA_GLOBAL)
+            ?.takeIf { it.isFinite() && it in PACK_VOLTAGE_RANGE } ?: return null
+        val amps = getFloatPropertyCPM(PROP_BMS_PACK_CURRENT_SWI68, AREA_GLOBAL)
+            ?.takeIf { it.isFinite() && kotlin.math.abs(it) <= MAX_PACK_CURRENT_A } ?: return null
+        return volts * amps / 1_000f
+    }
+
     /** SWI68-only fallback; other generations use the standard or vendor-service range. */
     fun getVendorRangeKm(): Int? =
         if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI68) {
@@ -524,6 +570,11 @@ object EVHardware {
         probeProperty("PERF_ODOMETER", PROP_ODOMETER, AREA_GLOBAL, Float::class.javaObjectType),
         probeProperty("HVAC_TEMPERATURE_CURRENT", PROP_CABIN_TEMP, AREA_HVAC, Float::class.javaObjectType),
         probeProperty("EV_CHARGE_PORT_CONNECTED", PROP_EV_CHARGE_PORT_CONNECTED, AREA_GLOBAL, Boolean::class.javaObjectType),
+        // The pair battery power is computed from on SWI68. Probed by name so the diagnostic
+        // bundle says which of the two answered, rather than only that the product did not.
+        probeProperty("BMS_PACK_VOL", PROP_BMS_PACK_VOLT_SWI68, AREA_GLOBAL, Float::class.javaObjectType),
+        probeProperty("BMS_PACK_CRNT", PROP_BMS_PACK_CURRENT_SWI68, AREA_GLOBAL, Float::class.javaObjectType),
+        probeProperty("HVAC_AMBIENT_TEMPERATURE", PROP_HVAC_AMBIENT_TEMP_SWI68, AREA_GLOBAL, Float::class.javaObjectType),
     )
 
     private fun probeProperty(name: String, propId: Int, areaId: Int, boxed: Class<*>): PropertyReport {
@@ -1663,6 +1714,28 @@ object EVHardware {
      * ADAS calls, and it needs the same instance [callVsm] uses rather than a second bind.
      */
     internal fun vsmInstance(): Any? = sVsm
+
+    /** Whether the AAOS `Car` object is bound, so a missing manager can be told from a missing car. */
+    internal fun isCarBound(): Boolean = sCar != null
+
+    /**
+     * Any AAOS car manager, named by the `Car` constant that selects its service.
+     *
+     * For the `RI-` survey rather than for a feature. `DIAGNOSTIC_SERVICE` is the only
+     * OBD-shaped surface the platform defines, and it is gated behind a privileged permission —
+     * so "the constant is not on this platform", "the car is not bound" and "we were refused"
+     * are three different answers, and a probe that returned a bare null would merge them.
+     */
+    internal fun carManagerNamed(serviceField: String): Any? {
+        val car = sCar ?: return null
+        return try {
+            val service = car.javaClass.getField(serviceField).get(null) as String
+            car.javaClass.getMethod("getCarManager", String::class.java).invoke(car, service)
+        } catch (e: Exception) {
+            AppLogger.d(TAG, "  carManagerNamed($serviceField): ${e.message}")
+            null
+        }
+    }
 
     private fun callVsm(methodName: String, vararg args: Any?): Any? {
         val vsm = sVsm ?: return null
