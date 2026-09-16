@@ -34,14 +34,25 @@ class StateOfHealthTest {
         assertEquals(5, unavailable.windowsSeen)
     }
 
-    @Test fun `the band is never tighter than a gauge that moves a point at a time`() {
+    @Test fun `the band is never tighter than the counter's own whole kilowatt-hour`() {
         val ready = StateOfHealthEstimator()
             .estimate(counterLedger(windows = 8, capacityKwh = 60.0), CAPACITY_WHEN_NEW)
                 as StateOfHealthResult.Ready
 
-        // Identical windows have no spread at all; the quantisation floor is what is left.
-        val expected = 60.0 * StateOfHealthEstimator.SOC_STEP_PERCENT / 60.0
+        // Identical windows have no spread at all, so a floor is all that is left — and for the
+        // car's own counter the coarser of the two is its whole-kWh step, not the charge gauge.
+        val expected = StateOfHealthEstimator.COUNTER_STEP_KWH * 100.0 / 60.0
         assertEquals(expected, ready.estimate.usableCapacityKwh.uncertainty!!, 1e-6)
+        assertTrue(expected > 60.0 * StateOfHealthEstimator.SOC_STEP_PERCENT / 60.0)
+    }
+
+    @Test fun `an integral has no step of its own, so the gauge is its floor`() {
+        val ready = StateOfHealthEstimator()
+            .estimate(packPairLedger(windows = 8, capacityKwh = 58.0), CAPACITY_WHEN_NEW)
+                as StateOfHealthResult.Ready
+
+        val expected = 58.0 * StateOfHealthEstimator.SOC_STEP_PERCENT / 60.0
+        assertEquals(expected, ready.estimate.usableCapacityKwh.uncertainty!!, 1e-3)
     }
 
     @Test fun `a window under the minimum drop contributes nothing`() {

@@ -119,7 +119,8 @@ class StateOfHealthEstimator(
         // that moves a point at a time can resolve at all.
         val spread = (percentile(capacities, 0.75) - percentile(capacities, 0.25)) / 2.0
         val quantisation = capacity * SOC_STEP_PERCENT / median(drops)
-        val band = maxOf(spread, quantisation)
+        val resolution = sourceStepKwh(chosen.first().source) * 100.0 / median(drops)
+        val band = maxOf(spread, quantisation, resolution)
         val health = capacity * 100.0 / usableCapacityKwhWhenNew
         val healthBand = band * 100.0 / usableCapacityKwhWhenNew
 
@@ -266,8 +267,29 @@ class StateOfHealthEstimator(
         /** How far the app's own integral may fall short of the odometer before the window is refused. */
         const val DISTANCE_TOLERANCE = 0.10
 
-        /** The step this car's charge gauge takes, and so the floor under every band. */
+        /** The step this car's charge gauge takes, and so one floor under every band. */
         const val SOC_STEP_PERCENT = 1.0
+
+        /**
+         * The step the vehicle's own counter takes — a whole kilowatt-hour.
+         *
+         * Not a guess: the 2026-09-13 drive spent 1,1 % of the pack and read zero on
+         * `saic_consumed_kwh_since_start`, and the 2026-09-15 drive moved it. RI-002's verdict is
+         * that the counter was below its *resolution* rather than below its bind point, and that
+         * resolution is a whole kWh. Over a sixty-point window that is a couple of percent of the
+         * capacity, which is the same order as a year of degradation — so it belongs in the band
+         * rather than in a footnote. A median over several windows averages the rounding down; the
+         * floor states what a single window could not have resolved.
+         */
+        const val COUNTER_STEP_KWH = 1.0
+
+        /** What one window's energy figure could be wrong by, before anything else goes wrong. */
+        internal fun sourceStepKwh(source: SohEnergySource): Double = when (source) {
+            SohEnergySource.VEHICLE_COUNTERS -> COUNTER_STEP_KWH
+            // An integral of a float property has no step of its own; what it can be wrong about
+            // is coverage, and the odometer guard is what refuses a window for that.
+            SohEnergySource.PACK_PAIR_INTEGRAL -> 0.0
+        }
 
         const val MIN_TREND_WINDOWS = 12
         const val MIN_TREND_DAYS = 60.0
