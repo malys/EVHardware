@@ -22,6 +22,9 @@ interface EnergySignalSource {
     fun odometerKm(): Float?
     fun chargePortConnected(): Boolean?
     fun chargingStatus(): Int?
+    /** The vehicle's own counters since its last charge; null where the car keeps none. */
+    fun vehicleConsumedKwh(): Float? = null
+    fun vehicleRegeneratedKwh(): Float? = null
     fun parked(): Boolean?
     fun climate(): ClimateSnapshot
     fun tirePressures(): TirePressureSnapshot
@@ -57,6 +60,8 @@ class EvHardwareEnergySignalSource(context: Context) : EnergySignalSource {
     override fun odometerKm() = EVHardware.getOdometerKm()
     override fun chargePortConnected() = EVHardware.isChargePortConnected()
     override fun chargingStatus() = SaicCharging.chargingStatus()
+    override fun vehicleConsumedKwh() = SaicCharging.consumedKwhSinceCharge()
+    override fun vehicleRegeneratedKwh() = SaicCharging.regeneratedKwhSinceCharge()
     override fun parked() = EVHardware.isVehicleInPark()
     override fun tirePressures() = TirePressureSnapshot(
         frontLeftKpa = EVHardware.getTirePressureKpa(EVHardware.Wheel.FRONT_LEFT),
@@ -109,6 +114,8 @@ class EnergyTelemetryReader(private val source: EnergySignalSource) {
         odometerKm = source.odometerKm()?.takeIf { it.isFinite() && it >= 0f },
         chargePortConnected = source.chargePortConnected(),
         chargingStatus = source.chargingStatus(),
+        vehicleConsumedKwh = source.vehicleConsumedKwh()?.takeIf { it.isFinite() && it >= 0f },
+        vehicleRegeneratedKwh = source.vehicleRegeneratedKwh()?.takeIf { it.isFinite() && it >= 0f },
         parked = source.parked(),
         climate = source.climate(),
         tirePressures = source.tirePressures(),

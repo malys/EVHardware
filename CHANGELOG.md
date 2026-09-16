@@ -8,6 +8,38 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **The pack's health, as a ratio rather than a reading.** `INFO_EV_BATTERY_CAPACITY`,
+  `EV_BATTERY_LEVEL` and the `EV_CURRENT_BATTERY_CAPACITY` candidate are declared and never
+  published on SWI68 — null in all 612 snapshots of the 2026-09-13 drive — so the capacity behind
+  every kWh figure in EVSuite has been a specification sheet the driver retypes. It does not have
+  to be: the energy that left the pack, over the charge it cost, *is* a capacity, and both halves
+  are now recorded. `BatteryLedgerStore` keeps the entries a trip cannot — the parking, the
+  standing, the charge between two drives — and `BatteryLedgerRecorder` turns the 1 Hz sample
+  stream into one entry per point of charge, change of charging state, or quarter of an hour,
+  carrying the car's own kWh counters (`SaicCharging` transactions 75 and 77), this app's running
+  integral of `BMS_PACK_VOL × BMS_PACK_CRNT`, the odometer and the outside temperature.
+  `StateOfHealthEstimator` assembles the discharges between two charges and reports the median of
+  at least six of them, with the source named on the estimate and the two sources never averaged
+  together. A charge step on this car is about one point, so a 25-point window carries ±4 % before
+  anything else goes wrong and a year of real degradation is two or three points: one window is
+  never a health figure, the band never claims to be tighter than the quantisation allows, and the
+  figure worth reading is the trend, which cancels whatever node the energy was counted at. Cold
+  windows are excluded and counted rather than believed. Every output is `ESTIMATED` with its band.
+
+- **When the charge gauge last had anything to anchor itself on.** `CalibrationDrift` reads the
+  same ledger for a different question: how long since the pack saw a full charge, how many
+  equivalent cycles since, and whether any charge step went unexplained — a car that stood still,
+  drove nowhere and woke up several points lower did not consume that charge, the BMS re-estimated
+  it. The odometer has to read identical at both ends for a step to count at all, and a
+  self-discharge allowance keeps a fortnight of standing still from being reported as a fault.
+  It notices; it changes nothing, and no figure is corrected against an observed step.
+
+- **What a pack has been subjected to.** `BatteryExposure` reports hours above 80 % and below
+  10 % of charge (interpolated across each segment, so a night that ended at 85 % counts its hours
+  where they were spent), the mean charge, equivalent full cycles, kilometres per cycle, and one
+  row per charge session with its mean and peak points per hour — the rate being what separates a
+  wall box from a fast charger on a car that publishes no charger type.
+
 - **The head unit can now be asked what it publishes.** `RuntimeInterfaceProbe` walks the
   adapter's service codes and the vehicle hub's service names, reads back the interface
   descriptor of every binder that answers, and records one of three verdicts per interface:
@@ -100,6 +132,11 @@ All notable changes to this project are documented here. Format follows
   is not a place, which is why it can travel on the stick.
 
 ### Changed
+
+- `EnergySnapshot` carries `vehicleConsumedKwh` and `vehicleRegeneratedKwh`, read through
+  `EnergyTelemetryReader` from the charging service's own counters. Both are defaulted: every
+  existing caller builds that snapshot by name, and a counter this car may not keep should not
+  become a parameter each of them has to pass as null.
 
 - **`PlanDrift` now measures the charge gauge at a tenth of a percent, not a whole one.** The
   2026-09-05 drive on SWI68 recorded 457 samples stepping between 53,9 % and 52,9 % in tenths and

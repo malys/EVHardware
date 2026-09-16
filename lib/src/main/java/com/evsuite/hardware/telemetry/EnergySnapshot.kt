@@ -19,6 +19,15 @@ data class EnergySnapshot(
     val odometerKm: Float?,
     val chargePortConnected: Boolean?,
     val chargingStatus: Int?,
+    /**
+     * The vehicle's own kWh counters since the end of the last charge, when it keeps any.
+     *
+     * Defaulted rather than required: they arrived with the battery ledger, every existing
+     * caller builds this snapshot positionally, and a counter this car may not keep must not
+     * become a parameter every one of them has to pass as null.
+     */
+    val vehicleConsumedKwh: Float? = null,
+    val vehicleRegeneratedKwh: Float? = null,
     val parked: Boolean?,
     val climate: ClimateSnapshot,
     val tirePressures: TirePressureSnapshot,
@@ -28,6 +37,7 @@ data class EnergySnapshot(
             batteryPowerKw != null || outsideTempCelsius != null || cabinTempCelsius != null ||
             batteryTempCelsius != null || batteryEnergyKwh != null || batteryCapacityKwh != null ||
             odometerKm != null || chargePortConnected != null || chargingStatus != null ||
+            vehicleConsumedKwh != null || vehicleRegeneratedKwh != null ||
             parked != null || climate.hasData || tirePressures.hasData
 }
 
