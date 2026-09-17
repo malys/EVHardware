@@ -1680,6 +1680,17 @@ object EVHardware {
     }
 
     /**
+     * Whether a carapi adapter client exists at all on this firmware.
+     *
+     * [a9ClientBinder] returns null for two entirely different reasons — the code is not served,
+     * or there is no adapter to ask — and a survey that cannot tell them apart records "absent"
+     * for a question that was never put to the vehicle. `sCarAdapter` is assigned only by
+     * `initKatman4Swi69`, so on SWI68 every `queryClient` in a probe fails before it reaches a
+     * binder. RI-002 was nearly closed on that false negative; the probe now says so out loud.
+     */
+    internal fun hasCarAdapterClient(): Boolean = sCarAdapter != null && sCarAdapterClass != null
+
+    /**
      * A carapi client binder by service code, on the A9 platform.
      *
      * `queryClient` is how every A9 client is obtained — the vehicle settings one (0x8) is

@@ -8,6 +8,21 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A probe that says when it was never able to ask.** `RuntimeInterfaceProbe.adapterClientMap()`
+  swept nineteen service codes and recorded ABSENT for every one of them on a firmware where
+  `sCarAdapter` is never assigned — nineteen answers to a question that never reached a binder,
+  and RI-002 was nearly closed on them. `EVHardware.hasCarAdapterClient()` is checked once before
+  the sweep and every swept entry now carries the caveat on itself rather than in the bundle
+  preamble, because a later session reads one entry and not the header.
+
+- **`SocConsumptionFitter.describe()` tells the two refusals apart.** Too few segments and a speed
+  span too narrow to separate rolling from aero both answer `INSUFFICIENT_SAMPLES`, and the two
+  ask the driver for opposite things — more kilometres, or one motorway leg. A third cause was
+  silent altogether: a trip skipped for a speed conversion no longer believed leaves no trace, and
+  a history of them looks exactly like a history of short drives. One diagnostic line now states
+  used-trips, segments and speed span against their thresholds. Diagnostic only — it runs the
+  collection pass a second time, so it belongs in a probe and not on a screen.
+
 - **The pack's health, as a ratio rather than a reading.** `INFO_EV_BATTERY_CAPACITY`,
   `EV_BATTERY_LEVEL` and the `EV_CURRENT_BATTERY_CAPACITY` candidate are declared and never
   published on SWI68 — null in all 612 snapshots of the 2026-09-13 drive — so the capacity behind

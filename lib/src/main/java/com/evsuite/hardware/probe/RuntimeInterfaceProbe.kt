@@ -79,8 +79,14 @@ object RuntimeInterfaceProbe {
      * the interface, so nothing of unknown meaning is invoked. That distinction is why a sweep
      * is acceptable here and was refused in CP-004.
      */
-    fun adapterClientMap(): List<InterfaceProbe> = CODE_SWEEP.map { code ->
-        describe("queryClient(0x${code.toString(16)})", EVHardware.a9ClientBinder(code))
+    fun adapterClientMap(): List<InterfaceProbe> {
+        // Asked once, ahead of the sweep: without an adapter client every code below fails
+        // before it reaches a binder, and nineteen ABSENT entries then look exactly like a head
+        // unit that publishes nothing. That is the false negative RI-002 was nearly closed on.
+        val note = if (EVHardware.hasCarAdapterClient()) null else NO_ADAPTER_CLIENT
+        return CODE_SWEEP.map { code ->
+            describe("queryClient(0x${code.toString(16)})", EVHardware.a9ClientBinder(code), note)
+        }
     }
 
     /**
@@ -305,9 +311,11 @@ object RuntimeInterfaceProbe {
     private val engMode = SaicService(ENG_PACKAGE, ENG_ACTION, "EV_RI_ENGMODE")
 
     /** A binder that will not name itself was reached and refused, which is not the same as absent. */
-    private fun describe(label: String, binder: IBinder?): InterfaceProbe {
+    private fun describe(label: String, binder: IBinder?, note: String? = null): InterfaceProbe {
         val descriptor = binder?.let { runCatching { it.interfaceDescriptor }.getOrNull() }
-        return InterfaceProbe(label, descriptor, verdictFor(binder != null, listOf(descriptor)))
+        return InterfaceProbe(
+            label, descriptor, verdictFor(binder != null, listOf(descriptor)), note = note,
+        )
     }
 
     /** How a reply is laid out. A wrong choice here reads a valid parcel as nonsense. */
@@ -356,6 +364,17 @@ object RuntimeInterfaceProbe {
      * explicit and short rather than open-ended.
      */
     private val CODE_SWEEP = (0x0..0x12).toList()
+
+    /**
+     * What ABSENT means when there is no adapter client to ask. Carried on every swept entry
+     * rather than stated once at the top of the bundle: a later session reads one entry, not the
+     * preamble, and closing RI-001, RI-002 or RI-008 on a field that was never set is the exact
+     * mistake this sentence exists to prevent.
+     */
+    internal const val NO_ADAPTER_CLIENT =
+        "no CarAdapterClient on this firmware — sCarAdapter is assigned only by " +
+            "initKatman4Swi69, so this call failed before it reached a binder. ABSENT here is " +
+            "not a reading of the vehicle."
 
     /**
      * Every sub-service name the hub is known to resolve.

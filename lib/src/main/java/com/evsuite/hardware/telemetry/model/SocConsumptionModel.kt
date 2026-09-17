@@ -8,6 +8,7 @@ import com.evsuite.hardware.telemetry.TripSample
 import com.evsuite.hardware.telemetry.UnavailableReason
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
@@ -116,6 +117,53 @@ class SocConsumptionFitter(
         val percentPer100Km: Double get() = socDropPercent * 100.0 / distanceKm
     }
 
+    /**
+     * Whether a trip's stored distance was integrated under the conversion in force now.
+     *
+     * The distance is the speed integral, so a trip recorded under a conversion that is no
+     * longer believed correct contributes nothing. CP-036's 3.6x error is invisible in the
+     * stored number and would be fitted as a real consumption.
+     */
+    private fun usable(trip: StoredTrip, generation: FirmwareInfo.Gen): Boolean =
+        trip.summary.speedEvidence?.matchesCurrent(generation) == true
+
+    /** The training points a history yields, in one pass, capped at [maxSegments]. */
+    private fun collectAll(trips: List<StoredTrip>, generation: FirmwareInfo.Gen): List<Segment> {
+        val segments = ArrayList<Segment>()
+        for (trip in trips) {
+            if (!usable(trip, generation)) continue
+            collect(trip.samples.orEmpty(), segments)
+            if (segments.size >= maxSegments) break
+        }
+        return segments
+    }
+
+    /**
+     * What the history looks like to [fit], as one line for a diagnostic bundle.
+     *
+     * Two different gates answer [UnavailableReason.INSUFFICIENT_SAMPLES] — too few segments,
+     * and a speed span too narrow to separate rolling from aero — and the reason code cannot
+     * tell them apart. Two validation bundles reported that one word while asking the driver
+     * for opposite things: more kilometres, or one motorway leg. A third cause is silent
+     * altogether — a trip skipped for a speed conversion that is no longer believed leaves no
+     * trace at all, and a history of them looks exactly like a history of short drives.
+     *
+     * Diagnostic only: it runs the same collection pass as [fit] a second time, so call it
+     * from a probe and not from a screen.
+     */
+    fun describe(
+        trips: List<StoredTrip>,
+        generation: FirmwareInfo.Gen = FirmwareInfo.getGeneration(),
+    ): String {
+        if (generation == FirmwareInfo.Gen.UNKNOWN) return "firmware=unknown"
+        val segments = collectAll(trips, generation)
+        val head = "used=${trips.count { usable(it, generation) }}/${trips.size} " +
+            "segments=${segments.size}/$MIN_SEGMENTS"
+        if (segments.isEmpty()) return head
+        val span = segments.maxOf { it.meanSpeedKmh } - segments.minOf { it.meanSpeedKmh }
+        return "$head span=${span.roundToInt()}/${MIN_SPEED_SPAN_KMH.roundToInt()} km/h"
+    }
+
     fun fit(
         trips: List<StoredTrip>,
         generation: FirmwareInfo.Gen = FirmwareInfo.getGeneration(),
@@ -127,15 +175,7 @@ class SocConsumptionFitter(
         // be exercised on the JVM. A correctness gate that only runs on a car is untested.
         val evidence = VehicleSpeedEvidence(generation, VehicleSpeedEvidence.CURRENT)
 
-        val segments = ArrayList<Segment>()
-        for (trip in trips) {
-            // The distance is the speed integral, so a trip recorded under a conversion that
-            // is no longer believed correct contributes nothing. CP-036's 3.6x error is
-            // invisible in the stored number and would be fitted as a real consumption.
-            if (trip.summary.speedEvidence?.matchesCurrent(generation) != true) continue
-            collect(trip.samples.orEmpty(), segments)
-            if (segments.size >= maxSegments) break
-        }
+        val segments = collectAll(trips, generation)
         if (segments.size < MIN_SEGMENTS) {
             return SocConsumptionFitResult.Unavailable(UnavailableReason.INSUFFICIENT_SAMPLES)
         }

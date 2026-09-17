@@ -189,4 +189,36 @@ class SocConsumptionModelTest {
         SocConsumptionFitter().collect(charging, segments)
         assertTrue(segments.isEmpty())
     }
+
+    @Test
+    fun `describe tells the two INSUFFICIENT_SAMPLES gates apart`() {
+        // The reason code is the same word for both, and the two ask the driver for opposite
+        // things. Two validation bundles reported that word without saying which.
+        val fitter = SocConsumptionFitter()
+
+        // Segments enough, one speed band. The answer is "drive a motorway leg".
+        val oneSpeed = listOf(
+            trip(drive(90.0, 20.0, 16.0, startAtMs = 0L)),
+            trip(drive(90.0, 0.0, 21.0, startAtMs = 100_000_000L)),
+        )
+        assertEquals(
+            SocConsumptionFitResult.Unavailable(UnavailableReason.INSUFFICIENT_SAMPLES),
+            fitter.fit(oneSpeed, generation),
+        )
+        val narrow = fitter.describe(oneSpeed, generation)
+        assertTrue(narrow, narrow.contains("used=2/2"))
+        assertTrue(narrow, narrow.contains("span=0/20 km/h"))
+
+        // Every trip skipped for a conversion no longer believed: no segments at all, and
+        // nothing about speed to say. The answer is "these kilometres do not count".
+        val staleHistory = oneSpeed.map { trip(it.samples!!, evidence = stale) }
+        assertEquals(
+            SocConsumptionFitResult.Unavailable(UnavailableReason.INSUFFICIENT_SAMPLES),
+            fitter.fit(staleHistory, generation),
+        )
+        val skipped = fitter.describe(staleHistory, generation)
+        assertTrue(skipped, skipped.contains("used=0/2"))
+        assertTrue(skipped, skipped.contains("segments=0/"))
+        assertTrue(skipped, !skipped.contains("span="))
+    }
 }
