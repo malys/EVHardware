@@ -8,6 +8,22 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **The charge side of the battery ledger, which nothing read.** Phase 5 measures the pack from
+  its discharges alone: a rise in charge is only a boundary marker, so the energy going back in
+  was being recorded and never looked at — and the two facts RI-002 has been blocked on since
+  2026-09-13 live in exactly that gap. `ChargeEnergyAnalyzer` reads it, taking `BatteryExposure`'s
+  sessions rather than cutting its own so the two can never disagree about what a charge is. Per
+  charge: energy and mean power from the pack-pair integral, which way that integral moved
+  (`ENERGY_FELL` is `EnergySnapshot.batteryPowerKw`'s declared convention holding, `ENERGY_ROSE`
+  is it inverted, `CONTRADICTORY` when two charges disagree — never averaged), what the car's own
+  counters did (`RESET` is what "since the last charge" predicts, and one observed reset outranks
+  a charge that ended before the car clears them), and the odometer, because a long descent raises
+  the charge too and only a stationary session is a plug. A charge the app slept through keeps its
+  points and loses its power: the recorder earns an entry every quarter of an hour, so a longer
+  silence is this app having been down, and the integral does not move while nobody is
+  integrating. `describe()` puts the verdicts in a diagnostic bundle. Nothing is corrected and
+  nothing new is sampled — no new property, no new transaction, no new permission (CP-073).
+
 - **A probe that says when it was never able to ask.** `RuntimeInterfaceProbe.adapterClientMap()`
   swept nineteen service codes and recorded ABSENT for every one of them on a firmware where
   `sCarAdapter` is never assigned — nineteen answers to a question that never reached a binder,
