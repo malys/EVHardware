@@ -8,6 +8,19 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **`EcoDriving`: the band, the levers and the refusals behind the eco coach.** `EcoDrivingMonitor`
+  keeps a bounded window of the speed channel and answers one question — is this drive cheaper or
+  dearer than what this driver's own fit expects at this mean speed and outside temperature —
+  against the fit's own residual rather than a threshold invented for the purpose. It offers at
+  most one lever: a cruising speed quoted from `SocConsumptionModel.predict`, or the share of
+  moving time spent accelerating hard, chosen by precedence because the two have no common unit.
+  Every silence carries its `UnavailableReason`: no fit, a speed outside the fitted envelope, a
+  distance recorded under the superseded speed conversion, too little distance, too little charge
+  drop, no outside temperature. `forReplay()` gives the same class an unbounded window, so a
+  finished track is judged whole rather than on its last three minutes.
+
+### Added
+
 - **The charge side of the battery ledger, which nothing read.** Phase 5 measures the pack from
   its discharges alone: a rise in charge is only a boundary marker, so the energy going back in
   was being recorded and never looked at — and the two facts RI-002 has been blocked on since
