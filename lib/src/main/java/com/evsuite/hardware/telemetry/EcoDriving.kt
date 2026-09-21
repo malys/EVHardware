@@ -126,6 +126,7 @@ class EcoDrivingMonitor(
     private val windowMs: Long = WINDOW_MS,
     private val harshAccelerationMs2: Double = HARSH_ACCELERATION_MS2,
     private val maxSamples: Int = MAX_WINDOW_SAMPLES,
+    private val maxGapMs: Long = MAX_GAP_MS,
 ) {
     private data class Speed(val atMs: Long, val kmh: Double)
 
@@ -135,6 +136,7 @@ class EcoDrivingMonitor(
         require(windowMs > 0L) { "the lever window must be positive" }
         require(harshAccelerationMs2 > 0.0) { "the acceleration threshold must be positive" }
         require(maxSamples > 1) { "a window of one sample measures nothing" }
+        require(maxGapMs > 0L) { "the sampling gap must be positive" }
     }
 
     /** Feed one frame. A null or negative speed is a gap in the window, never a zero. */
@@ -272,7 +274,7 @@ class EcoDrivingMonitor(
             // Beyond the gap this app allows itself to integrate over, the missing minutes are
             // unknown motion. Reading them as one enormous step would invent an acceleration
             // out of the app having been asleep.
-            if (deltaMs !in 1..MAX_GAP_MS) return@zipWithNext
+            if (deltaMs !in 1..maxGapMs) return@zipWithNext
             if (current.kmh <= 0.0 && previous.kmh <= 0.0) return@zipWithNext
             movingMs += deltaMs
             val acceleration = (current.kmh - previous.kmh) / KMH_PER_MS2 / (deltaMs / 1000.0)
@@ -290,7 +292,7 @@ class EcoDrivingMonitor(
         var distanceKmh = 0.0
         window.zipWithNext { previous, current ->
             val deltaMs = current.atMs - previous.atMs
-            if (deltaMs !in 1..MAX_GAP_MS) return@zipWithNext
+            if (deltaMs !in 1..maxGapMs) return@zipWithNext
             weightedMs += deltaMs
             distanceKmh += (previous.kmh + current.kmh) / 2.0 * deltaMs
         }
@@ -306,7 +308,11 @@ class EcoDrivingMonitor(
          * arrival, and the bound that keeps the live window cheap has no purpose over a track
          * that is already on the disk.
          */
-        fun forReplay() = EcoDrivingMonitor(windowMs = Long.MAX_VALUE, maxSamples = Int.MAX_VALUE)
+        fun forReplay() = EcoDrivingMonitor(
+            windowMs = Long.MAX_VALUE,
+            maxSamples = Int.MAX_VALUE,
+            maxGapMs = REPLAY_MAX_GAP_MS,
+        )
 
         /** Long enough that a single roundabout is not a driving style. */
         const val WINDOW_MS = 180_000L
@@ -335,6 +341,9 @@ class EcoDrivingMonitor(
 
         /** The app's own integration rule: past five seconds, the motion in between is unknown. */
         const val MAX_GAP_MS = 5_000L
+
+        /** Stored samples cross the five-second boundary on the next live telemetry frame. */
+        private const val REPLAY_MAX_GAP_MS = TripSampleTrack.DEFAULT_INTERVAL_MS * 2
 
         /** Three minutes at 1 Hz, with room for a faster caller. */
         const val MAX_WINDOW_SAMPLES = 1_024

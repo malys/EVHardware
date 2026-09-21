@@ -177,6 +177,27 @@ class EcoDrivingTest {
     }
 
     @Test
+    fun `replay accepts the stored track cadence without relaxing live gaps`() {
+        val samples = (0..24).map { index ->
+            TripSample(
+                atMs = index * 5_500L,
+                speedKmh = if (index % 2 == 0) 0f else 36f,
+                batteryPowerKw = null,
+                socPercent = null,
+                outsideTempCelsius = null,
+                cabinTempCelsius = null,
+                batteryTempCelsius = null,
+                climatePowerOn = null,
+                climateAcOn = null,
+                climateFanLevel = null,
+            )
+        }
+
+        assertEquals(EcoLever.STEADINESS, EcoDrivingMonitor.forReplay().replay(samples).steadiness()?.lever)
+        assertNull(EcoDrivingMonitor().replay(samples).steadiness())
+    }
+
+    @Test
     fun `a window too short to judge says nothing`() {
         assertNull(verdict(monitor = cruise(110f, 30)).advice)
     }

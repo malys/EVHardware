@@ -6,6 +6,12 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Eco-driving trip replay now accepts persisted sample cadence.** Live monitoring still rejects
+  gaps over five seconds, while replay allows the expected delay between five-second track samples
+  and the next telemetry frame. Stored trips can therefore report measured steadiness again.
+
 ### Added
 
 - **`EcoDriving`: the band, the levers and the refusals behind the eco coach.** `EcoDrivingMonitor`
