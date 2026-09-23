@@ -8,6 +8,14 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- **Hard keys are decoded per broadcast.** `com.saic.keyevent.hardkey.report` carries Android
+  key codes and `com.android.systemui.ACTION_HARD_KEY_EVENT` carries SAIC's own numbering, and
+  the same press arrives on both. Read as one space, SystemUI's next-track (5) decoded as the
+  report's phone (5), and a phone press (5 and 16) read as a double. `accept()` now takes a
+  `Source`; SystemUI contributes only the cluster pad (6–10), which the report does not carry.
+  A key neither table names is reported with an id of its own (`unknownKeyId`), so it can still
+  be bound. `Event` carries `keyId`; `Button.id` keeps the numbers rules already store.
+
 - **Eco-driving trip replay now accepts persisted sample cadence.** Live monitoring still rejects
   gaps over five seconds, while replay allows the expected delay between five-second track samples
   and the next telemetry frame. Stored trips can therefore report measured steadiness again.
