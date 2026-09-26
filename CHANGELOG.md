@@ -8,6 +8,16 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- **The power model trains on town driving.** `EnergyModelTrainer` fitted every 5 s sample,
+  so an acceleration costing several times a cruise counted as model error and stop-and-go
+  history never passed the residual gate. It now fits one point per kilometre of driving, a
+  point per charge made rather than per instant, and `sampleCount` counts those kilometres
+  (twelve at least). A history without 5 °C of temperature spread fits speed alone, with no
+  weather term, instead of refusing.
+- **The charge model trains on short drives.** `SocConsumptionFitter` waited for 2 % of charge
+  before cutting a segment; SWI68 publishes tenths of a percent, so every drive under about
+  ten kilometres gave nothing. The drop needed is now two steps of the track's own gauge,
+  capped at 2 %, and a stretch shorter than 2 km keeps accumulating instead of being dropped.
 - **Hard keys are decoded per broadcast.** `com.saic.keyevent.hardkey.report` carries Android
   key codes and `com.android.systemui.ACTION_HARD_KEY_EVENT` carries SAIC's own numbering, and
   the same press arrives on both. Read as one space, SystemUI's next-track (5) decoded as the

@@ -191,6 +191,24 @@ class SocConsumptionModelTest {
     }
 
     @Test
+    fun `a gauge in tenths trains on a town drive that a whole-percent gauge cannot`() {
+        // Nine kilometres at 40 km/h for 15 %/100 km: 1.35 % of charge, under two whole points.
+        val town = drive(40.0, 20.0, 15.0, distanceKm = 9.0)
+        fun gauge(step: Float) = town.map {
+            it.copy(socPercent = kotlin.math.round(it.socPercent!! / step) * step)
+        }
+        val tenths = ArrayList<SocConsumptionFitter.Segment>()
+        SocConsumptionFitter().collect(gauge(0.1f), tenths)
+        val whole = ArrayList<SocConsumptionFitter.Segment>()
+        SocConsumptionFitter().collect(gauge(1f), whole)
+
+        // Cut at two kilometres, the shortest segment a stretch may be, and still near 15.
+        assertEquals(4, tenths.size)
+        assertTrue("$tenths", tenths.all { it.distanceKm >= 2.0 && it.percentPer100Km in 10.0..20.0 })
+        assertTrue(whole.isEmpty())
+    }
+
+    @Test
     fun `describe tells the two INSUFFICIENT_SAMPLES gates apart`() {
         // The reason code is the same word for both, and the two ask the driver for opposite
         // things. Two validation bundles reported that word without saying which.

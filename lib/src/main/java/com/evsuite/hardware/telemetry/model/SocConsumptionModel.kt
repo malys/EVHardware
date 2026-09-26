@@ -247,6 +247,11 @@ class SocConsumptionFitter(
      * refuses to build a segment from is most of what makes the fit trustworthy.
      */
     internal fun collect(samples: List<TripSample>, out: MutableList<Segment>) {
+        // Two steps of this track's own gauge, never more than [minSocDropPercent]. SWI68
+        // publishes tenths of a percent, and waiting for two whole points there threw away
+        // every town drive shorter than ten kilometres — most of what the car is used for.
+        val minDrop = gaugeStep(samples)?.let { minOf(minSocDropPercent, 2.0 * it) }
+            ?: minSocDropPercent
         var startSoc: Double? = null
         var distanceKm = 0.0
         var hours = 0.0
@@ -302,11 +307,27 @@ class SocConsumptionFitter(
                 continue
             }
             val drop = start - soc
-            if (drop < minSocDropPercent) continue
+            // A short stretch keeps accumulating rather than being thrown away: on a fine gauge
+            // the drop arrives before the distance does.
+            if (drop < minDrop || distanceKm < MIN_SEGMENT_KM) continue
             emit(distanceKm, hours, tempSum, tempCount, drop)?.let(out::add)
             reset(soc)
             if (out.size >= maxSegments) return
         }
+    }
+
+    /** The smallest move this track's gauge made, or null when it never moved. */
+    private fun gaugeStep(samples: List<TripSample>): Double? {
+        var step: Double? = null
+        var previous: Double? = null
+        for (sample in samples) {
+            val soc = sample.socPercent?.toDouble()?.takeIf { it.isFinite() } ?: continue
+            val move = previous?.let { abs(soc - it) }
+            // Float storage turns 0.1 into 0.0999…; anything below a hundredth is that noise.
+            if (move != null && move >= 0.01) step = minOf(step ?: move, move)
+            previous = soc
+        }
+        return step
     }
 
     private fun emit(
