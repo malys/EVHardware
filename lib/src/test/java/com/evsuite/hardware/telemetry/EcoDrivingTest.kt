@@ -167,6 +167,16 @@ class EcoDrivingTest {
     }
 
     @Test
+    fun `a calm drive is measured, not waiting`() {
+        val monitor = EcoDrivingMonitor()
+        (0..30).forEach { monitor.add(it * 1_000L, 50f) }
+        assertNull(monitor.harshSharePercent())
+        (31..90).forEach { monitor.add(it * 1_000L, 50f) }
+        assertEquals(0.0, monitor.harshSharePercent()!!, 1e-9)
+        assertNull(monitor.steadiness())
+    }
+
+    @Test
     fun `a sampling gap is a gap, not an acceleration`() {
         val monitor = EcoDrivingMonitor()
         (0..70).forEach { monitor.add(it * 1_000L, 50f) }

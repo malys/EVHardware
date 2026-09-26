@@ -266,7 +266,14 @@ class EcoDrivingMonitor(
         )
     }
 
-    private fun steadinessAdvice(): EcoAdvice? {
+    /**
+     * The share of moving time spent accelerating hard, below the advice threshold included.
+     *
+     * Null only while the window holds less than [MIN_LEVER_WINDOW_MS] of movement, so a caller
+     * can tell "not measured yet" from "measured, and calm" — the two read the same through
+     * [steadiness], which answers only when there is something to say.
+     */
+    fun harshSharePercent(): Double? {
         var movingMs = 0L
         var harshMs = 0L
         window.zipWithNext { previous, current ->
@@ -281,7 +288,11 @@ class EcoDrivingMonitor(
             if (acceleration >= harshAccelerationMs2) harshMs += deltaMs
         }
         if (movingMs < MIN_LEVER_WINDOW_MS) return null
-        val share = harshMs.toDouble() / movingMs * PERCENT
+        return harshMs.toDouble() / movingMs * PERCENT
+    }
+
+    private fun steadinessAdvice(): EcoAdvice? {
+        val share = harshSharePercent() ?: return null
         if (share < MIN_HARSH_SHARE_PERCENT) return null
         return EcoAdvice(lever = EcoLever.STEADINESS, harshSharePercent = share)
     }

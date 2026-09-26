@@ -8,6 +8,10 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- **A calm drive is measured, not waiting.** `EcoDrivingMonitor.harshSharePercent()` returns the
+  share of hard acceleration once the window holds a minute of movement, below the advice
+  threshold included. `steadiness()` still answers only above it; callers can now tell "not
+  measured yet" from "measured, and calm".
 - **The power model trains on town driving.** `EnergyModelTrainer` fitted every 5 s sample,
   so an acceleration costing several times a cruise counted as model error and stop-and-go
   history never passed the residual gate. It now fits one point per kilometre of driving, a
