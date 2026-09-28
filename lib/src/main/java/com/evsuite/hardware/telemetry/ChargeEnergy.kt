@@ -94,9 +94,38 @@ data class ChargeEnergy(
     val movedKm: Double?,
     /** Every distinct value the charging status held, in the order the ledger saw them. */
     val chargingStatuses: List<Int>,
+    /**
+     * Pack power between each pair of watched ledger entries, which the recorder writes once
+     * per point of charge: this is the charge curve, one step per point. Empty when unwatched.
+     */
+    val steps: List<ChargePowerStep> = emptyList(),
+    /** Outside temperature over the session, named as such: the pack's own is unpublished. */
+    val minOutsideTempCelsius: Double? = null,
+    val maxOutsideTempCelsius: Double? = null,
 ) {
-    /** Stationary as far as the odometer is concerned. A missing odometer is not proof. */
-    val plugged: Boolean get() = movedKm != null && movedKm <= STATIONARY_TOLERANCE_KM
+    /** The fastest watched step, measured; null when no step was watched. */
+    val peakPowerKw: Double? get() = steps.maxOfOrNull { it.powerKw }
+
+    /**
+     * Whether this rise was a charge rather than regeneration.
+     *
+     * Three pieces of evidence, any one of them enough:
+     * - the odometer stood still;
+     * - the car reported a non-zero charging status during the rise (every drive recorded so far
+     *   read zero throughout, 1 473 samples on SWI68);
+     * - the rise is too large to be regeneration **and** nobody watched the car move during it.
+     *   A head unit asleep on the charger is the ordinary overnight case: the ledger then holds
+     *   the evening entry and the morning one, the odometer may have moved between them because
+     *   the drive home was never recorded either, and requiring it to stand still is what made
+     *   a whole night's charge read as a descent and vanish from the battery page.
+     */
+    val plugged: Boolean
+        get() {
+            val moved = movedKm
+            if (moved != null && moved <= STATIONARY_TOLERANCE_KM) return true
+            if (chargingStatuses.any { it != 0 }) return true
+            return session.gainedPercent >= UNAMBIGUOUS_CHARGE_PERCENT && (moved == null || !watched)
+        }
 
     val sign: ChargePackSign
         get() {
@@ -112,8 +141,33 @@ data class ChargeEnergy(
     companion object {
         /** The odometer reads in whole kilometres, so anything under one is standing still. */
         const val STATIONARY_TOLERANCE_KM = 0.5
+
+        /**
+         * A rise no descent produces. Regeneration on the steepest ordinary pass returns a few
+         * points; ten points of a 61,7 kWh pack is over 6 kWh of potential energy recovered.
+         */
+        const val UNAMBIGUOUS_CHARGE_PERCENT = 10.0
     }
 }
+
+/** One watched step of a charge: from one ledger entry to the next, usually one point. */
+data class ChargePowerStep(
+    val fromSocPercent: Double,
+    val toSocPercent: Double,
+    val durationMs: Long,
+    /** Magnitude of the pack-pair integral's move over the step's wall clock. */
+    val powerKw: Double,
+) {
+    val midSocPercent: Double get() = (fromSocPercent + toSocPercent) / 2.0
+}
+
+/** Time-weighted mean power over every watched step whose midpoint fell in one charge band. */
+data class SocBandPower(
+    val fromPercent: Int,
+    val toPercent: Int,
+    val meanPowerKw: Double,
+    val hours: Double,
+)
 
 /** Every charge the ledger holds, and the two questions the set of them settles. */
 data class ChargeEnergyReport(
@@ -124,6 +178,28 @@ data class ChargeEnergyReport(
 ) {
     /** The most recent charge that stood still, which is the one a driver means by "my charge". */
     val lastPluggedCharge: ChargeEnergy? get() = charges.lastOrNull { it.plugged }
+
+    /** Every charge that was a charge, oldest first. */
+    val pluggedCharges: List<ChargeEnergy> get() = charges.filter { it.plugged }
+
+    /**
+     * The charge curve across every watched charge: mean power per band of [bandPercent]
+     * points of charge. This is where a taper shows — the pack accepting less as it fills —
+     * and it is measured, one step per point, never modelled.
+     */
+    fun powerBySocBand(bandPercent: Int = SOC_BAND_PERCENT): List<SocBandPower> =
+        pluggedCharges.flatMap { it.steps }
+            .groupBy { (it.midSocPercent / bandPercent).toInt().coerceIn(0, 100 / bandPercent - 1) }
+            .toSortedMap()
+            .map { (band, steps) ->
+                val ms = steps.sumOf { it.durationMs }.toDouble()
+                SocBandPower(
+                    fromPercent = band * bandPercent,
+                    toPercent = (band + 1) * bandPercent,
+                    meanPowerKw = steps.sumOf { it.powerKw * it.durationMs } / ms,
+                    hours = ms / 3_600_000.0,
+                )
+            }
 
     val watchedCount: Int get() = charges.count { it.watched }
 
@@ -151,7 +227,14 @@ data class ChargeEnergyReport(
                 " regenerated_delta_kwh=${format(charge.regeneratedDeltaKwh)}" +
                 " moved_km=${format(charge.movedKm)}" +
                 " counters=${charge.counterBehaviour.name}" +
-                " sign=${charge.sign.name}"
+                " sign=${charge.sign.name}" +
+                " plugged=${charge.plugged}" +
+                " peak_power_kw=${format(charge.peakPowerKw)}" +
+                " steps=${charge.steps.size}"
+        }
+        powerBySocBand().forEach {
+            lines += "soc_band ${it.fromPercent}-${it.toPercent} mean_power_kw=${format(it.meanPowerKw)}" +
+                " hours=${format(it.hours)}"
         }
         return lines
     }
@@ -162,6 +245,8 @@ data class ChargeEnergyReport(
     companion object {
         /** A bundle is bounded; the newest charges are the ones a question is asked about. */
         const val MAX_DESCRIBED_CHARGES = 8
+
+        const val SOC_BAND_PERCENT = 10
     }
 }
 
@@ -207,6 +292,7 @@ class ChargeEnergyAnalyzer(
         val consumed = span(slice.mapNotNull { it.vehicleConsumedKwh?.toDouble() })
         val regenerated = span(slice.mapNotNull { it.vehicleRegeneratedKwh?.toDouble() })
         val hours = session.durationHours
+        val temps = slice.mapNotNull { it.outsideTempCelsius?.toDouble() }
         return ChargeEnergy(
             session = session,
             watched = watched,
@@ -222,8 +308,26 @@ class ChargeEnergyAnalyzer(
             regeneratedDeltaKwh = regenerated,
             movedKm = span(slice.mapNotNull { it.odometerKm?.toDouble() }),
             chargingStatuses = slice.mapNotNull { it.chargingStatus }.distinct(),
+            steps = if (watched) steps(slice) else emptyList(),
+            minOutsideTempCelsius = temps.minOrNull(),
+            maxOutsideTempCelsius = temps.maxOrNull(),
         )
     }
+
+    /** Adjacent pairs that both carry the integral; a pair with none says nothing and is dropped. */
+    private fun steps(slice: List<BatteryLedgerEntry>): List<ChargePowerStep> =
+        slice.zipWithNext().mapNotNull { (a, b) ->
+            val from = a.packEnergyKwh ?: return@mapNotNull null
+            val to = b.packEnergyKwh ?: return@mapNotNull null
+            val ms = b.atMs - a.atMs
+            if (ms <= 0L || !from.isFinite() || !to.isFinite()) return@mapNotNull null
+            ChargePowerStep(
+                fromSocPercent = a.socPercent.toDouble(),
+                toSocPercent = b.socPercent.toDouble(),
+                durationMs = ms,
+                powerKw = abs(to - from) / (ms / 3_600_000.0),
+            )
+        }
 
     /** Last reading minus first, or null when fewer than two of them were published. */
     private fun span(values: List<Double>): Double? {

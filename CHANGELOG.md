@@ -8,6 +8,18 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- **An overnight charge the head unit slept through is a charge.** `ChargeEnergy.plugged` required
+  the odometer to stand still between the two ledger entries around a rise; when the drive home
+  was never recorded either, the evening entry predates it, the odometer "moved", and a night's
+  fifty points were filed as regeneration and hidden from the battery page. A rise is now a charge
+  when the odometer stood still, **or** the car reported a non-zero charging status, **or** it is
+  at least 10 points and nobody watched the car move during it.
+- **Each charge carries its curve.** `ChargeEnergy.steps` is pack power per watched ledger step
+  (one step per point of charge), with `peakPowerKw` and the outside temperature range;
+  `ChargeEnergyReport.powerBySocBand()` aggregates the steps of every charge into 10-point bands,
+  which is where the taper shows. Measured only; an unwatched charge has no steps. Both reach
+  `describe()`.
+
 - **A calm drive is measured, not waiting.** `EcoDrivingMonitor.harshSharePercent()` returns the
   share of hard acceleration once the window holds a minute of movement, below the advice
   threshold included. `steadiness()` still answers only above it; callers can now tell "not

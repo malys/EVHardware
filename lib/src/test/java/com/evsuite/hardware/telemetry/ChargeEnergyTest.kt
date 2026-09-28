@@ -125,6 +125,63 @@ class ChargeEnergyTest {
         assertEquals(ChargePackSign.ENERGY_FELL, report.packSign)
     }
 
+    @Test fun `a night the head unit slept through is a charge even when the drive home was not recorded`() {
+        // The reported case: plugged in overnight, battery page empty the next morning. The last
+        // entry before sleep was written before the unrecorded drive home, so the odometer moved
+        // between the two ends and the old rule read fifty points as a descent.
+        val entries = listOf(
+            entry(0L, 38f, pack = 100.0, odometer = 10_000f, temp = 12f),
+            entry(11 * HOUR, 88f, pack = 100.0, odometer = 10_014f, temp = 7f),
+        )
+
+        val charge = analyse(entries).lastPluggedCharge!!
+        assertFalse(charge.watched)
+        assertTrue(charge.plugged)
+        assertNull(charge.meanPowerKw)
+        assertTrue(charge.steps.isEmpty())
+        assertEquals(7.0, charge.minOutsideTempCelsius!!, 1e-6)
+        assertEquals(12.0, charge.maxOutsideTempCelsius!!, 1e-6)
+    }
+
+    @Test fun `the car saying it charges is enough without an odometer`() {
+        val entries = listOf(
+            entry(0L, 40f, status = 1),
+            entry(10 * MINUTE, 43f, status = 1),
+        )
+
+        assertTrue(analyse(entries).charges.single().plugged)
+    }
+
+    @Test fun `a small rise across a gap while the car moved stays unclaimed`() {
+        val entries = listOf(
+            entry(0L, 40f, odometer = 10_000f),
+            entry(3 * HOUR, 46f, odometer = 10_030f),
+        )
+
+        assertNull(analyse(entries).lastPluggedCharge)
+    }
+
+    @Test fun `a watched charge carries its curve, its peak and its taper by band`() {
+        // 7 kW up to 80 %, then the pack takes 3,5 kW above it.
+        val entries = listOf(
+            entry(0L, 77f, pack = 100.0, odometer = 10_000f),
+            entry(6 * MINUTE, 78f, pack = 99.3, odometer = 10_000f),
+            entry(12 * MINUTE, 79f, pack = 98.6, odometer = 10_000f),
+            entry(18 * MINUTE, 80f, pack = 97.9, odometer = 10_000f),
+            entry(30 * MINUTE, 81f, pack = 97.2, odometer = 10_000f),
+        )
+
+        val report = analyse(entries)
+        val charge = report.charges.single()
+        assertEquals(4, charge.steps.size)
+        assertEquals(7.0, charge.peakPowerKw!!, 1e-6)
+        val bands = report.powerBySocBand()
+        assertEquals(listOf(70, 80), bands.map { it.fromPercent })
+        assertEquals(7.0, bands[0].meanPowerKw, 1e-6)
+        assertEquals(3.5, bands[1].meanPowerKw, 1e-6)
+        assertTrue(report.describe().any { it.startsWith("soc_band 80-90 mean_power_kw=3.50") })
+    }
+
     @Test fun `the description names every question and stays one line per charge`() {
         val entries = listOf(
             entry(0L, 40f, pack = 100.0, odometer = 10_000f, status = 2),
@@ -161,6 +218,7 @@ class ChargeEnergyTest {
         regenerated: Float? = null,
         odometer: Float? = null,
         status: Int? = null,
+        temp: Float? = null,
     ) = BatteryLedgerEntry(
         atMs = atMs,
         socPercent = soc,
@@ -169,6 +227,7 @@ class ChargeEnergyTest {
         vehicleRegeneratedKwh = regenerated,
         packEnergyKwh = pack,
         chargingStatus = status,
+        outsideTempCelsius = temp,
     )
 
     private companion object {
