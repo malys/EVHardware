@@ -48,6 +48,12 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Open windows are a consumption factor, like the climate (CP-086).** `EnergySnapshot` and
+  `TripSample` carry `widestWindowPercent`, read from `SaicVehicleControl.widestWindowPercent()`;
+  null where unread, never 0, and absent from older stored trips. The attribution gains
+  `ResidualContext.WINDOWS_OPEN`: an interval with a window open at either end gets its own
+  residual instead of joining a climate group, so the cabin share no longer absorbs the drag.
+
 - **`EcoDriving`: the band, the levers and the refusals behind the eco coach.** `EcoDrivingMonitor`
   keeps a bounded window of the speed channel and answers one question — is this drive cheaper or
   dearer than what this driver's own fit expects at this mean speed and outside temperature —

@@ -7,7 +7,14 @@ import com.evsuite.hardware.telemetry.UnavailableReason
 import kotlin.math.abs
 import kotlin.math.max
 
-enum class ResidualContext { CLIMATE_ACTIVE, CLIMATE_INACTIVE, CLIMATE_UNKNOWN }
+/**
+ * Which auxiliary load an interval's residual may belong to.
+ *
+ * CP-086: [WINDOWS_OPEN] takes an interval with a window open at either end out of the climate
+ * groups, so the drag of open glass never reads as cabin energy. Its residual may still carry
+ * the climate system if that ran at the same time; its average fan level says whether it did.
+ */
+enum class ResidualContext { CLIMATE_ACTIVE, CLIMATE_INACTIVE, CLIMATE_UNKNOWN, WINDOWS_OPEN }
 
 enum class ResidualFinding {
     DISTINGUISHABLE,
@@ -115,7 +122,11 @@ object EnergyAttributionCalculator {
             val modelled = predictedConsumption * distanceKm / 100.0
             val uncertainty = predictedUncertainty * distanceKm / 100.0
             val measured = (max(0.0, previousPower) + max(0.0, currentPower)) / 2.0 * hours
-            val context = climateContext(previous, current)
+            val context = if (windowOpen(previous) || windowOpen(current)) {
+                ResidualContext.WINDOWS_OPEN
+            } else {
+                climateContext(previous, current)
+            }
 
             tractionKwh += modelled
             tractionUncertaintyKwh += uncertainty
@@ -158,6 +169,9 @@ object EnergyAttributionCalculator {
             else -> ResidualContext.CLIMATE_UNKNOWN
         }
     }
+
+    private fun windowOpen(sample: TripSample): Boolean =
+        sample.widestWindowPercent?.let { it > 0 } == true
 
     private fun climateActive(sample: TripSample): Boolean? = when {
         sample.climatePowerOn == true || sample.climateAcOn == true ||

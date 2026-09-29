@@ -24,6 +24,8 @@ data class TripSample(
     val climatePowerOn: Boolean?,
     val climateAcOn: Boolean?,
     val climateFanLevel: Int?,
+    /** CP-086. Absent from trips stored before it, which Gson reads back as null: unknown. */
+    val widestWindowPercent: Int? = null,
 ) {
     companion object {
         fun of(snapshot: EnergySnapshot) = TripSample(
@@ -37,6 +39,7 @@ data class TripSample(
             climatePowerOn = snapshot.climate.powerOn,
             climateAcOn = snapshot.climate.acOn,
             climateFanLevel = snapshot.climate.fanLevel,
+            widestWindowPercent = snapshot.widestWindowPercent,
         )
     }
 }

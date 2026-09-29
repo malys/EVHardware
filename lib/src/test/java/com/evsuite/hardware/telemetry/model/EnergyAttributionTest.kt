@@ -57,6 +57,26 @@ class EnergyAttributionTest {
         assertEquals(0.0, result.reconciliationErrorKwh, 1e-9)
     }
 
+    @Test fun `window-open intervals keep their own residual, out of the climate one`() {
+        val result = ready(
+            calculate(powerKw = 12f, climateOn = false, consumedKwh = 12.0, windowPercent = 40),
+        )
+        val windows = result.residuals.single()
+
+        assertEquals(ResidualContext.WINDOWS_OPEN, windows.context)
+        assertEquals(ResidualFinding.DISTINGUISHABLE, windows.finding)
+        assertEquals(2.0, windows.estimate.valueKwh, 1e-6)
+        assertEquals(0.0, result.reconciliationErrorKwh, 1e-9)
+    }
+
+    @Test fun `a closed window leaves the climate grouping as it was`() {
+        val result = ready(
+            calculate(powerKw = 12f, climateOn = true, consumedKwh = 12.0, windowPercent = 0),
+        )
+
+        assertEquals(ResidualContext.CLIMATE_ACTIVE, result.residuals.single().context)
+    }
+
     @Test fun `missing model evidence stays unavailable`() {
         val result = EnergyAttributionCalculator.calculate(trip(12f, true, 12.0), null)
 
@@ -66,10 +86,22 @@ class EnergyAttributionTest {
         )
     }
 
-    private fun calculate(powerKw: Float, climateOn: Boolean, consumedKwh: Double) =
-        EnergyAttributionCalculator.calculate(trip(powerKw, climateOn, consumedKwh), model)
+    private fun calculate(
+        powerKw: Float,
+        climateOn: Boolean,
+        consumedKwh: Double,
+        windowPercent: Int? = null,
+    ) = EnergyAttributionCalculator.calculate(
+        trip(powerKw, climateOn, consumedKwh, windowPercent),
+        model,
+    )
 
-    private fun trip(powerKw: Float, climateOn: Boolean, consumedKwh: Double): StoredTrip {
+    private fun trip(
+        powerKw: Float,
+        climateOn: Boolean,
+        consumedKwh: Double,
+        windowPercent: Int? = null,
+    ): StoredTrip {
         val samples = (0..60).map { minute ->
             TripSample(
                 atMs = minute * 60_000L,
@@ -82,6 +114,7 @@ class EnergyAttributionTest {
                 climatePowerOn = climateOn,
                 climateAcOn = climateOn,
                 climateFanLevel = if (climateOn) 4 else 0,
+                widestWindowPercent = windowPercent,
             )
         }
         return StoredTrip(

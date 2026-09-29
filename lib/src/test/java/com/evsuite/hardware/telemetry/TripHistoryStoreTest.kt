@@ -88,6 +88,25 @@ class TripHistoryStoreTest {
         assertNull(restored.batteryTempCelsius)
         assertNull(restored.climateAcOn)
         assertNull(restored.climateFanLevel)
+        assertNull(restored.widestWindowPercent)
+    }
+
+    @Test fun `a sample stored before the window field reads it as unknown`() {
+        val directory = tempDirectory()
+        val target = File(directory, "trips.json")
+        val store = EnergyTripHistoryStore(target)
+        val sample = TripSample(
+            atMs = 10L, speedKmh = 42f, batteryPowerKw = null, socPercent = null,
+            outsideTempCelsius = null, cabinTempCelsius = null, batteryTempCelsius = null,
+            climatePowerOn = null, climateAcOn = null, climateFanLevel = null,
+            widestWindowPercent = 30,
+        )
+        assertTrue(store.append(summary(1L), listOf(sample)))
+        target.writeText(target.readText().replace(",\"widestWindowPercent\":30", ""))
+
+        val restored = EnergyTripHistoryStore(target).read().single().samples!!.single()
+        assertEquals(42f, restored.speedKmh)
+        assertNull(restored.widestWindowPercent)
     }
 
     @Test fun `battery power evidence survives a history round trip`() {

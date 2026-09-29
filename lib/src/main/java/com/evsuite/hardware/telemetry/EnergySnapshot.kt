@@ -31,6 +31,11 @@ data class EnergySnapshot(
     val parked: Boolean?,
     val climate: ClimateSnapshot,
     val tirePressures: TirePressureSnapshot,
+    /**
+     * CP-086. The widest-open window, 0 closed to 100 open; null where the car does not answer,
+     * never 0 — a closed window and an unread one are different facts to the attribution.
+     */
+    val widestWindowPercent: Int? = null,
 ) {
     val hasVehicleData: Boolean
         get() = socPercent != null || rangeKm != null || speedKmh != null ||
@@ -38,7 +43,8 @@ data class EnergySnapshot(
             batteryTempCelsius != null || batteryEnergyKwh != null || batteryCapacityKwh != null ||
             odometerKm != null || chargePortConnected != null || chargingStatus != null ||
             vehicleConsumedKwh != null || vehicleRegeneratedKwh != null ||
-            parked != null || climate.hasData || tirePressures.hasData
+            parked != null || climate.hasData || tirePressures.hasData ||
+            widestWindowPercent != null
 }
 
 data class TirePressureSnapshot(
