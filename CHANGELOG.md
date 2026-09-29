@@ -48,6 +48,13 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **How long the rest of a charge takes (CP-089).** `ChargeDuration.estimate` sums, band by
+  10-point band, the minutes per point the driver's own watched charges took: the median, and the
+  fastest and slowest charge as the range. Charges at a similar outside temperature (±8 °C) are
+  tried first, all charges after. A band on the path that no watched charge crossed is refused
+  (`MISSING_BAND`), never extrapolated. `lastStretchMinutes` is the part above 80 %.
+  `ChargeDuration.curveCheck` compares one finished band with the same band in at least three
+  past charges; `slower` only when it took longer than the slowest of them.
 - **A daily battery digest (CP-087).** `BatteryDigest` copies one day of the health, calibration,
   exposure and charge analyses; `BatteryDigestStore` keeps a year of them, one per local day, with
   the same atomic write and quarantine as the ledger. `BatteryDigest.changes` reports only what
