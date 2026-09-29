@@ -48,6 +48,13 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A daily battery digest (CP-087).** `BatteryDigest` copies one day of the health, calibration,
+  exposure and charge analyses; `BatteryDigestStore` keeps a year of them, one per local day, with
+  the same atomic write and quarantine as the ledger. `BatteryDigest.changes` reports only what
+  moved past its own band from one day to the next — health beyond its uncertainty, a band that
+  narrowed by at least a point (or a first estimate), a calibration verdict that changed — so a
+  health figure wandering inside its band is never news.
+
 - **Open windows are a consumption factor, like the climate (CP-086).** `EnergySnapshot` and
   `TripSample` carry `widestWindowPercent`, read from `SaicVehicleControl.widestWindowPercent()`;
   null where unread, never 0, and absent from older stored trips. The attribution gains
