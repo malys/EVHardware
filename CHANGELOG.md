@@ -48,6 +48,13 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **What a drive asked of the pack at the moments it minds most (CP-090).** `DrivingStress.of`
+  measures, per trip, the minutes of hard discharge (above 60 % of the trip's own peak) below
+  20 % charge or below 0 °C outside, and the energy regenerated below 0 °C. The pack power sign
+  is unvalidated (RI-002), so each trip orients itself from its falling charge; a trip that
+  cannot, or with more than a tenth of its time undecidable, gives null rather than zero.
+  `DrivingStress.monthly` sums the trips that could say, per local month. Measured quantities,
+  never a wear figure.
 - **How long the rest of a charge takes (CP-089).** `ChargeDuration.estimate` sums, band by
   10-point band, the minutes per point the driver's own watched charges took: the median, and the
   fastest and slowest charge as the range. Charges at a similar outside temperature (±8 °C) are
