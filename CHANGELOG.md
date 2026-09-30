@@ -6,6 +6,15 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The trip history keeps four times as many tracks.** `EnergyTripHistoryStore`'s default
+  `maxBytes` goes from 512 KiB to 2 MiB. At about 145 KB per hour of driving, 512 KiB held roughly
+  fourteen short trips' tracks, so each new drive evicted older tracks and the consumption model's
+  segment count fell as trips were added (51 to 47 on SWI68, 2026-09-30). One long trip's
+  4 096-sample track alone did not fit. Every reader parses the file off the main thread and the
+  write stays atomic, so the cost is parse time and memory per read, not a new failure mode.
+
 ### Fixed
 
 - **An overnight charge the head unit slept through is a charge.** `ChargeEnergy.plugged` required

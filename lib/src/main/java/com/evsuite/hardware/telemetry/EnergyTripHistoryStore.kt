@@ -43,7 +43,7 @@ data class TripHistoryFile(
 class EnergyTripHistoryStore(
     private val target: File,
     private val maxTrips: Int = 200,
-    private val maxBytes: Int = 512 * 1024,
+    private val maxBytes: Int = 2 * 1024 * 1024,
     private val gson: Gson = Gson(),
 ) {
     /** Trips with whatever tracks survived eviction, newest first. */
