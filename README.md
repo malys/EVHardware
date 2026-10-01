@@ -7,7 +7,7 @@
 [![Publish](https://github.com/malys/EVHardware/actions/workflows/publish.yml/badge.svg)](https://github.com/malys/EVHardware/actions/workflows/publish.yml)
 [![Release](https://img.shields.io/github/v/release/malys/EVHardware?include_prereleases&sort=semver)](https://github.com/malys/EVHardware/releases)
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue.svg)](LICENSE)
-[![Part of EVSuite](https://img.shields.io/badge/part%20of-EVSuite-2f81f7)](https://malys.github.io/EVSuite_site/)
+[![Part of EVSuite](https://img.shields.io/badge/part%20of-EVSuite-2f81f7)](https://malys.github.io/EVSuite/)
 
 > ⚠️ **This library reads and writes a car's settings.** It runs inside apps installed on
 > an MG4 head unit. Read [DISCLAIMER.md](DISCLAIMER.md) before depending on it.
@@ -29,10 +29,10 @@ and EVChargePilot. Each app consumes EVHardware as a git submodule (`EVHardware/
 
 ## Part of EVSuite
 
-EVHardware is the shared vehicle library of [**EVSuite**](https://malys.github.io/EVSuite_site/), a family of independent,
+EVHardware is the shared vehicle library of [**EVSuite**](https://malys.github.io/EVSuite/), a family of independent,
 offline-first apps for the MG4 head unit (Android Automotive OS 9). Each app installs on its
 own — pick only what you need. User guides and install instructions:
-<https://malys.github.io/EVSuite_site/>.
+<https://malys.github.io/EVSuite/>.
 
 Discover the rest of the suite:
 
