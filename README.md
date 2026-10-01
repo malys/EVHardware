@@ -5,13 +5,14 @@
 [![Tests](https://github.com/malys/EVHardware/actions/workflows/tests.yml/badge.svg)](https://github.com/malys/EVHardware/actions/workflows/tests.yml)
 [![Security](https://github.com/malys/EVHardware/actions/workflows/security.yml/badge.svg)](https://github.com/malys/EVHardware/actions/workflows/security.yml)
 [![Publish](https://github.com/malys/EVHardware/actions/workflows/publish.yml/badge.svg)](https://github.com/malys/EVHardware/actions/workflows/publish.yml)
-[![Release](https://img.shields.io/github/v/release/malys/EVHardware?include_prereleases&amp;sort=semver)](https://github.com/malys/EVHardware/releases)
+[![Release](https://img.shields.io/github/v/release/malys/EVHardware?include_prereleases&sort=semver)](https://github.com/malys/EVHardware/releases)
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue.svg)](LICENSE)
+[![Part of EVSuite](https://img.shields.io/badge/part%20of-EVSuite-2f81f7)](https://malys.github.io/EVSuite/)
 
 > ⚠️ **This library reads and writes a car's settings.** It runs inside apps installed on
 > an MG4 head unit. Read [DISCLAIMER.md](DISCLAIMER.md) before depending on it.
-> MG and MG4 are third-party marks used only to identify compatibility; this project is
-> independent and is not approved by SAIC Motor or MG Motor.
+> MG and MG4 are third-party marks used only to identify compatibility; this independent
+> project is not affiliated with or approved by SAIC Motor or MG Motor.
 
 Shared vehicle-access layer for the SAIC MG4 (Android Automotive OS 9, MT2712). One
 implementation of the reflection-based hardware layer, the 0 km/h safety gate, the driving
@@ -22,6 +23,26 @@ The design line: **the apps are thin. EVHardware provides the vehicle.** EVTaske
 engine between shared conditions and actions; EVChargePilot and EVABRPUploader consume the
 same energy snapshot instead of carrying their own property ids, units and fallback order.
 
+Consumers: EVProfile (drive-profile manager; owns the signature-protected TaskerBridge), EVTasker, EVABRPUploader
+and EVChargePilot. Each app consumes EVHardware as a git submodule (`EVHardware/lib` as the
+`:evhardware` subproject). Common toolchain: **AGP 9.1.1 / Gradle 9.3.1 / compileSdk 36 / JDK 17**.
+
+## Part of EVSuite
+
+EVHardware is the shared vehicle library of [**EVSuite**](https://malys.github.io/EVSuite/), a family of independent,
+offline-first apps for the MG4 head unit (Android Automotive OS 9). Each app installs on its
+own — pick only what you need. User guides and install instructions:
+<https://malys.github.io/EVSuite/>.
+
+Discover the rest of the suite:
+
+[![EVProfile](https://img.shields.io/badge/EVProfile-settings%20%26%20drive%20profiles-2f81f7?logo=github)](https://github.com/malys/EVProfile)
+[![EVTasker](https://img.shields.io/badge/EVTasker-rule%20automation-2f81f7?logo=github)](https://github.com/malys/EVTasker)
+[![EVABRPUploader](https://img.shields.io/badge/EVABRPUploader-ABRP%20telemetry-2f81f7?logo=github)](https://github.com/malys/EVABRPUploader)
+[![EVChargePilot](https://img.shields.io/badge/EVChargePilot-energy%20%26%20trips-2f81f7?logo=github)](https://github.com/malys/EVChargePilot)
+[![EVLauncher](https://img.shields.io/badge/EVLauncher-home%20launcher-2f81f7?logo=github)](https://github.com/malys/EVLauncher)
+[![EVSwipe](https://img.shields.io/badge/EVSwipe-swipe%20shortcuts-2f81f7?logo=github)](https://github.com/malys/EVSwipe)
+
 ---
 
 ## Contents
@@ -29,7 +50,6 @@ same energy snapshot instead of carrying their own property ids, units and fallb
 - [Overview](#overview)
 - [How it works](#how-it-works)
 - [Install](#install)
-- [The EVSuite](#the-evsuite)
 - [Building](#building)
 - [Project documents](#project-documents)
 - [Security](#security)
@@ -114,9 +134,16 @@ permissions are `signature|privileged`); reads of standard AAOS properties work 
 The library itself declares no permissions and no `sharedUserId` — that is the consuming
 app's decision.
 
----
+## Install
 
-### External projects: consume the AAR
+EVHardware is a library, not an APK: it ships inside the consumer apps (EVProfile, EVTasker, EVABRPUploader,
+EVChargePilot). Those apps are sideloaded on the head unit via the keyboard route: open a
+text field, long-press `,` on the on-screen keyboard → **Language settings** → search
+`backup` then press back to reach Android Settings → enable **Developer options** +
+**Install unknown apps** → search `storage` and open the APK. See each app's README for
+the full steps.
+
+### Consume the AAR
 
 Projects outside this org can depend on EVHardware as a binary instead of a submodule. A
 version tag publishes the AAR to GitHub Packages (`com.evsuite:evhardware:<version>`), and
@@ -132,29 +159,6 @@ dependencies { implementation("com.evsuite:evhardware:0.1.0-SNAPSHOT") }
 
 The AAR carries `consumer-rules.pro`, so a consumer's R8 keeps the reflected names. Vehicle
 writes still require the consuming app to be signed with the ROM platform key.
-
-## Install
-EVHardware is a library — it ships inside the consumer apps (EVProfile, EVTasker), not
-as its own APK. Those apps are sideloaded on the head unit via the keyboard route: open a
-text field, long-press `,` on the on-screen keyboard → **Language settings** → search
-`backup` then press back to reach Android Settings → enable **Developer options** +
-**Install unknown apps** → search `storage` and open the APK. See each app's README for
-the full steps.
-
-## The EVSuite
-Part of a small set of projects for the SAIC MG4 (AAOS 9, MT2712), all sharing the
-**EVHardware** vehicle layer:
-
-| Project | Role |
-|---|---|
-| [EVHardware](https://github.com/malys/EVHardware) | Shared vehicle-access layer: reflection hardware layer, 0 km/h safety gate, driving models, condition/action catalogue + firmware matrix |
-| [EVProfile](https://github.com/malys/EVProfile) | Drive-profile manager; applies settings at startup; owns the signature-protected TaskerBridge |
-| [EVTasker](https://github.com/malys/EVTasker) | Rule engine — *when* conditions *then* actions — driving the car through EVProfile |
-| [EVABRPUploader](https://github.com/malys/EVABRPUploader) | Live telemetry uploader to A Better Route Planner |
-| [EVChargePilot](https://github.com/malys/EVChargePilot) | Offline live energy dashboard and local trip analyser |
-
-Common toolchain: **AGP 9.1.1 / Gradle 9.3.1 / compileSdk 36 / JDK 17**. Each app consumes
-EVHardware as a git submodule (`EVHardware/lib` as the `:evhardware` subproject).
 
 ## Building
 ```bash

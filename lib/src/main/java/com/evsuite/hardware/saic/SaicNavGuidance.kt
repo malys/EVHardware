@@ -222,7 +222,7 @@ object SaicNavGuidance {
      * A `List<EVRoutPoiInfo>` as `Parcel.writeTypedList` lays it out: the count, then per item a
      * non-null marker and the bean's own three fields in the order its `writeToParcel` wrote
      * them. Written by hand because the bean is the vendor's class and this module does not
-     * carry it — the layout is three lines and depending on a decompiled class would be worse.
+     * carry it — the layout is three lines and depending on an OEM class would be worse.
      */
     internal fun Parcel.writeEvRoutPoiList(pois: List<NavigationHandoff.Poi>) {
         writeInt(pois.size)
