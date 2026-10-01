@@ -37,5 +37,29 @@ data class DrivingProfile(
     val tsrEnabled: Boolean = false,
     val isDefault: Boolean = false,
     // [BT-PROFILES] MAC of the Bluetooth device tied to this profile (null = none)
-    val btDeviceMac: String? = null
+    val btDeviceMac: String? = null,
+    // CUSTOM drive mode (CR-040) — CustomDrive index: 0=Eco/Comfort, 1=Normal, 2=Sport.
+    // null = not configured, never written; profiles saved before this feature read as null.
+    // Written only when driveMode is CUSTOM — the car ignores them in any other mode.
+    val customPower: Int? = null,
+    val customSteering: Int? = null,
+    val customPedal: Int? = null,
+    // Climate (CR-041) — null = the profile does not touch climate (every older profile).
+    val climate: ProfileClimate? = null
+)
+
+/**
+ * The climate a profile applies (CR-041). A null switch means "unchanged": the profile leaves
+ * that control where the car has it, which is what lets a profile care about the setpoint
+ * without turning the defrost off.
+ */
+data class ProfileClimate(
+    val powerOn: Boolean = true,
+    val autoOn: Boolean? = null,
+    val acOn: Boolean? = null,
+    val tempCelsius: Int? = null,
+    val fanLevel: Int? = null,
+    val recirculation: Boolean? = null,
+    val frontDefrost: Boolean? = null,
+    val rearDefrost: Boolean? = null
 )

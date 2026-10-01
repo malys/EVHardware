@@ -15,6 +15,18 @@ All notable changes to this project are documented here. Format follows
   4 096-sample track alone did not fit. Every reader parses the file off the main thread and the
   write stays atomic, so the cost is parse time and memory per read, not a new failure mode.
 
+### Added
+
+- **CUSTOM drive mode settings (CR-040).** `CustomDrive` reads and writes powertrain response,
+  steering weight and brake-pedal feel by index (0 Eco/Comfort, 1 Normal, 2 Sport) on the VSM
+  generations: `…Level` methods on SWI68/SWI165, `…Mode` methods on SWI69/SWI131/SWI132. The
+  index↔code tables live here only — the pedal's Normal is `0`, the A9 powertrain uses the
+  drive-mode scale. Writes are standstill-gated. SWI133 answers unavailable: its route is a raw
+  property id this project has not verified. Codes beyond RI-006 are leads until a car confirms.
+- **`DrivingProfile` carries the CUSTOM settings and an optional `ProfileClimate` (CR-041).**
+  All new fields are nullable and default to null, so every saved profile and backup reads as
+  "not configured" and writes nothing new.
+
 ### Fixed
 
 - **An overnight charge the head unit slept through is a charge.** `ChargeEnergy.plugged` required
