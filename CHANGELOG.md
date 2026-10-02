@@ -8,6 +8,11 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- **`EcoDrivingMonitor.harshSharePercent` counts hard braking as well as hard acceleration.**
+  The live steadiness share read only positive steps past `HARSH_ACCELERATION_MS2`, while
+  EVChargePilot's trip review (`DrivingStyle`) has always counted both signs at the same threshold,
+  so the live gauge read lower than the summary of the same drive — roughly half in stop-and-go.
+  Thresholds are unchanged.
 - **The trip history keeps four times as many tracks.** `EnergyTripHistoryStore`'s default
   `maxBytes` goes from 512 KiB to 2 MiB. At about 145 KB per hour of driving, 512 KiB held roughly
   fourteen short trips' tracks, so each new drive evicted older tracks and the consumption model's

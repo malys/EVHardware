@@ -4,6 +4,7 @@ import com.evsuite.hardware.FirmwareInfo
 import com.evsuite.hardware.telemetry.model.SocConsumptionFitter
 import com.evsuite.hardware.telemetry.model.SocConsumptionModel
 import java.util.Locale
+import kotlin.math.abs
 
 /** How this drive compares with what the driver's own fitted history expected of it. */
 enum class EcoBand {
@@ -32,9 +33,9 @@ enum class EcoLever {
     CRUISE_SPEED,
 
     /**
-     * Time spent accelerating hard. Measured from the speed channel alone, which matters: on a
-     * firmware where battery power is derived rather than measured this lever is still a
-     * measurement.
+     * Time spent accelerating or braking hard. Measured from the speed channel alone, which
+     * matters: on a firmware where battery power is derived rather than measured this lever is
+     * still a measurement.
      */
     STEADINESS,
 }
@@ -52,7 +53,7 @@ data class EcoAdvice(
     val savingPercent: Double? = null,
     val fromSpeedKmh: Double? = null,
     val toSpeedKmh: Double? = null,
-    /** [EcoLever.STEADINESS]: the share of moving time spent above the acceleration threshold. */
+    /** [EcoLever.STEADINESS]: the share of moving time spent beyond the threshold, either sign. */
     val harshSharePercent: Double? = null,
 )
 
@@ -158,7 +159,7 @@ class EcoDrivingMonitor(
     }
 
     /**
-     * The share of moving time spent accelerating hard, whatever the cruise lever had to say.
+     * The share of moving time spent accelerating or braking hard, whatever the cruise lever said.
      *
      * Live, the two levers compete for one line and the cruise lever wins when it has a measured
      * saving. A trip review has no such contest: the motorway question is answered there by
@@ -267,7 +268,12 @@ class EcoDrivingMonitor(
     }
 
     /**
-     * The share of moving time spent accelerating hard, below the advice threshold included.
+     * The share of moving time spent accelerating or braking hard, below the advice threshold
+     * included.
+     *
+     * Braking counts because every hard stop throws away what regeneration could not take back,
+     * and because the trip review (`DrivingStyle` in EVChargePilot) has always counted it: a live
+     * gauge that saw only half the habit read lower than the summary of the same drive.
      *
      * Null only while the window holds less than [MIN_LEVER_WINDOW_MS] of movement, so a caller
      * can tell "not measured yet" from "measured, and calm" — the two read the same through
@@ -285,7 +291,7 @@ class EcoDrivingMonitor(
             if (current.kmh <= 0.0 && previous.kmh <= 0.0) return@zipWithNext
             movingMs += deltaMs
             val acceleration = (current.kmh - previous.kmh) / KMH_PER_MS2 / (deltaMs / 1000.0)
-            if (acceleration >= harshAccelerationMs2) harshMs += deltaMs
+            if (abs(acceleration) >= harshAccelerationMs2) harshMs += deltaMs
         }
         if (movingMs < MIN_LEVER_WINDOW_MS) return null
         return harshMs.toDouble() / movingMs * PERCENT

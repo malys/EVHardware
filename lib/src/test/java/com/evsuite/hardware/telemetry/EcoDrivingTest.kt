@@ -177,6 +177,20 @@ class EcoDrivingTest {
     }
 
     @Test
+    fun `hard braking counts like hard acceleration`() {
+        val monitor = EcoDrivingMonitor()
+        var atMs = 0L
+        var speed = 0f
+        // Gentle launches (0.56 m/s²) and abrupt stops (2.2 m/s²): only the braking is harsh.
+        repeat(5) {
+            repeat(24) { speed += 2f; monitor.add(atMs, speed); atMs += 1_000L }
+            repeat(6) { speed -= 8f; monitor.add(atMs, speed); atMs += 1_000L }
+        }
+        // 6 hard seconds in every 30: the trip review's `DrivingStyle` reads the same 20 %.
+        assertEquals(20.0, monitor.harshSharePercent()!!, 0.5)
+    }
+
+    @Test
     fun `a sampling gap is a gap, not an acceleration`() {
         val monitor = EcoDrivingMonitor()
         (0..70).forEach { monitor.add(it * 1_000L, 50f) }
