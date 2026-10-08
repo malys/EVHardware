@@ -655,6 +655,59 @@ object EVHardware {
         return out
     }
 
+    // -------------------------------------------------------------------------
+    // Exterior lights (CR-046) — standard AAOS ids and policy in [ExteriorLights]
+    // -------------------------------------------------------------------------
+
+    /** Status-checked read, only on a proven generation: an unpublished 0 would read as OFF. */
+    private fun lightRead(propId: Int): Int? =
+        if (ExteriorLights.isProven(FirmwareInfo.getGeneration()))
+            readPropertyCPM(propId, AREA_GLOBAL, Int::class.javaObjectType) { sCpmGetIntMethod } as? Int
+        else null
+
+    /** Low beams as VehicleLightState (0 off, 1 on, 2 daytime running); null when unreadable. */
+    fun headlightsStateOrNull(): Int? = lightRead(ExteriorLights.PROP_HEADLIGHTS_STATE)
+
+    fun highBeamOnOrNull(): Boolean? =
+        ExteriorLights.isOn(lightRead(ExteriorLights.PROP_HIGH_BEAM_LIGHTS_STATE))
+
+    fun fogLightsOnOrNull(): Boolean? =
+        ExteriorLights.isOn(lightRead(ExteriorLights.PROP_FOG_LIGHTS_STATE))
+
+    /** Switch positions, for the action editor's current value. */
+    fun headlightsSwitchOrNull(): Int? = lightRead(ExteriorLights.PROP_HEADLIGHTS_SWITCH)
+
+    fun highBeamSwitchOrNull(): Int? = lightRead(ExteriorLights.PROP_HIGH_BEAM_LIGHTS_SWITCH)
+
+    fun fogLightsSwitchOnOrNull(): Boolean? =
+        lightRead(ExteriorLights.PROP_FOG_LIGHTS_SWITCH)?.let { it == ExteriorLights.SWITCH_ON }
+
+    /** Low beams ON or AUTOMATIC — never OFF ([ExteriorLights.HEADLIGHT_SWITCH_ALLOWED]). */
+    @RequiresStandstill
+    fun setHeadlightsSwitch(mode: Int): Boolean =
+        lightWrite(ExteriorLights.PROP_HEADLIGHTS_SWITCH, mode, ExteriorLights.HEADLIGHT_SWITCH_ALLOWED)
+
+    /** High beam OFF or AUTOMATIC — never forced ON. */
+    @RequiresStandstill
+    fun setHighBeamSwitch(mode: Int): Boolean =
+        lightWrite(ExteriorLights.PROP_HIGH_BEAM_LIGHTS_SWITCH, mode, ExteriorLights.HIGH_BEAM_SWITCH_ALLOWED)
+
+    @RequiresStandstill
+    fun setFogLights(on: Boolean): Boolean = lightWrite(
+        ExteriorLights.PROP_FOG_LIGHTS_SWITCH,
+        if (on) ExteriorLights.SWITCH_ON else ExteriorLights.SWITCH_OFF,
+        ExteriorLights.FOG_SWITCH_ALLOWED,
+    )
+
+    /** Policy, then proven generation, then the 0 km/h gate inside [setIntPropertyCPM]. */
+    private fun lightWrite(propId: Int, value: Int, allowed: Set<Int>): Boolean {
+        ExteriorLights.writeRefusal(FirmwareInfo.getGeneration(), allowed, value)?.let {
+            AppLogger.w(TAG, "  light 0x${Integer.toHexString(propId)} refused: $it")
+            return false
+        }
+        return setIntPropertyCPM(propId, AREA_GLOBAL, value)
+    }
+
     private inline fun <T> supportedTelemetryRead(read: () -> T?): T? =
         when (FirmwareInfo.getGeneration()) {
             FirmwareInfo.Gen.SWI68,

@@ -108,7 +108,8 @@ class CatalogConsistencyTest {
             ActionType.SET_ELK_MODE, ActionType.SET_ELK_SENSITIVITY,
             ActionType.SET_ACC_TJA_MODE, ActionType.SET_LIMITER_MODE,
             ActionType.SET_TSR, ActionType.SET_OVERSPEED_ALARM,
-            ActionType.SET_SPEED_LIMIT_TONE, ActionType.SET_SOUND_WARNING
+            ActionType.SET_SPEED_LIMIT_TONE, ActionType.SET_SOUND_WARNING,
+            ActionType.SET_HEADLIGHTS, ActionType.SET_HIGH_BEAM, ActionType.SET_FOG_LIGHTS
         )
 
         mustBeGated.forEach { type ->
@@ -325,7 +326,10 @@ class CatalogConsistencyTest {
         }
         // Exactly these: an unproven write is invisible to the user, so adding one elsewhere
         // silently removes an action from every app that carries this catalogue.
-        assertEquals(glass.toSet(), ActionType.entries.filter { !it.writeProven }.toSet())
+        // CR-046: the exterior-light actions are unproven too, on purpose, until a capture
+        // proves a generation (see ExteriorLightsTest).
+        val lights = setOf(ActionType.SET_HEADLIGHTS, ActionType.SET_HIGH_BEAM, ActionType.SET_FOG_LIGHTS)
+        assertEquals(glass.toSet() + lights, ActionType.entries.filter { !it.writeProven }.toSet())
     }
 
     @Test

@@ -61,6 +61,9 @@
 | SEAT_HEAT_RIGHT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | STEERING_HEAT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SCREEN_BRIGHTNESS | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| HEADLIGHTS | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| HIGH_BEAM_ON | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| FOG_LIGHTS_ON | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | RADIO_PLAYING | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | MEDIA_VOLUME | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | AEB_ENABLED | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -103,6 +106,9 @@
 | SET_SEAT_HEAT_RIGHT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_STEERING_HEAT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_SCREEN_BRIGHTNESS | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SET_HEADLIGHTS ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| SET_HIGH_BEAM ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| SET_FOG_LIGHTS ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | SET_CLIMATE_POWER | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_CABIN_TEMP | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_PASSENGER_TEMP | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |

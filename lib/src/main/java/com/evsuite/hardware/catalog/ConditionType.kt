@@ -23,7 +23,8 @@ enum class ConditionGroup(@StringRes val labelRes: Int) {
     CLIMATE(R.string.group_climate),
     COMFORT(R.string.group_comfort),
     AUDIO(R.string.group_audio),
-    ADAS(R.string.group_adas)
+    ADAS(R.string.group_adas),
+    LIGHTS(R.string.group_lights)
 }
 
 /**
@@ -471,6 +472,26 @@ enum class ConditionType(
         R.string.cond_brightness, ConditionGroup.COMFORT,
         number(VehicleEnums.BRIGHTNESS_MIN, VehicleEnums.BRIGHTNESS_MAX, R.string.unit_percent),
         SnapshotKeys.KEY_BRIGHTNESS, comparable = true
+    ),
+
+    // ── Exterior lights (CR-046) ─────────────────────────────────────────────
+    // Standard AAOS ids (ExteriorLights). Proven on no generation yet: @SupportedOn stays empty
+    // until a capture shows the state follow the stalk, in the commit that fills
+    // ExteriorLights.PROVEN.
+    @SupportedOn
+    HEADLIGHTS(
+        R.string.cond_headlights, ConditionGroup.LIGHTS,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.HEADLIGHT_STATES), SnapshotKeys.KEY_HEADLIGHTS
+    ),
+    @SupportedOn
+    HIGH_BEAM_ON(
+        R.string.cond_high_beam, ConditionGroup.LIGHTS,
+        ValueSpec.BOOL, SnapshotKeys.KEY_HIGH_BEAM
+    ),
+    @SupportedOn
+    FOG_LIGHTS_ON(
+        R.string.cond_fog_lights, ConditionGroup.LIGHTS,
+        ValueSpec.BOOL, SnapshotKeys.KEY_FOG_LIGHTS
     ),
 
     // ── Audio ────────────────────────────────────────────────────────────────

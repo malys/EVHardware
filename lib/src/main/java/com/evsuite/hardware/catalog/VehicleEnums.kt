@@ -176,4 +176,23 @@ object VehicleEnums {
         EnumOption(2, R.string.radio_band_fm),
         EnumOption(4, R.string.radio_band_dab)
     )
+
+    /** VehicleLightState of the low beams — see ExteriorLights. */
+    val HEADLIGHT_STATES = listOf(
+        EnumOption(0, R.string.light_off),
+        EnumOption(1, R.string.light_on),
+        EnumOption(2, R.string.light_daytime_running)
+    )
+
+    /** What a rule may ask of the low beams: ON or AUTOMATIC, never OFF. */
+    val HEADLIGHT_SWITCH_CHOICES = listOf(
+        EnumOption(1, R.string.light_on),
+        EnumOption(0x100, R.string.light_auto)
+    )
+
+    /** What a rule may ask of the high beam: OFF or AUTOMATIC, never forced ON. */
+    val HIGH_BEAM_SWITCH_CHOICES = listOf(
+        EnumOption(0, R.string.light_off),
+        EnumOption(0x100, R.string.light_auto)
+    )
 }

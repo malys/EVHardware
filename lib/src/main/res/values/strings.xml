@@ -7,6 +7,17 @@
     <string name="group_comfort">Comfort</string>
     <string name="group_audio">Audio</string>
     <string name="group_adas">Driver assistance</string>
+    <string name="group_lights">Lights</string>
+    <string name="cond_headlights">Low beams</string>
+    <string name="cond_high_beam">High beam on</string>
+    <string name="cond_fog_lights">Fog lights on</string>
+    <string name="act_headlights">Low beams</string>
+    <string name="act_high_beam">High beam</string>
+    <string name="act_fog_lights">Fog lights</string>
+    <string name="light_off">Off</string>
+    <string name="light_on">On</string>
+    <string name="light_daytime_running">Daytime running</string>
+    <string name="light_auto">Automatic</string>
     <string name="group_climate">Climate</string>
     <string name="group_profile">Profile</string>
     <string name="group_system">System</string>

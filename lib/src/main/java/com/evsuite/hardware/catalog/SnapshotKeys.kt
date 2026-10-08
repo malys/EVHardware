@@ -60,6 +60,13 @@ object SnapshotKeys {
     const val KEY_MEDIA_VOLUME     = "mediaVolume"
     const val KEY_MEDIA_VOLUME_MAX = "mediaVolumeMax"
     const val KEY_BRIGHTNESS       = "brightnessPct"
+    // Exterior lights (CR-046): states for conditions, switch positions for the action editor.
+    const val KEY_HEADLIGHTS       = "headlightsState"
+    const val KEY_HIGH_BEAM        = "highBeamOn"
+    const val KEY_FOG_LIGHTS       = "fogLightsOn"
+    const val KEY_HEADLIGHTS_SWITCH = "headlightsSwitch"
+    const val KEY_HIGH_BEAM_SWITCH = "highBeamSwitch"
+    const val KEY_FOG_LIGHTS_SWITCH = "fogLightsSwitchOn"
     const val KEY_AEB_ENABLED      = "aebEnabled"
     const val KEY_AEB_MODE         = "aebMode"
     const val KEY_AEB_SENSITIVITY  = "aebSensitivity"

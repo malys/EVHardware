@@ -7,6 +7,17 @@
     <string name="group_comfort">Confort</string>
     <string name="group_audio">Audio</string>
     <string name="group_adas">Asistencia a la conducción</string>
+    <string name="group_lights">Iluminación</string>
+    <string name="cond_headlights">Luces de cruce</string>
+    <string name="cond_high_beam">Luces largas encendidas</string>
+    <string name="cond_fog_lights">Antiniebla encendidas</string>
+    <string name="act_headlights">Luces de cruce</string>
+    <string name="act_high_beam">Luces largas</string>
+    <string name="act_fog_lights">Antiniebla</string>
+    <string name="light_off">Apagadas</string>
+    <string name="light_on">Encendidas</string>
+    <string name="light_daytime_running">Luces diurnas</string>
+    <string name="light_auto">Automático</string>
     <string name="group_climate">Climatización</string>
     <string name="group_profile">Perfil</string>
     <string name="group_system">Sistema</string>

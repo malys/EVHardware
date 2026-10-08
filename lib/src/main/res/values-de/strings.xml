@@ -7,6 +7,17 @@
     <string name="group_comfort">Komfort</string>
     <string name="group_audio">Audio</string>
     <string name="group_adas">Fahrerassistenz</string>
+    <string name="group_lights">Beleuchtung</string>
+    <string name="cond_headlights">Abblendlicht</string>
+    <string name="cond_high_beam">Fernlicht an</string>
+    <string name="cond_fog_lights">Nebelscheinwerfer an</string>
+    <string name="act_headlights">Abblendlicht</string>
+    <string name="act_high_beam">Fernlicht</string>
+    <string name="act_fog_lights">Nebelscheinwerfer</string>
+    <string name="light_off">Aus</string>
+    <string name="light_on">An</string>
+    <string name="light_daytime_running">Tagfahrlicht</string>
+    <string name="light_auto">Automatisch</string>
     <string name="group_climate">Klima</string>
     <string name="group_profile">Profil</string>
     <string name="group_system">System</string>

@@ -22,6 +22,7 @@ enum class ActionGroup(@StringRes val labelRes: Int) {
     ENERGY(R.string.group_energy),
     AUDIO(R.string.group_audio),
     ADAS(R.string.group_adas),
+    LIGHTS(R.string.group_lights),
     SYSTEM(R.string.group_system)
 }
 
@@ -163,6 +164,32 @@ enum class ActionType(
         R.string.act_brightness, ActionGroup.COMFORT,
         number(VehicleEnums.BRIGHTNESS_MIN, VehicleEnums.BRIGHTNESS_MAX, R.string.unit_percent),
         "SET_SCREEN_BRIGHTNESS", currentKey = SnapshotKeys.KEY_BRIGHTNESS
+    ),
+
+    // ── Exterior lights (CR-046, gated) ──────────────────────────────────────
+    // Owner decisions: 0 km/h only, never low beams OFF, never high beam forced ON — the
+    // options below cannot express either, and ExteriorLights refuses them again at the write.
+    // Unproven everywhere: empty @SupportedOn and writeProven = false until a capture and an
+    // observed effect prove a generation.
+    @SupportedOn
+    SET_HEADLIGHTS(
+        R.string.act_headlights, ActionGroup.LIGHTS,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.HEADLIGHT_SWITCH_CHOICES),
+        "SET_HEADLIGHTS", gated = true, currentKey = SnapshotKeys.KEY_HEADLIGHTS_SWITCH,
+        writeProven = false
+    ),
+    @SupportedOn
+    SET_HIGH_BEAM(
+        R.string.act_high_beam, ActionGroup.LIGHTS,
+        ValueSpec(ValueKind.ENUM, options = VehicleEnums.HIGH_BEAM_SWITCH_CHOICES),
+        "SET_HIGH_BEAM", gated = true, currentKey = SnapshotKeys.KEY_HIGH_BEAM_SWITCH,
+        writeProven = false
+    ),
+    @SupportedOn
+    SET_FOG_LIGHTS(
+        R.string.act_fog_lights, ActionGroup.LIGHTS,
+        ValueSpec.BOOL, "SET_FOG_LIGHTS", gated = true,
+        currentKey = SnapshotKeys.KEY_FOG_LIGHTS_SWITCH, writeProven = false
     ),
 
     // ── Climate (vendor service — com.evsuite.hardware.saic.SaicClimate) ─────────

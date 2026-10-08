@@ -87,7 +87,15 @@ object VendorSurfaceRules {
             appendLine("  nothing changed: the setting is not in what this app can read, or the")
             appendLine("  car had not applied it yet when the second capture was taken")
         }
-        changes.forEach { appendLine("  ${it.key}: ${it.before ?: "—"} → ${it.after ?: "—"}") }
+        changes.forEach { appendLine("  ${label(it.key)}: ${it.before ?: "—"} → ${it.after ?: "—"}") }
+    }
+
+    private val CPM_KEY = Regex("""^CPM 0x([0-9A-Fa-f]{8})/""")
+
+    /** `CPM 0x11400E00/0` → `CPM 0x11400E00/0 (HEADLIGHTS_STATE)` for a standard id we name. */
+    fun label(key: String, names: Map<Int, String> = com.evsuite.hardware.ExteriorLights.NAMES): String {
+        val id = CPM_KEY.find(key)?.groupValues?.get(1)?.toLongOrNull(16)?.toInt() ?: return key
+        return names[id]?.let { "$key ($it)" } ?: key
     }
 
     /** Arrays print their content; everything else its own text. */

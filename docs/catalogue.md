@@ -116,6 +116,14 @@ Every condition a rule can test and every action it can run, straight out of `Co
 | Speed limit tone | `SPEED_LIMIT_TONE` | on / off | SWI133, SWI132 |
 | ADAS sound warning | `SOUND_WARNING` | on / off | SWI68, SWI165, SWI69, SWI131, SWI132 |
 
+### Lights
+
+| Condition | Entry | Tested against | Firmware |
+|---|---|---|---|
+| Low beams | `HEADLIGHTS` | Off, On, Daytime running | none |
+| High beam on | `HIGH_BEAM_ON` | on / off | none |
+| Fog lights on | `FOG_LIGHTS_ON` | on / off | none |
+
 A reading the car does not answer makes the rule **not evaluable**: it does not fire, and it does not count as false.
 
 ## Actions
@@ -216,6 +224,14 @@ A reading the car does not answer makes the rule **not evaluable**: it does not 
 | ADAS sound warning | `SET_SOUND_WARNING` | on / off | yes | SWI68, SWI165, SWI69, SWI131, SWI132 |
 | Lane departure sound warning | `SET_LAS_WARNING_SOUND` | on / off | — | SWI132 |
 | Lane departure steering vibration | `SET_LAS_WARNING_VIBRATION` | on / off | — | SWI132 |
+
+### Lights
+
+| Action | Entry | Asks for | When stopped only | Firmware |
+|---|---|---|:--:|---|
+| Low beams ⚠️ | `SET_HEADLIGHTS` | On, Automatic | yes | none |
+| High beam ⚠️ | `SET_HIGH_BEAM` | Off, Automatic | yes | none |
+| Fog lights ⚠️ | `SET_FOG_LIGHTS` | on / off | yes | none |
 
 ### System
 
