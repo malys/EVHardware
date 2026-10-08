@@ -6,6 +6,25 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-10-08
+
+### Added
+
+- **Exterior-light conditions and standstill actions (CR-046).** Conditions `HEADLIGHTS`
+  (off / on / daytime running), `HIGH_BEAM_ON` and `FOG_LIGHTS_ON`, plus gated actions
+  `SET_HEADLIGHTS` (ON / AUTO), `SET_HIGH_BEAM` (OFF / AUTO) and `SET_FOG_LIGHTS`. They use the
+  standard AAOS `HEADLIGHTS` / `HIGH_BEAM_LIGHTS` / `FOG_LIGHTS` `_STATE` and `_SWITCH` ids.
+  Writes happen only at 0 km/h. A rule can never switch the low beams OFF, and can never force
+  the high beam ON (`ExteriorLights`). **Proven on no generation yet**: `ExteriorLights.PROVEN`
+  and `@SupportedOn` are empty and `writeProven` is false, so the entries stay hidden and inert
+  until a capture proves a generation.
+- **Read-only vendor-surface tools (CR-044, CR-045)** for an app's unstable capture.
+  `VendorSurfaceProbe.socSourcesReport()` reads every candidate source of state of charge side by
+  side. `VendorSurfaceProbe.capture()` together with `VendorSurfaceRules.diff()` reads every
+  `CarPropertyManager` property and every value getter of the vendor setting objects, before and
+  after a setting is changed on the car's own screen, and lists what changed, naming the light
+  properties. No setter is called: getter selection is pinned by `VendorSurfaceRulesTest`.
+
 ### Changed
 
 - **`EcoDrivingMonitor.harshSharePercent` counts hard braking as well as hard acceleration.**
