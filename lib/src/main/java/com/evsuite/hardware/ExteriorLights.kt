@@ -6,7 +6,8 @@ package com.evsuite.hardware
  * Kept free of Android so the policy is pinned by JVM tests. The ids are the public
  * `VehicleProperty` ones (types.hal 2.0, available on AAOS 9); nothing here comes from a vendor
  * catalogue. Whether the MG4 VHAL publishes them is a per-generation question: a generation joins
- * [PROVEN] only with a capture showing the state follow the stalk, in the same commit as the
+ * [PROVEN] only with a capture showing the state follow the stalk — EVTasker's Diagnostic
+ * `EXTERIOR_LIGHTS` row ([EVHardware.probeExteriorLights]), exported off and on — in the same commit as the
  * `@SupportedOn` of the light entries and their `writeProven`.
  *
  * Owner decisions (2026-10-08): writes only at 0 km/h like every vehicle write, and a rule may

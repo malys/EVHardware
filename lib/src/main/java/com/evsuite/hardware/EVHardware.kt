@@ -577,6 +577,15 @@ object EVHardware {
         probeProperty("HVAC_AMBIENT_TEMPERATURE", PROP_HVAC_AMBIENT_TEMP_SWI68, AREA_GLOBAL, Float::class.javaObjectType),
     )
 
+    /**
+     * The six exterior-light properties (CR-046), read raw whatever [ExteriorLights.PROVEN] says:
+     * this is the evidence that fills it. EVTasker's Diagnostic shows and exports it — read once
+     * with a light off and once with it on; a generation is proven when the state follows.
+     */
+    fun probeExteriorLights(): List<PropertyReport> = ExteriorLights.NAMES.map { (id, name) ->
+        probeProperty(name, id, AREA_GLOBAL, Int::class.javaObjectType)
+    }
+
     private fun probeProperty(name: String, propId: Int, areaId: Int, boxed: Class<*>): PropertyReport {
         val cpm = sCarPropertyManager
             ?: return PropertyReport(name, propId, areaId, "CarPropertyManager not connected")
