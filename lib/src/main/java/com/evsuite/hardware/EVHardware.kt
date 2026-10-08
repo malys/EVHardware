@@ -596,6 +596,65 @@ object EVHardware {
         }
     }
 
+    /**
+     * The vendor setting objects this library already holds, by the name a report prints.
+     * Probe use only ([com.evsuite.hardware.probe.VendorSurfaceProbe]); no production path
+     * reads this, and the probe calls nothing on them but value getters.
+     */
+    internal fun vendorSettingHandles(): Map<String, Any> = listOfNotNull(
+        sVsm?.let { "VehicleSetting" to it },          // SWI68/165 manager, A9 CarVehicleSettingClient
+        sVsm133?.let { "VehicleSetting133" to it },
+        sVcontrol?.let { "VehicleControl" to it },
+        sGeneral?.let { "General" to it },
+        sCarGeneral?.let { "CarGeneral" to it },
+        sCarState?.let { "CarState" to it },
+    ).toMap()
+
+    /**
+     * Every property the CarPropertyManager lists, read once per area, keyed `CPM 0x…/area`.
+     * Probe use only. Stops at [deadlineMs] and says so rather than blocking a diagnostic on a
+     * VHAL that answers slowly.
+     */
+    internal fun readAllCarProperties(deadlineMs: Long): Map<String, String> {
+        val cpm = sCarPropertyManager ?: return mapOf("CPM" to "not connected")
+        cacheCarPropertyMethods(cpm)
+        val getProperty = sCpmGetPropertyMethod ?: return mapOf("CPM" to "no getProperty")
+        val configs = try {
+            cpm.javaClass.getMethod("getPropertyList").invoke(cpm) as? List<*>
+        } catch (e: Exception) {
+            return mapOf("CPM" to "getPropertyList: ${e.readFailureReason()}")
+        } ?: return mapOf("CPM" to "getPropertyList: null")
+        val out = sortedMapOf<String, String>()
+        for (config in configs) {
+            if (config == null) continue
+            if (System.currentTimeMillis() > deadlineMs) {
+                out["CPM ~"] = "time budget spent after ${out.size} values"
+                break
+            }
+            val type = config.javaClass
+            val id = runCatching { type.getMethod("getPropertyId").invoke(config) as Int }.getOrNull() ?: continue
+            val valueType = runCatching { type.getMethod("getPropertyType").invoke(config) as Class<*> }
+                .getOrNull() ?: Any::class.java
+            val areas = runCatching { type.getMethod("getAreaIds").invoke(config) as IntArray }
+                .getOrNull()?.takeIf { it.isNotEmpty() } ?: intArrayOf(AREA_GLOBAL)
+            for (area in areas) {
+                val key = "CPM 0x%08X/%d".format(id, area)
+                out[key] = try {
+                    val holder = getProperty.invoke(cpm, valueType, id, area)
+                    if (holder == null) "no value" else {
+                        val status = (holder.javaClass.getMethod("getStatus").invoke(holder) as? Int)
+                            ?.let(CarPropertyEvidence::describe) ?: "no status"
+                        "$status ${com.evsuite.hardware.probe.VendorSurfaceRules.render(
+                            holder.javaClass.getMethod("getValue").invoke(holder))}"
+                    }
+                } catch (e: Exception) {
+                    e.readFailureReason()
+                }
+            }
+        }
+        return out
+    }
+
     private inline fun <T> supportedTelemetryRead(read: () -> T?): T? =
         when (FirmwareInfo.getGeneration()) {
             FirmwareInfo.Gen.SWI68,
