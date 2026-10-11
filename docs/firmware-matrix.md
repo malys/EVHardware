@@ -45,7 +45,7 @@
 | RECIRC | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | FAN_SPEED | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | TEMPERATURE_SET | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| PASSENGER_TEMP | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| PASSENGER_TEMP | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
 | ECON_MODE | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | FRONT_DEFROST | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | REAR_DEFROST | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -55,7 +55,7 @@
 | WINDOW_PASSENGER | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | WINDOW_REAR_LEFT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | WINDOW_REAR_RIGHT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| DOORS_LOCKED | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| DOORS_LOCKED | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
 | FRONT_DOOR_OPEN | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | SEAT_HEAT_LEFT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SEAT_HEAT_RIGHT | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |

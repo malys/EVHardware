@@ -24,7 +24,7 @@ Every condition a rule can test and every action it can run, straight out of `Co
 | Call in progress | `IN_CALL` | on / off | any |
 | Drive duration | `DRIVE_DURATION` | 0…600 min (=, <, >) | any |
 | Random chance | `RANDOM_CHANCE` | 1…100 % | any |
-| Doors locked | `DOORS_LOCKED` | on / off | SWI68, SWI165 |
+| Doors locked | `DOORS_LOCKED` | on / off | SWI165 |
 | Front door open | `FRONT_DOOR_OPEN` | on / off | SWI133 |
 | Data used today | `DATA_USED_TODAY` | 0…100000 MB (=, <, >) | any |
 | Data used this month | `DATA_USED_MONTH` | 0…100000 MB (=, <, >) | any |
@@ -72,7 +72,7 @@ Every condition a rule can test and every action it can run, straight out of `Co
 | Air recirculation on | `RECIRC` | on / off | SWI133, SWI68, SWI165, SWI69, SWI131, SWI132 |
 | Fan speed | `FAN_SPEED` | 0…11 (=, <, >) | SWI133, SWI68, SWI165, SWI69, SWI131, SWI132 |
 | Set temperature | `TEMPERATURE_SET` | 17…33 °C (=, <, >) | SWI133, SWI68, SWI165, SWI69, SWI131, SWI132 |
-| Passenger temperature | `PASSENGER_TEMP` | 17…33 °C (=, <, >) | SWI68, SWI165 |
+| Passenger temperature | `PASSENGER_TEMP` | 17…33 °C (=, <, >) | SWI165 |
 | ECON mode on | `ECON_MODE` | on / off | SWI68, SWI165 |
 | Windscreen defroster on | `FRONT_DEFROST` | on / off | SWI68, SWI165 |
 | Rear window defroster on | `REAR_DEFROST` | on / off | SWI68, SWI165 |
