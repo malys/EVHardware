@@ -173,6 +173,15 @@ object SaicClimate {
     fun fanLevelMax(): Int? = if (a9) null else level(TX_GET_MAX_AIR_VOLUME)
     fun driverTemp(): Int? = if (a9) A9Climate.driverTemp() else level(TX_GET_DRV_TEMP)
     fun passengerTemp(): Int? = if (a9) null else level(TX_GET_PSG_TEMP)
+
+    /**
+     * The passenger target exactly as the service answers it, for the diagnostic only.
+     *
+     * [passengerTemp] drops -1, which is also what the service's converter returns for a
+     * zone the car does not have: the raw number is what tells "single zone" from "the
+     * read did not answer" (null).
+     */
+    fun passengerTempState(): Int? = if (a9) null else SaicAidl.callInt(binder(), DESCRIPTOR, TX_GET_PSG_TEMP)
     fun frontDefrostOn(): Boolean? = if (a9) A9Climate.frontDefrostOn() else flag(TX_GET_FRONT_DEFROST)
     fun rearDefrostOn(): Boolean? = if (a9) A9Climate.rearDefrostOn() else flag(TX_GET_BACK_DEFROST)
     /** The service answers [TEMP_ERROR] for a reading it holds no value for, not an error. */

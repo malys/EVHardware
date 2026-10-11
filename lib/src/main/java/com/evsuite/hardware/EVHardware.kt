@@ -4372,6 +4372,30 @@ object EVHardware {
         return if (answered) open else null
     }
 
+    /**
+     * Front-door evidence for a firmware the door feature does not claim yet, for EVTasker's
+     * Diagnostic.
+     *
+     * MG4Control reads DLOCK_DOOR_OPEN_STS on SWI68/69/131/165 through the change
+     * subscription, because the on-demand read throws there. Nothing here has seen a car
+     * confirm that, so [frontDoorOpenOrNull] stays gated. This connects and subscribes
+     * regardless of [hasDoorVolumeFeature] — the first call starts the connection, which is
+     * asynchronous — and reports what came back: export with the front doors shut, open
+     * one, export again. Proven when the event value follows the door.
+     */
+    fun probeFrontDoors(): String {
+        connectCarProperty()
+        registerDoorCallback()
+        val reads = DOOR_FRONT_AREAS.joinToString(" ") { area ->
+            "read[0x${area.toString(16)}]=${readDoorOpen(area) ?: "?"}"
+        }
+        val events = synchronized(this) {
+            DOOR_FRONT_AREAS.joinToString(" ") { area -> "event[0x${area.toString(16)}]=${sDoorReadLast[area] ?: "?"}" }
+        }
+        return "managers property=${sCarPropMgr != null} doorlock=${sCarDoorMgr != null} " +
+            "subscribed property=$sDoorSubProperty doorlock=$sDoorSubDoorlock $reads $events"
+    }
+
     /** Diagnostic button probe: logs the volume + door states at click time. */
     fun runDoorVolumeDiag() {
         AppLogger.i(VOL_TAG, "── DIAG (bouton Diagnostic) ──")
