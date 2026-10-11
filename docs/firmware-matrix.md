@@ -111,7 +111,7 @@
 | SET_FOG_LIGHTS ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | SET_CLIMATE_POWER | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_CABIN_TEMP | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| SET_PASSENGER_TEMP | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_PASSENGER_TEMP | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
 | SET_AC | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SET_ECON | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_CLIMATE_AUTO | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |

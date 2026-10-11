@@ -159,7 +159,7 @@ A reading the car does not answer makes the rule **not evaluable**: it does not 
 |---|---|---|:--:|---|
 | Climate on/off | `SET_CLIMATE_POWER` | on / off | — | SWI68, SWI165, SWI69, SWI131, SWI132 |
 | Cabin temperature | `SET_CABIN_TEMP` | 17…33 °C | — | SWI68, SWI165, SWI69, SWI131, SWI132 |
-| Passenger temperature | `SET_PASSENGER_TEMP` | 17…33 °C | — | SWI68, SWI165 |
+| Passenger temperature | `SET_PASSENGER_TEMP` | 17…33 °C | — | SWI165 |
 | Air conditioning | `SET_AC` | on / off | — | SWI68, SWI165, SWI69, SWI131, SWI132 |
 | ECON mode | `SET_ECON` | on / off | — | SWI68, SWI165 |
 | Climate AUTO | `SET_CLIMATE_AUTO` | on / off | — | SWI68, SWI165, SWI69, SWI131, SWI132 |

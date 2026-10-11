@@ -218,8 +218,13 @@ enum class ActionType(
      * A second action rather than a zone argument on the first: the driver's target is the
      * one every existing rule sets, and giving it a zone would have made every saved rule
      * carry a value it never chose.
+     *
+     * Not SWI68: the passenger target reads -1 there, the converter's answer for a zone
+     * the car does not have, so nothing shows the write lands anywhere. EVTasker's
+     * Diagnostic prints that raw read (`CLIMATE_ZONES`); a SWI68 that answers a real
+     * target there is what would bring the action back.
      */
-    @SupportedOn(SWI68, SWI165)
+    @SupportedOn(SWI165)
     SET_PASSENGER_TEMP(
         R.string.act_passenger_temp, ActionGroup.CLIMATE,
         number(VehicleEnums.CABIN_TEMP_MIN, VehicleEnums.CABIN_TEMP_MAX, R.string.unit_celsius),
