@@ -6,6 +6,23 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-10-11
+
+### Added
+
+- `EVHardware.probeFrontDoors()`: front-door evidence on firmwares the door feature does not
+  claim. Connects and subscribes to DLOCK_DOOR_OPEN_STS whatever `hasDoorVolumeFeature()` says
+  (MG4Control reads it through the change subscription on SWI68/69/131/165) and reports the
+  managers, the subscriptions, the on-demand read and the last event per front door.
+  `frontDoorOpenOrNull()` stays gated until a car confirms.
+- `SaicClimate.passengerTempState()`: the passenger target as the service answers it, -1
+  included, for the diagnostic.
+
+### Fixed
+
+- `SET_PASSENGER_TEMP` no longer claims SWI68: the passenger target reads -1 there, so nothing
+  shows the write lands.
+
 ## [1.15.1] - 2026-10-11
 
 ### Fixed
