@@ -6,6 +6,18 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- Probe-only vendor charge readings for the telemetry evidence: `BMS_CHRG_STS`, the AC and DC
+  plug states and the kWh-since-plug-in counter, ids from MG4Control's SWI133 readings and
+  unproven on SWI68. Recorded as `candidate.vendor*`; nothing reads them as values yet.
+
+### Fixed
+
+- **The battery ledger ignores readings taken on the factory clock.** A head unit woken by a
+  night charge runs on its late-2018 clock until it syncs; one such entry sorted first in the
+  ledger and split the charge. `BatteryLedgerRecorder` now drops samples before 2025-01-01.
+
 ## [1.16.0] - 2026-10-11
 
 ### Added
