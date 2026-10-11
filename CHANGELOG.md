@@ -6,6 +6,17 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.15.1] - 2026-10-11
+
+### Fixed
+
+- **`PASSENGER_TEMP` and `DOORS_LOCKED` no longer claim SWI68.** Both were declared from the
+  getters the SAIC services expose, never from a read on the car, and a SWI68 MG4 reported
+  both `NOT_READABLE` (2026-10-11). The passenger target reads a zone a single-zone car does not
+  have; the service answers -1. `getDoorLock` reads back the lock *request* property, and the
+  car answered 0, which is neither of the two named values. The editor now hides both there.
+  SWI165 keeps them until a car says otherwise.
+
 ## [1.15.0] - 2026-10-08
 
 ### Added
