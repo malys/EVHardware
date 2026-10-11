@@ -408,6 +408,11 @@ object EVHardware {
     private const val PROP_EV_RANGE_KM_SWI68 = 0x2140F41C            // vendor int km
     private const val PROP_BMS_PACK_VOLT_SWI68 = 0x2160F406          // vendor float V
     private const val PROP_BMS_PACK_CURRENT_SWI68 = 0x2160F407       // vendor float A
+    // Probe-only, ids from MG4Control's SWI133 readings; unproven on SWI68.
+    private const val PROP_BMS_CHRG_STS = 0x2140F409                 // vendor int
+    private const val PROP_CCU_ONBD_PLUG = 0x2140F43E                // vendor int, AC socket
+    private const val PROP_CCU_OFFBD_PLUG = 0x2140F43F               // vendor int, DC socket
+    private const val PROP_ENERGY_SINCE_CHARGE = 0x2160A1BB          // vendor float kWh
 
     /**
      * `HVAC_AMBIENT_TEMPERATURE`, the one in-car candidate left on this firmware.
@@ -461,6 +466,24 @@ object EVHardware {
     internal fun probeCurrentBatteryCapacityWh(): Float? = supportedTelemetryRead {
         getFloatPropertyCPM(PROP_EV_CURRENT_BATTERY_CAPACITY, AREA_GLOBAL)
             ?.takeIf { it.isFinite() && it >= 0f }
+    }
+
+    /**
+     * Probe-only vendor charge properties, read raw. MG4Control (a system-signed app) reads them
+     * on SWI133: `BMS_CHRG_STS` 1 while charging, the AC and DC plug states 0 off a charge and
+     * non-zero on the active socket, and a kWh counter that resets at plug-in. Whether this app
+     * may read them on SWI68, and what they say there, is what the capture is for.
+     */
+    internal fun probeVendorChargeStatus(): Int? = probeVendorInt(PROP_BMS_CHRG_STS)
+    internal fun probeVendorPlugAc(): Int? = probeVendorInt(PROP_CCU_ONBD_PLUG)
+    internal fun probeVendorPlugDc(): Int? = probeVendorInt(PROP_CCU_OFFBD_PLUG)
+    internal fun probeVendorEnergySinceChargeKwh(): Float? = supportedTelemetryRead {
+        getFloatPropertyCPM(PROP_ENERGY_SINCE_CHARGE, AREA_GLOBAL)?.takeIf { it.isFinite() }
+    }
+
+    /** Null when unreadable, never the -1 [getIntPropertyCPM] stands in for a failure with. */
+    private fun probeVendorInt(propId: Int): Int? = supportedTelemetryRead {
+        readPropertyCPM(propId, AREA_GLOBAL, Int::class.javaObjectType) { sCpmGetIntMethod } as? Int
     }
 
     fun getStandardRangeKm(): Float? = supportedTelemetryRead {

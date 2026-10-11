@@ -261,6 +261,10 @@ class TelemetryEvidenceRecorder {
         const val CLIMATE_PASSENGER_TARGET_C = "climate.passengerTargetCelsius"
         const val CANDIDATE_CURRENT_BATTERY_CAPACITY_WH =
             "candidate.evCurrentBatteryCapacityWh"
+        const val CANDIDATE_VENDOR_CHARGE_STATUS = "candidate.vendorChargeStatus"
+        const val CANDIDATE_VENDOR_PLUG_AC = "candidate.vendorPlugAc"
+        const val CANDIDATE_VENDOR_PLUG_DC = "candidate.vendorPlugDc"
+        const val CANDIDATE_VENDOR_ENERGY_SINCE_CHARGE_KWH = "candidate.vendorEnergySinceChargeKwh"
     }
 }
 

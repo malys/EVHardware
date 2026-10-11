@@ -77,7 +77,23 @@ class EvHardwareEnergySignalSource(context: Context) : EnergySignalSource {
         TelemetryEvidenceProbe(
             TelemetryEvidenceRecorder.CANDIDATE_CURRENT_BATTERY_CAPACITY_WH,
             EVHardware.probeCurrentBatteryCapacityWh()?.toDouble(),
-        )
+        ),
+        TelemetryEvidenceProbe(
+            TelemetryEvidenceRecorder.CANDIDATE_VENDOR_CHARGE_STATUS,
+            EVHardware.probeVendorChargeStatus()?.toDouble(),
+        ),
+        TelemetryEvidenceProbe(
+            TelemetryEvidenceRecorder.CANDIDATE_VENDOR_PLUG_AC,
+            EVHardware.probeVendorPlugAc()?.toDouble(),
+        ),
+        TelemetryEvidenceProbe(
+            TelemetryEvidenceRecorder.CANDIDATE_VENDOR_PLUG_DC,
+            EVHardware.probeVendorPlugDc()?.toDouble(),
+        ),
+        TelemetryEvidenceProbe(
+            TelemetryEvidenceRecorder.CANDIDATE_VENDOR_ENERGY_SINCE_CHARGE_KWH,
+            EVHardware.probeVendorEnergySinceChargeKwh()?.toDouble(),
+        ),
     )
     override fun climate() = ClimateSnapshot(
         powerOn = SaicClimate.powerOn(),

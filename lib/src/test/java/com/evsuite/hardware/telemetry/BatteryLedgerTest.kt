@@ -72,6 +72,16 @@ class BatteryLedgerTest {
         assertTrue(recorder.observe(snapshot(atMs = 1_000L, soc = 50f, chargingStatus = 1)))
     }
 
+    @Test fun `a reading taken on the factory clock earns nothing`() {
+        val store = BatteryLedgerStore(File(tempDirectory(), BatteryLedgerStore.FILE_NAME))
+        val recorder = BatteryLedgerRecorder(store)
+        val factoryClock = 1_546_214_400_000L - NOW_MS // 2018-12-31, as the woken head unit reads
+
+        assertFalse(recorder.observe(snapshot(atMs = factoryClock, soc = 80f)))
+        assertTrue(recorder.observe(snapshot(atMs = 0L, soc = 80f)))
+        assertEquals(listOf(NOW_MS), store.read().map { it.atMs })
+    }
+
     @Test fun `the integrals are cumulative and bounded by the same five seconds a trip uses`() {
         val store = BatteryLedgerStore(File(tempDirectory(), BatteryLedgerStore.FILE_NAME))
         val recorder = BatteryLedgerRecorder(store)
@@ -134,7 +144,7 @@ class BatteryLedgerTest {
         consumedKwh: Float? = null,
         regeneratedKwh: Float? = null,
     ) = EnergySnapshot(
-        timestampMs = atMs,
+        timestampMs = NOW_MS + atMs,
         firmware = FirmwareInfo.Gen.SWI68,
         socPercent = soc,
         rangeKm = null,
@@ -156,4 +166,9 @@ class BatteryLedgerTest {
     )
 
     private fun tempDirectory(): File = Files.createTempDirectory("ledger").toFile()
+
+    private companion object {
+        /** 2026-10-11, past the recorder's clock floor. */
+        const val NOW_MS = 1_791_728_806_645L
+    }
 }

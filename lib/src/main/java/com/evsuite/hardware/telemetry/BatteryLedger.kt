@@ -166,6 +166,9 @@ class BatteryLedgerRecorder(
 
     /** @return true when this sample earned an entry and it was written. */
     fun observe(snapshot: EnergySnapshot): Boolean {
+        // A head unit woken by a night charge runs on its factory clock (late 2018) until it syncs.
+        // The ledger is read in time order, so one such entry would sort first and split the charge.
+        if (snapshot.timestampMs < MIN_PLAUSIBLE_CLOCK_MS) return false
         seed()
         integrate(snapshot)
         val soc = snapshot.socPercent?.takeIf { it.isFinite() } ?: return false
@@ -231,5 +234,8 @@ class BatteryLedgerRecorder(
         const val SOC_STEP_PERCENT = 1.0f
         const val QUIET_INTERVAL_MS = 15 * 60 * 1000L
         const val MAX_SAMPLE_GAP_MS = 5_000L
+
+        /** 2025-01-01T00:00Z: no reading of this app can be older. Seen by MG4Control on the car. */
+        const val MIN_PLAUSIBLE_CLOCK_MS = 1_735_689_600_000L
     }
 }
