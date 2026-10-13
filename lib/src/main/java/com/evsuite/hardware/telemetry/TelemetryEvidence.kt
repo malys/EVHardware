@@ -104,6 +104,7 @@ class TelemetryEvidenceRecorder {
         record(CHARGING_STATUS, snapshot.chargingStatus?.toDouble(), at)
         record(CHARGE_PORT_CONNECTED, snapshot.chargePortConnected, at)
         record(PARKED, snapshot.parked, at)
+        record(WINDOWS_WIDEST_PERCENT, snapshot.widestWindowPercent?.toDouble(), at)
 
         val climate = snapshot.climate
         record(CLIMATE_POWER_ON, climate.powerOn, at)
@@ -250,6 +251,7 @@ class TelemetryEvidenceRecorder {
         const val CHARGING_STATUS = "chargingStatus"
         const val CHARGE_PORT_CONNECTED = "chargePortConnected"
         const val PARKED = "parked"
+        const val WINDOWS_WIDEST_PERCENT = "windows.widestPercent"
         const val CLIMATE_POWER_ON = "climate.powerOn"
         const val CLIMATE_AC_ON = "climate.acOn"
         const val CLIMATE_AUTO_ON = "climate.autoOn"

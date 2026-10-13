@@ -65,6 +65,20 @@ class TelemetryEvidenceTest {
         assertEquals(1, parked.samples)
     }
 
+    @Test fun `the widest window is a quantity, recorded as the snapshot carries it`() {
+        val recorder = TelemetryEvidenceRecorder()
+        recorder.record(snapshot(at = 0L, power = null).copy(widestWindowPercent = 40))
+        recorder.record(snapshot(at = 1_000L, power = null))
+
+        val windows = recorder.evidence()
+            .single { it.signal == TelemetryEvidenceRecorder.WINDOWS_WIDEST_PERCENT }
+        assertEquals("windows.widestPercent", windows.signal)
+        assertEquals(SignalKind.NUMERIC, windows.kind)
+        assertEquals(1, windows.samples)
+        assertEquals(1, windows.nulls)
+        assertEquals(40.0, windows.max!!, 0.0)
+    }
+
     @Test fun `the update period follows value changes, not sampling ticks`() {
         val recorder = TelemetryEvidenceRecorder()
         // One second between reads, five seconds between the values the vehicle publishes.
