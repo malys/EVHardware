@@ -1,6 +1,7 @@
 package com.evsuite.hardware.probe
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.IBinder
 import com.evsuite.hardware.EVHardware
 import com.evsuite.hardware.FirmwareInfo
@@ -61,6 +62,7 @@ object RuntimeInterfaceProbe {
      * it from a capture that has been up for a while.
      */
     fun connect(context: Context) {
+        packages = context.applicationContext.packageManager
         SaicHub.connect(context)
         engMode.connect(context)
     }
@@ -276,6 +278,80 @@ object RuntimeInterfaceProbe {
         add(vehicleProperty())
         add(vehicleCharging())
         add(carDiagnostics())
+        addAll(componentMap())
+    }
+
+    /** Kept from [connect], so [componentMap] needs no extra argument from the callers. */
+    @Volatile private var packages: PackageManager? = null
+
+    /**
+     * Every service the vendor packages declare in their manifests, as PackageManager lists it.
+     *
+     * The hub maps above can only name what someone already guessed to ask for. This is the
+     * other direction: what is installed, which services each package declares, and whether an
+     * unprivileged caller may reach them — RI-001, RI-003, RI-004, RI-007 and RI-008 each start
+     * by not knowing which component publishes their signal.
+     *
+     * Manifest metadata only. Nothing is bound, no transaction is sent and no vendor class is
+     * loaded, so this cannot reach a write on any interface. Visibility of other packages holds
+     * because the target is API 28; a later target needs `QUERY_ALL_PACKAGES`, and without it
+     * this would read as a head unit with no vendor packages at all.
+     */
+    fun componentMap(): List<InterfaceProbe> {
+        val pm = packages ?: return listOf(
+            InterfaceProbe(COMPONENT_MAP, null, BindVerdict.ABSENT, note = NOT_CONNECTED),
+        )
+        val names = try {
+            pm.getInstalledPackages(0).map { it.packageName }
+                .filter { name -> COMPONENT_PREFIXES.any { name.startsWith(it) } }.sorted()
+        } catch (e: RuntimeException) {
+            return listOf(
+                InterfaceProbe(COMPONENT_MAP, null, BindVerdict.DENIED, note = e.javaClass.name),
+            )
+        }
+        return listOf(componentSummary(names)) + names.take(MAX_COMPONENT_PACKAGES).map { name ->
+            val services = try {
+                pm.getPackageInfo(name, PackageManager.GET_SERVICES).services.orEmpty()
+                    .map { ServiceRow(it.name, it.exported, it.permission) }
+            } catch (e: PackageManager.NameNotFoundException) {
+                return@map InterfaceProbe("$COMPONENT_MAP:$name", null, BindVerdict.ABSENT)
+            } catch (e: RuntimeException) {
+                return@map InterfaceProbe(
+                    "$COMPONENT_MAP:$name", null, BindVerdict.DENIED, note = e.javaClass.name,
+                )
+            }
+            componentEntry(name, services)
+        }
+    }
+
+    /** One declared service, as the manifest states it. */
+    internal data class ServiceRow(val name: String, val exported: Boolean, val permission: String?)
+
+    /** How many vendor packages there are, and how many of them the entries below list. */
+    internal fun componentSummary(names: List<String>): InterfaceProbe = InterfaceProbe(
+        COMPONENT_MAP, null, BindVerdict.ANSWERED,
+        mapOf(
+            "packages" to names.size.toString(),
+            "listed" to minOf(names.size, MAX_COMPONENT_PACKAGES).toString(),
+        ),
+        COMPONENT_NOTE,
+    )
+
+    /**
+     * One package's services, keyed by class name, the value kept as the manifest's own words.
+     *
+     * A package that declares none is still ANSWERED: the manifest was read and said so.
+     */
+    internal fun componentEntry(pkg: String, services: List<ServiceRow>): InterfaceProbe {
+        val values = LinkedHashMap<String, String?>()
+        values["services"] = services.size.toString()
+        services.take(MAX_COMPONENT_SERVICES).forEach {
+            values[it.name] = "exported=${it.exported} permission=${it.permission}"
+        }
+        if (services.size > MAX_COMPONENT_SERVICES) {
+            values["truncated"] = (services.size - MAX_COMPONENT_SERVICES).toString()
+        }
+        return InterfaceProbe("$COMPONENT_MAP:$pkg", null, BindVerdict.ANSWERED, values)
     }
 
     /**
@@ -364,6 +440,18 @@ object RuntimeInterfaceProbe {
      * explicit and short rather than open-ended.
      */
     private val CODE_SWEEP = (0x0..0x12).toList()
+
+    private const val COMPONENT_MAP = "componentMap"
+    private val COMPONENT_PREFIXES = listOf("com.saicmotor.", "com.saicvehicleservice.")
+
+    /** A bundle is pasted and read; a few hundred lines of manifest is the useful end of it. */
+    internal const val MAX_COMPONENT_PACKAGES = 64
+    internal const val MAX_COMPONENT_SERVICES = 40
+
+    private const val NOT_CONNECTED = "connect() was not called, so there is no PackageManager"
+    private const val COMPONENT_NOTE =
+        "PackageManager GET_SERVICES only: nothing bound, called or loaded. exported=false or " +
+            "a permission we do not hold means unreachable from EVSuite, not absent."
 
     /**
      * What ABSENT means when there is no adapter client to ask. Carried on every swept entry

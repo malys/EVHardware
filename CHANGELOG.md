@@ -11,9 +11,19 @@ All notable changes to this project are documented here. Format follows
 - Probe-only vendor charge readings for the telemetry evidence: `BMS_CHRG_STS`, the AC and DC
   plug states and the kWh-since-plug-in counter, ids from MG4Control's SWI133 readings and
   unproven on SWI68. Recorded as `candidate.vendor*`; nothing reads them as values yet.
+- `RuntimeInterfaceProbe.componentMap()`, part of `survey()`: every service the
+  `com.saicmotor.*` packages declare, with its exported flag and permission, from
+  PackageManager metadata only. Nothing is bound or called; capped at 64 packages and
+  40 services per package, with the cut recorded.
+- `windows.widestPercent` in the telemetry evidence, from `EnergySnapshot.widestWindowPercent`.
+- `SocConsumptionFitter.describe()` ends with the solve's outcome once both gates pass:
+  `fit=ready rmse=…` or `fit=refused(<guard>)`. The existing prefix is unchanged.
 
 ### Fixed
 
+- **`SaicCharging.chargeLimitPercent()` answers null outside 40–100 %.** SWI68 answered `5`,
+  a code rather than a percent; callers now take their "limit unreadable" path. The setter
+  is unchanged.
 - **The battery ledger ignores readings taken on the factory clock.** A head unit woken by a
   night charge runs on its late-2018 clock until it syncs; one such entry sorted first in the
   ledger and split the charge. `BatteryLedgerRecorder` now drops samples before 2025-01-01.
