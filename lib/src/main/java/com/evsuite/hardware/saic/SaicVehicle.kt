@@ -5,6 +5,7 @@ import android.os.IBinder
 import com.evsuite.hardware.A9Climate
 import com.evsuite.hardware.GlassProbe
 import com.evsuite.hardware.VsmGlass
+import com.evsuite.hardware.catalog.VehicleEnums
 
 /**
  * The vendor vehicle service the head unit's HVAC and charging screens talk to.
@@ -263,8 +264,18 @@ object SaicCharging {
 
     fun chargingStatus(): Int? = read(TX_GET_CHARGING_STATUS)
 
-    /** Charge limit in percent — charging stops here. */
-    fun chargeLimitPercent(): Int? = read(TX_GET_CLOSE_SOC)
+    /**
+     * Charge limit in percent — charging stops here.
+     *
+     * Null outside the range the car accepts: SWI68 answered `5` on 2026-10-13, a code from a
+     * table nobody has read, not a percent. Null sends every caller down its "limit
+     * unreadable" path instead of planning a charge to 5 %.
+     */
+    fun chargeLimitPercent(): Int? = chargeLimitOrNull(read(TX_GET_CLOSE_SOC))
+
+    internal fun chargeLimitOrNull(raw: Int?): Int? =
+        raw?.takeIf { it in VehicleEnums.CHARGE_LIMIT_MIN..VehicleEnums.CHARGE_LIMIT_MAX }
+
     fun setChargeLimitPercent(percent: Int): Boolean =
         SaicAidl.callVoid(binder(), DESCRIPTOR, TX_SET_CLOSE_SOC, percent.coerceIn(0, 100))
 
