@@ -6,6 +6,12 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `SET_CHARGE_LIMIT` is `writeProven = false`: SWI68 reads the limit back as `5`, a code, while
+  the write sends a percent. Hidden from editors and refused by executors until one write is
+  seen to set the limit on the car's screen.
+
 ### Added
 
 - Probe-only vendor charge readings for the telemetry evidence: `BMS_CHRG_STS`, the AC and DC

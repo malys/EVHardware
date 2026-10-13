@@ -329,7 +329,12 @@ class CatalogConsistencyTest {
         // CR-046: the exterior-light actions are unproven too, on purpose, until a capture
         // proves a generation (see ExteriorLightsTest).
         val lights = setOf(ActionType.SET_HEADLIGHTS, ActionType.SET_HIGH_BEAM, ActionType.SET_FOG_LIGHTS)
-        assertEquals(glass.toSet() + lights, ActionType.entries.filter { !it.writeProven }.toSet())
+        // CP-088: the charge limit reads back as a code on SWI68 while the write sends a percent.
+        val chargeLimit = setOf(ActionType.SET_CHARGE_LIMIT)
+        assertEquals(
+            glass.toSet() + lights + chargeLimit,
+            ActionType.entries.filter { !it.writeProven }.toSet()
+        )
     }
 
     @Test

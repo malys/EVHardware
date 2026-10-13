@@ -125,7 +125,7 @@
 | SET_WINDOW_REAR_LEFT ⚠️ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_WINDOW_REAR_RIGHT ⚠️ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_DOOR_LOCK | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SET_CHARGE_LIMIT | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SET_CHARGE_LIMIT ⚠️ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_CHARGING_ENABLED | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_CHARGE_SCHEDULE | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SET_CHARGE_WINDOW | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |

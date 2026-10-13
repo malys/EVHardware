@@ -178,7 +178,7 @@ A reading the car does not answer makes the rule **not evaluable**: it does not 
 
 | Action | Entry | Asks for | When stopped only | Firmware |
 |---|---|---|:--:|---|
-| Charge limit | `SET_CHARGE_LIMIT` | 40…100 % | — | SWI68, SWI165 |
+| Charge limit ⚠️ | `SET_CHARGE_LIMIT` | 40…100 % | — | SWI68, SWI165 |
 | Allow charging | `SET_CHARGING_ENABLED` | on / off | — | SWI68, SWI165 |
 | Scheduled charging | `SET_CHARGE_SCHEDULE` | on / off | — | SWI68, SWI165 |
 | Charging window | `SET_CHARGE_WINDOW` | a start and an end time | — | SWI68, SWI165 |

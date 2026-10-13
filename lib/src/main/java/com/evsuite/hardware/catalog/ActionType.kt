@@ -328,11 +328,15 @@ enum class ActionType(
     ),
 
     // ── Energy (vendor service — com.evsuite.hardware.saic.SaicCharging) ─────────
+    // Unproven: the write sends a percent, but SWI68 reads the limit back as `5` (2026-10-13),
+    // a code from a table nobody has read. Writing 80 into a coded field is a guess, so the
+    // action is held back until one write is seen to set the limit shown on the car's screen.
     @SupportedOn(SWI68, SWI165)
     SET_CHARGE_LIMIT(
         R.string.act_charge_limit, ActionGroup.ENERGY,
         number(VehicleEnums.CHARGE_LIMIT_MIN, VehicleEnums.CHARGE_LIMIT_MAX, R.string.unit_percent),
-        "SET_CHARGE_LIMIT", currentKey = SnapshotKeys.KEY_CHARGE_LIMIT
+        "SET_CHARGE_LIMIT", currentKey = SnapshotKeys.KEY_CHARGE_LIMIT,
+        writeProven = false
     ),
     @SupportedOn(SWI68, SWI165)
     SET_CHARGING_ENABLED(
