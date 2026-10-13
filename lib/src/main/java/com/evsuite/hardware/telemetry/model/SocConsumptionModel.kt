@@ -6,6 +6,7 @@ import com.evsuite.hardware.telemetry.Provenanced
 import com.evsuite.hardware.telemetry.StoredTrip
 import com.evsuite.hardware.telemetry.TripSample
 import com.evsuite.hardware.telemetry.UnavailableReason
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -148,8 +149,8 @@ class SocConsumptionFitter(
      * altogether — a trip skipped for a speed conversion that is no longer believed leaves no
      * trace at all, and a history of them looks exactly like a history of short drives.
      *
-     * Diagnostic only: it runs the same collection pass as [fit] a second time, so call it
-     * from a probe and not from a screen.
+     * Diagnostic only: it runs the same collection pass and solve as [fit] a second time, so
+     * call it from a probe and not from a screen.
      */
     fun describe(
         trips: List<StoredTrip>,
@@ -161,8 +162,19 @@ class SocConsumptionFitter(
             "segments=${segments.size}/$MIN_SEGMENTS"
         if (segments.isEmpty()) return head
         val span = segments.maxOf { it.meanSpeedKmh } - segments.minOf { it.meanSpeedKmh }
-        return "$head span=${span.roundToInt()}/${MIN_SPEED_SPAN_KMH.roundToInt()} km/h"
+        val line = "$head span=${span.roundToInt()}/${MIN_SPEED_SPAN_KMH.roundToInt()} km/h"
+        if (segments.size < MIN_SEGMENTS || span < MIN_SPEED_SPAN_KMH) return line
+        // Past both gates the line used to stop, and a bundle could not say whether a model
+        // came out of the solve. Appended, so a parser of the prefix above still matches.
+        val evidence = VehicleSpeedEvidence(generation, VehicleSpeedEvidence.CURRENT)
+        val solved = solve(segments, evidence)
+        val model = solved.model ?: return "$line fit=refused(${solved.refusal})"
+        val rmse = model.residualRmsePercentPer100Km
+        return line + String.format(Locale.ROOT, " fit=ready rmse=%.2f", rmse)
     }
+
+    /** What [solve] produced: a model, or the name of the guard that refused one. */
+    private class Solved(val model: SocConsumptionModel?, val refusal: String? = null)
 
     fun fit(
         trips: List<StoredTrip>,
@@ -180,13 +192,21 @@ class SocConsumptionFitter(
             return SocConsumptionFitResult.Unavailable(UnavailableReason.INSUFFICIENT_SAMPLES)
         }
 
+        if (segments.maxOf { it.meanSpeedKmh } - segments.minOf { it.meanSpeedKmh } <
+            MIN_SPEED_SPAN_KMH
+        ) {
+            return SocConsumptionFitResult.Unavailable(UnavailableReason.INSUFFICIENT_SAMPLES)
+        }
+        return solve(segments, evidence).model?.let { SocConsumptionFitResult.Ready(it) }
+            ?: SocConsumptionFitResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED)
+    }
+
+    /** The least-squares solve behind [fit], shared with [describe] so both report one answer. */
+    private fun solve(segments: List<Segment>, evidence: VehicleSpeedEvidence): Solved {
         val minSpeed = segments.minOf { it.meanSpeedKmh }
         val maxSpeed = segments.maxOf { it.meanSpeedKmh }
         val minTemp = segments.minOf { it.meanOutsideTempCelsius }
         val maxTemp = segments.maxOf { it.meanOutsideTempCelsius }
-        if (maxSpeed - minSpeed < MIN_SPEED_SPAN_KMH) {
-            return SocConsumptionFitResult.Unavailable(UnavailableReason.INSUFFICIENT_SAMPLES)
-        }
 
         // A driver who has only recorded one kind of weather has no evidence about weather.
         // Fitting two coefficients is the honest answer there; the envelope keeps the narrow
@@ -200,13 +220,15 @@ class SocConsumptionFitter(
                 segment.percentPer100Km,
             )
         }
-        val coefficients = equations.solve()
-            ?: return SocConsumptionFitResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED)
+        val coefficients = equations.solve() ?: return Solved(null, "singular")
         val rolling = coefficients[0]
         val aero = coefficients[1]
         val thermal = if (features == 3) coefficients[2] else 0.0
-        if (rolling <= 0.0 || aero < 0.0 || thermal < 0.0 || coefficients.any { !it.isFinite() }) {
-            return SocConsumptionFitResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED)
+        when {
+            coefficients.any { !it.isFinite() } -> return Solved(null, "nonfinite")
+            rolling <= 0.0 -> return Solved(null, "rolling")
+            aero < 0.0 -> return Solved(null, "aero")
+            thermal < 0.0 -> return Solved(null, "thermal")
         }
 
         var squaredError = 0.0
@@ -221,7 +243,7 @@ class SocConsumptionFitter(
         }
         val rmse = sqrt(squaredError / segments.size)
         if (!rmse.isFinite() || rmse > maxResidualRmse) {
-            return SocConsumptionFitResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED)
+            return Solved(null, String.format(Locale.ROOT, "rmse=%.2f", rmse))
         }
 
         val model = SocConsumptionModel(
@@ -233,11 +255,7 @@ class SocConsumptionFitter(
             segmentCount = segments.size,
             envelope = EnergyModelEnvelope(minSpeed, maxSpeed, minTemp, maxTemp),
         )
-        return if (model.isValid()) {
-            SocConsumptionFitResult.Ready(model)
-        } else {
-            SocConsumptionFitResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED)
-        }
+        return if (model.isValid()) Solved(model) else Solved(null, "invalid")
     }
 
     /**

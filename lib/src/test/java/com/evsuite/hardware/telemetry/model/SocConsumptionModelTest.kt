@@ -239,4 +239,28 @@ class SocConsumptionModelTest {
         assertTrue(skipped, skipped.contains("segments=0/"))
         assertTrue(skipped, !skipped.contains("span="))
     }
+
+    @Test
+    fun `describe says whether the solve past the gates produced a model`() {
+        // Past both gates the line used to stop, so a bundle could not tell a trained model
+        // from a solve that refused one.
+        val ready = SocConsumptionFitter().describe(history(), generation)
+        assertTrue(ready, ready.startsWith("used=4/4 segments="))
+        assertTrue(ready, Regex(""" fit=ready rmse=\d+\.\d{2}$""").containsMatchIn(ready))
+
+        // Faster costs less: a negative aero term, which the fit refuses by name.
+        val backwards = listOf(
+            trip(drive(90.0, 20.0, 26.0, distanceKm = 120.0, startAtMs = 0L)),
+            trip(drive(130.0, 20.0, 16.0, distanceKm = 120.0, startAtMs = 100_000_000L)),
+        )
+        assertEquals(
+            SocConsumptionFitResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED),
+            SocConsumptionFitter().fit(backwards, generation),
+        )
+        val refused = SocConsumptionFitter().describe(backwards, generation)
+        assertTrue(refused, refused.endsWith("span=40/20 km/h fit=refused(aero)"))
+
+        val strict = SocConsumptionFitter(maxResidualRmse = -1.0).describe(history(), generation)
+        assertTrue(strict, Regex(""" fit=refused\(rmse=\d+\.\d{2}\)$""").containsMatchIn(strict))
+    }
 }
