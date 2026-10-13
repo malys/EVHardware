@@ -7,9 +7,10 @@ import com.evsuite.hardware.saic.SaicCharging
 import java.lang.reflect.InvocationTargetException
 
 /**
- * Two read-only diagnostic tools, for an app's unstable capture only (same isolation as
- * [RuntimeInterfaceProbe]): nothing in production calls this, and **no setter is called from
- * this file** — only the getters [VendorSurfaceRules.readableGetters] admits.
+ * Two read-only diagnostic tools. EVTasker's stable diagnostic screen calls [capture] from two
+ * buttons (CR-045/CR-046, 2026-10-13), because the owner only installs stable builds; that is
+ * safe only because **no setter is called from this file** — only the getters
+ * [VendorSurfaceRules.readableGetters] admits.
  *
  * 1. [socSourcesReport] (CR-044): every place state of charge might come from, side by side,
  *    for the generations where the uploader reads none.
