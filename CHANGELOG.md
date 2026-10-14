@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.17.0] - 2026-10-14
+
 ### Changed
 
 - `SET_CHARGE_LIMIT` is `writeProven = false`: SWI68 reads the limit back as `5`, a code, while
