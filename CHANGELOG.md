@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.18.0] - 2026-10-16
+
 ### Added
 
 - `EnergySnapshot`, `TripSample` and `EnergyTripSummary` carry the raw drive mode and regen
