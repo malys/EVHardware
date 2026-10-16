@@ -13,5 +13,8 @@ enum class RegenLevel(val value: Int, val label: String, @StringRes val labelRes
 
     companion object {
         fun fromValue(v: Int): RegenLevel = values().firstOrNull { it.value == v } ?: MEDIUM
+
+        /** Exact decode: a code this enum does not know is null, not a default. */
+        fun ofRaw(v: Int?): RegenLevel? = values().firstOrNull { it.value == v }
     }
 }

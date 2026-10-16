@@ -31,6 +31,17 @@ class EnergyTelemetryTest {
         assertEquals(18f, snapshot.batteryPowerKw)
     }
 
+    @Test fun `one pedal reaches the track as the car's own code, and an unknown code stays unknown`() {
+        val signals = FakeSignals(80f, null, null).apply { mode = 9; regen = 6 }
+        val sample = TripSample.of(EnergyTelemetryReader(signals).read(1_000L))
+
+        assertEquals(6, sample.regenLevelRaw)
+        assertEquals(com.evsuite.hardware.model.RegenLevel.ONE_PEDAL,
+            com.evsuite.hardware.model.RegenLevel.ofRaw(sample.regenLevelRaw))
+        assertEquals(9, sample.driveModeRaw)
+        assertNull(com.evsuite.hardware.model.DriveMode.ofRaw(sample.driveModeRaw))
+    }
+
     @Test fun `candidate probes exist only in the explicit evidence read`() {
         val source = FakeSignals(soc = 80f, range = 200f, power = 18f)
         source.probes = listOf(
@@ -68,6 +79,24 @@ class EnergyTelemetryTest {
         assertEquals(0.05, result.recordedDistanceKm!!, 0.000001)
         assertEquals(0.006666, result.consumedKwh!!, 0.000001)
         assertEquals(0.001666, result.regeneratedKwh!!, 0.000001)
+    }
+
+    @Test fun `a hard stretch counts once, braking and accelerating apart, at the live rate`() {
+        val trip = EnergyTripAccumulator(0L, 80f)
+        listOf(0f, 30f, 60f, 60f, 40f, 20f, 20f, 20f, 0f).forEachIndexed { second, speed ->
+            trip.add(
+                snapshot(second * 1_000L, speed, 5f)
+                    .copy(driveModeRaw = if (second < 6) 4 else 2, regenLevelRaw = 6)
+            )
+        }
+        val result = trip.snapshot(8_000L)
+
+        assertEquals(1, result.harshAccelerations)
+        assertEquals(2, result.harshBrakings)
+        assertEquals(8_000L, result.movingMs)
+        assertEquals(5_000L, result.harshMs)
+        assertEquals(4, result.driveModeRaw)
+        assertEquals(6, result.regenLevelRaw)
     }
 
     @Test fun `trip keeps distance unknown without a usable speed interval`() {
@@ -124,6 +153,10 @@ class EnergyTelemetryTest {
         private val power: Float?,
     ) : EnergySignalSource {
         var probes: List<TelemetryEvidenceProbe> = emptyList()
+        var mode: Int? = null
+        var regen: Int? = null
+        override fun driveModeRaw() = mode
+        override fun regenLevelRaw() = regen
         override fun firmware() = FirmwareInfo.Gen.SWI68
         override fun socPercent() = soc
         override fun rangeKm() = range

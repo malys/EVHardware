@@ -29,6 +29,9 @@ interface EnergySignalSource {
     fun parked(): Boolean?
     /** Widest window opening in percent; null where the firmware has no read. */
     fun widestWindowPercent(): Int? = null
+    /** Raw vendor codes; null where the firmware has no read. */
+    fun driveModeRaw(): Int? = null
+    fun regenLevelRaw(): Int? = null
     fun climate(): ClimateSnapshot
     fun tirePressures(): TirePressureSnapshot
     /** Probe-only values excluded from [EnergySnapshot] and normal consumers. */
@@ -67,6 +70,8 @@ class EvHardwareEnergySignalSource(context: Context) : EnergySignalSource {
     override fun vehicleRegeneratedKwh() = SaicCharging.regeneratedKwhSinceCharge()
     override fun parked() = EVHardware.isVehicleInPark()
     override fun widestWindowPercent() = SaicVehicleControl.widestWindowPercent()
+    override fun driveModeRaw() = EVHardware.getDriveModeRaw()
+    override fun regenLevelRaw() = EVHardware.getRegenLevelRaw()
     override fun tirePressures() = TirePressureSnapshot(
         frontLeftKpa = EVHardware.getTirePressureKpa(EVHardware.Wheel.FRONT_LEFT),
         frontRightKpa = EVHardware.getTirePressureKpa(EVHardware.Wheel.FRONT_RIGHT),
@@ -140,6 +145,8 @@ class EnergyTelemetryReader(private val source: EnergySignalSource) {
         climate = source.climate(),
         tirePressures = source.tirePressures(),
         widestWindowPercent = source.widestWindowPercent()?.takeIf { it in 0..100 },
+        driveModeRaw = source.driveModeRaw(),
+        regenLevelRaw = source.regenLevelRaw(),
     )
 
     /** Reads CP-004 candidates only when an unstable evidence capture explicitly requests them. */

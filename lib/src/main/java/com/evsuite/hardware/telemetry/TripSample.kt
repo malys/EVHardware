@@ -26,6 +26,12 @@ data class TripSample(
     val climateFanLevel: Int?,
     /** CP-086. Absent from trips stored before it, which Gson reads back as null: unknown. */
     val widestWindowPercent: Int? = null,
+    /**
+     * Raw vendor drive mode and regen codes, as [EnergySnapshot] carries them. Ints rather than
+     * the enums: Gson writes an enum by its constant name, which a release build may rename.
+     */
+    val driveModeRaw: Int? = null,
+    val regenLevelRaw: Int? = null,
 ) {
     companion object {
         fun of(snapshot: EnergySnapshot) = TripSample(
@@ -40,6 +46,8 @@ data class TripSample(
             climateAcOn = snapshot.climate.acOn,
             climateFanLevel = snapshot.climate.fanLevel,
             widestWindowPercent = snapshot.widestWindowPercent,
+            driveModeRaw = snapshot.driveModeRaw,
+            regenLevelRaw = snapshot.regenLevelRaw,
         )
     }
 }

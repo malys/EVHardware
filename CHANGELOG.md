@@ -6,6 +6,22 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- `EnergySnapshot`, `TripSample` and `EnergyTripSummary` carry the raw drive mode and regen
+  codes (`getDriveModeRaw`, `getRegenLevelRaw`; 6 is one-pedal on SWI68). Raw, so an unknown code
+  stays unknown instead of reading NORMAL or MEDIUM; `DriveMode.ofRaw` and `RegenLevel.ofRaw`
+  decode exactly.
+- `EnergyTripSummary` counts driving style at the live 1 Hz rate: moving and hard time, hard
+  accelerations and hard brakings as episodes. The 5 s track had smoothed short hard stops away.
+- `EcoScore`: a trip out of 100 from anticipation (hard brakings per 10 km), smoothness (hard
+  share) and efficiency (charge against the driver's own expectation). Unmeasured parts drop out.
+
+### Changed
+
+- The eco verdict's TYPICAL zone is one residual either side of the expectation, half the
+  prediction band. At the full 1.96 band almost every drive read TYPICAL.
+
 ### Fixed
 
 - `TripDetector` ends an automatic trip two seconds after the car reports P or a plugged cable,

@@ -2408,23 +2408,22 @@ object EVHardware {
     fun getSeatHeatRight(): Int = seatHeatRightOrNull() ?: 0
     fun isSteeringHeatOn(): Boolean = steeringHeatOnOrNull() ?: false
 
-    fun getDriveMode(): DriveMode? {
-        val cpm = sCarPropertyManager ?: return null
-        return try {
-            val raw = (cpm.javaClass
-                .getMethod("getIntProperty", Int::class.java, Int::class.java)
-                .invoke(cpm, PROP_DRIVE_MODE, AREA_GLOBAL) as? Int) ?: return null
-            DriveMode.fromValue(raw)
-        } catch (_: Exception) { null }
-    }
+    fun getDriveMode(): DriveMode? = getDriveModeRaw()?.let(DriveMode::fromValue)
 
-    fun getRegenLevel(): RegenLevel? {
+    /** The drive mode code as the car sends it; null when it could not be read. */
+    fun getDriveModeRaw(): Int? = readIntGlobal(PROP_DRIVE_MODE)
+
+    fun getRegenLevel(): RegenLevel? = getRegenLevelRaw()?.let(RegenLevel::fromValue)
+
+    /** The regen code as the car sends it: 6 is one-pedal on SWI68 (EVTasker CR-045 diff). */
+    fun getRegenLevelRaw(): Int? = readIntGlobal(PROP_REGEN_LEVEL)
+
+    private fun readIntGlobal(prop: Int): Int? {
         val cpm = sCarPropertyManager ?: return null
         return try {
-            val raw = (cpm.javaClass
+            cpm.javaClass
                 .getMethod("getIntProperty", Int::class.java, Int::class.java)
-                .invoke(cpm, PROP_REGEN_LEVEL, AREA_GLOBAL) as? Int) ?: return null
-            RegenLevel.fromValue(raw)
+                .invoke(cpm, prop, AREA_GLOBAL) as? Int
         } catch (_: Exception) { null }
     }
 

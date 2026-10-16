@@ -1,5 +1,8 @@
 package com.evsuite.hardware.telemetry
 
+import com.evsuite.hardware.model.DriveMode
+import com.evsuite.hardware.model.RegenLevel
+
 import com.evsuite.hardware.FirmwareInfo
 
 /** One immutable, nullable, read-only view of the vehicle's energy state. */
@@ -36,6 +39,13 @@ data class EnergySnapshot(
      * never 0 — a closed window and an unread one are different facts to the attribution.
      */
     val widestWindowPercent: Int? = null,
+    /**
+     * The vendor's own drive mode and regen codes, unmapped: [DriveMode.ofRaw] and
+     * [RegenLevel.ofRaw] decode them, and a code neither knows stays a code rather than
+     * becoming NORMAL or MEDIUM. Null where the car did not answer.
+     */
+    val driveModeRaw: Int? = null,
+    val regenLevelRaw: Int? = null,
 ) {
     val hasVehicleData: Boolean
         get() = socPercent != null || rangeKm != null || speedKmh != null ||
@@ -44,7 +54,7 @@ data class EnergySnapshot(
             odometerKm != null || chargePortConnected != null || chargingStatus != null ||
             vehicleConsumedKwh != null || vehicleRegeneratedKwh != null ||
             parked != null || climate.hasData || tirePressures.hasData ||
-            widestWindowPercent != null
+            widestWindowPercent != null || driveModeRaw != null || regenLevelRaw != null
 }
 
 data class TirePressureSnapshot(

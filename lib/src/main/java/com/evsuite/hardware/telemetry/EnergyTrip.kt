@@ -32,6 +32,20 @@ data class EnergyTripSummary(
      * train on it. See [VehicleSpeedEvidence].
      */
     val speedEvidence: VehicleSpeedEvidence? = null,
+    /**
+     * How the trip was driven, counted at the live sampling rate over the whole trip.
+     *
+     * The stored track is one sample per five seconds, and a two-second hard stop averaged over
+     * five reads as a gentle one: replayed, the same drive came out calmer than it was. Null on
+     * trips recorded before these were counted, which a reader treats as "not counted", never 0.
+     */
+    val movingMs: Long? = null,
+    val harshMs: Long? = null,
+    val harshAccelerations: Int? = null,
+    val harshBrakings: Int? = null,
+    /** The vendor drive mode and regen codes held for the longest share of the trip. */
+    val driveModeRaw: Int? = null,
+    val regenLevelRaw: Int? = null,
 ) {
     /**
      * The distance, only when the conversion behind it is the one believed correct today.
@@ -75,6 +89,13 @@ class EnergyTripAccumulator(
     private var hasPowerInterval = false
     private var recordedMs = 0L
     private var latestSocPercent = startSocPercent
+    private var movingMs = 0L
+    private var harshMs = 0L
+    private var harshAccelerations = 0
+    private var harshBrakings = 0
+    private var harshSign = 0
+    private val modeMs = HashMap<Int, Long>()
+    private val regenMs = HashMap<Int, Long>()
 
     fun add(sample: EnergySnapshot) {
         track.add(sample)
@@ -90,6 +111,7 @@ class EnergyTripAccumulator(
             hasSpeedInterval = true
             distanceKm += ((previous.speedKmh + sample.speedKmh) / 2.0) * hours
         }
+        countStyle(previous, sample, gapMs)
         if (previous.batteryPowerKw != null && sample.batteryPowerKw != null) {
             hasPowerInterval = true
             val intervalKwh =
@@ -97,6 +119,32 @@ class EnergyTripAccumulator(
             if (intervalKwh >= 0.0) consumedKwh += intervalKwh
             else regeneratedKwh += -intervalKwh
         }
+    }
+
+    /**
+     * One interval of driving style. A hard stretch counts once however many seconds it lasts:
+     * a driver asked to brake less hard three times wants three to be the number, not eleven.
+     */
+    private fun countStyle(previous: EnergySnapshot, sample: EnergySnapshot, gapMs: Long) {
+        sample.driveModeRaw?.let { modeMs.merge(it, gapMs, Long::plus) }
+        sample.regenLevelRaw?.let { regenMs.merge(it, gapMs, Long::plus) }
+        val from = previous.speedKmh ?: return
+        val to = sample.speedKmh ?: return
+        if (from <= 0f && to <= 0f) {
+            harshSign = 0
+            return
+        }
+        movingMs += gapMs
+        val acceleration = (to - from) / KMH_PER_MS2 / (gapMs / 1000.0)
+        val sign = when {
+            acceleration >= EcoDrivingMonitor.HARSH_ACCELERATION_MS2 -> 1
+            acceleration <= -EcoDrivingMonitor.HARSH_ACCELERATION_MS2 -> -1
+            else -> 0
+        }
+        if (sign != 0) harshMs += gapMs
+        if (sign == 1 && harshSign != 1) harshAccelerations++
+        if (sign == -1 && harshSign != -1) harshBrakings++
+        harshSign = sign
     }
 
     fun samples(): List<TripSample> = track.samples()
@@ -113,9 +161,20 @@ class EnergyTripAccumulator(
         distanceAvailable = hasSpeedInterval,
         speedEvidence = speedEvidence.takeIf { hasSpeedInterval },
         batteryPowerEvidence = batteryPowerEvidence.takeIf { hasPowerInterval },
+        movingMs = movingMs.takeIf { hasSpeedInterval },
+        harshMs = harshMs.takeIf { hasSpeedInterval },
+        harshAccelerations = harshAccelerations.takeIf { hasSpeedInterval },
+        harshBrakings = harshBrakings.takeIf { hasSpeedInterval },
+        driveModeRaw = modeMs.maxByOrNull { it.value }?.key,
+        regenLevelRaw = regenMs.maxByOrNull { it.value }?.key,
     )
 
-    private companion object { const val MAX_SAMPLE_GAP_MS = 5_000L }
+    private companion object {
+        const val MAX_SAMPLE_GAP_MS = 5_000L
+
+        /** 1 m/s² is 3.6 km/h per second. */
+        const val KMH_PER_MS2 = 3.6
+    }
 }
 
 /** Process-local recording state shared by any energy dashboard in the same app process. */

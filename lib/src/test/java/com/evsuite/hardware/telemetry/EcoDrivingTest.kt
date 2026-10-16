@@ -88,8 +88,15 @@ class EcoDrivingTest {
     fun `the band widens with the fit's residual rather than a threshold of our own`() {
         // The same 24 per 100 km that is WORSE against a tight fit is TYPICAL against a loose
         // one: a model that knows little must not be allowed to accuse the driver.
-        val loose = model.copy(residualRmsePercentPer100Km = 4.0)
+        val loose = model.copy(residualRmsePercentPer100Km = 7.0)
         assertEquals(EcoBand.TYPICAL, verdict(trip = trip(endSoc = 78f), model = loose).band.value)
+    }
+
+    @Test
+    fun `a sixth over the expectation is worse, not typical, against a two-point residual`() {
+        // 21 per 100 km against 18: the 95 % band (±3.9) called this TYPICAL, one residual does not.
+        val fit = model.copy(residualRmsePercentPer100Km = 2.0)
+        assertEquals(EcoBand.WORSE, verdict(trip = trip(endSoc = 79.5f), model = fit).band.value)
     }
 
     @Test

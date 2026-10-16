@@ -12,5 +12,8 @@ enum class DriveMode(val value: Int, val label: String, @StringRes val labelRes:
 
     companion object {
         fun fromValue(v: Int): DriveMode = values().firstOrNull { it.value == v } ?: NORMAL
+
+        /** Exact decode: a code this enum does not know is null, not a default. */
+        fun ofRaw(v: Int?): DriveMode? = values().firstOrNull { it.value == v }
     }
 }

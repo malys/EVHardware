@@ -211,8 +211,10 @@ class EcoDrivingMonitor(
         val observed = drop / distanceKm * PER_100_KM
         // Compared against the fit's *own* band rather than a threshold invented here: a fit with
         // a wide residual says TYPICAL more often, which is the correct behaviour for a fit that
-        // does not know much yet.
-        val band = expected.uncertainty ?: 0.0
+        // does not know much yet. Half of it, though, not all: the prediction band is 1.96
+        // residuals wide, so TYPICAL covered 95 % of drives and the verdict almost never said
+        // anything else. One residual either side leaves about a third of drives outside it.
+        val band = (expected.uncertainty ?: 0.0) * VERDICT_BAND_SHARE
         val verdict = when {
             observed < expectedValue - band -> EcoBand.BETTER
             observed > expectedValue + band -> EcoBand.WORSE
@@ -330,6 +332,9 @@ class EcoDrivingMonitor(
             maxSamples = Int.MAX_VALUE,
             maxGapMs = REPLAY_MAX_GAP_MS,
         )
+
+        /** The share of the prediction band that counts as TYPICAL: about one residual. */
+        const val VERDICT_BAND_SHARE = 0.5
 
         /** Long enough that a single roundabout is not a driving style. */
         const val WINDOW_MS = 180_000L
