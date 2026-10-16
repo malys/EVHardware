@@ -6,6 +6,18 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `TripDetector` ends an automatic trip two seconds after the car reports P or a plugged cable,
+  instead of after the two-minute standstill. The SWI68 head unit powers off about twelve
+  seconds after P, so an automatic trip died with the process before the timer ran out.
+- `SocConsumptionFitter` falls back to two coefficients when the thermal term comes out
+  negative, instead of refusing the fit. The 2026-10-16 bundle refused 87 segments for this
+  reason alone.
+- `CarPropertyEvidence` no longer lists SWI68 battery power as never published: the vendor pack
+  fallback reads −32,9 to +32,4 kW on a town drive. Screens now say "not validated yet" instead
+  of "this vehicle never publishes battery power".
+
 ## [1.17.0] - 2026-10-14
 
 ### Changed

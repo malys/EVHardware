@@ -73,7 +73,8 @@ class TripDetector {
                         transition(State.RECORDING, timestampMs)
                         Result(state)
                     }
-                    elapsed(timestampMs) >= STOP_DEBOUNCE_MS && endConfirmed(snapshot) -> {
+                    elapsed(timestampMs) >= STOP_DEBOUNCE_MS && endConfirmed(snapshot) ||
+                        elapsed(timestampMs) >= PARKED_STOP_DEBOUNCE_MS && endObserved(snapshot) -> {
                         transition(State.IDLE, timestampMs)
                         Result(state, Event.STOP)
                     }
@@ -117,8 +118,12 @@ class TripDetector {
 
     private fun endConfirmed(snapshot: EnergySnapshot): Boolean {
         val confirmationAvailable = snapshot.parked != null || snapshot.chargePortConnected != null
-        return !confirmationAvailable || snapshot.parked == true || snapshot.chargePortConnected == true
+        return !confirmationAvailable || endObserved(snapshot)
     }
+
+    /** The car said so itself: a gear in P or a cable in the port is not a traffic stop. */
+    private fun endObserved(snapshot: EnergySnapshot): Boolean =
+        snapshot.parked == true || snapshot.chargePortConnected == true
 
     companion object {
         /** Ignores parking creep and noisy zero readings; 5 km/h is unambiguous road motion. */
@@ -132,6 +137,13 @@ class TripDetector {
 
         /** Longer than the ticket's 90-second traffic stop while still practical at arrival. */
         const val STOP_DEBOUNCE_MS = 120_000L
+
+        /**
+         * The SWI68 head unit powers off about twelve seconds after P (2026-10-16: P at
+         * 12:13:54, off at 12:14:06), so the two-minute timer never ran out and every
+         * automatic trip died with the process. A confirmed P needs no traffic allowance.
+         */
+        const val PARKED_STOP_DEBOUNCE_MS = 2_000L
 
         /** Five seconds tolerates scheduler jitter but cannot bridge a meaningful telemetry hole. */
         const val MAX_OBSERVATION_GAP_MS = 5_000L

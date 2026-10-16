@@ -202,7 +202,11 @@ class SocConsumptionFitter(
     }
 
     /** The least-squares solve behind [fit], shared with [describe] so both report one answer. */
-    private fun solve(segments: List<Segment>, evidence: VehicleSpeedEvidence): Solved {
+    private fun solve(
+        segments: List<Segment>,
+        evidence: VehicleSpeedEvidence,
+        withWeather: Boolean = true,
+    ): Solved {
         val minSpeed = segments.minOf { it.meanSpeedKmh }
         val maxSpeed = segments.maxOf { it.meanSpeedKmh }
         val minTemp = segments.minOf { it.meanOutsideTempCelsius }
@@ -211,7 +215,7 @@ class SocConsumptionFitter(
         // A driver who has only recorded one kind of weather has no evidence about weather.
         // Fitting two coefficients is the honest answer there; the envelope keeps the narrow
         // temperature range, so this model refuses the cold instead of guessing at it.
-        val features = if (maxTemp - minTemp >= MIN_TEMPERATURE_SPAN_CELSIUS) 3 else 2
+        val features = if (withWeather && maxTemp - minTemp >= MIN_TEMPERATURE_SPAN_CELSIUS) 3 else 2
         val equations = LeastSquares3(features)
         for (segment in segments) {
             equations.add(
@@ -228,7 +232,11 @@ class SocConsumptionFitter(
             coefficients.any { !it.isFinite() } -> return Solved(null, "nonfinite")
             rolling <= 0.0 -> return Solved(null, "rolling")
             aero < 0.0 -> return Solved(null, "aero")
-            thermal < 0.0 -> return Solved(null, "thermal")
+            // The weather recorded so far costs nothing measurable: the bundle of 2026-10-16
+            // refused 87 segments over 77 km/h of span on this alone, and the model never
+            // came out on the car. That is the single-weather case again — two coefficients,
+            // and the envelope still refuses a temperature the history never saw.
+            thermal < 0.0 -> return solve(segments, evidence, withWeather = false)
         }
 
         var squaredError = 0.0

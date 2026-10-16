@@ -30,11 +30,12 @@ class TripDetectorTest {
         assertNull(movingAgain.event)
     }
 
-    @Test fun `a genuine confirmed end closes the trip`() {
+    @Test fun `a genuine confirmed end closes the trip before the head unit powers off`() {
         val detector = recordingDetector()
         detector.add(snapshot(6_000L, 0f, parked = false))
 
-        val stopped = sustainStop(detector, 7_000L, 126_000L, parked = true)
+        assertNull(detector.add(snapshot(7_000L, 0f, parked = true)).event)
+        val stopped = detector.add(snapshot(8_000L, 0f, parked = true))
 
         assertEquals(TripDetector.State.IDLE, stopped.state)
         assertEquals(TripDetector.Event.STOP, stopped.event)

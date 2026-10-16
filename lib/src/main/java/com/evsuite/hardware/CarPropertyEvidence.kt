@@ -143,12 +143,12 @@ object CarPropertyEvidence {
      * between them, zero readings for either signal, and `EV_INSTANTANEOUS_CHARGE_RATE` and
      * `EV_BATTERY_AVG_TEMP` answering `no CarPropertyValue` on every property probe.
      *
-     * Consequence worth stating plainly: the CP-030 energy model can never train from battery
-     * power on this generation, because there is no battery power to integrate. An arrival
-     * forecast on this car has to come from state of charge per kilometre instead.
+     * Battery power left this list once the vendor pack voltage × current fallback published:
+     * −32,9 to +32,4 kW on the urban drive of 2026-10-16, net agreeing with the charge drop.
+     * The standard property is still silent, but a screen asking "is there battery power"
+     * now gets "not validated yet", which is the true answer, instead of "never".
      */
     private val neverPublishedByFirmware: Map<Signal, Set<FirmwareInfo.Gen>> = mapOf(
-        Signal.BATTERY_POWER_KW to setOf(FirmwareInfo.Gen.SWI68),
         Signal.BATTERY_TEMPERATURE_CELSIUS to setOf(FirmwareInfo.Gen.SWI68),
     )
 }

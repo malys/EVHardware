@@ -127,13 +127,28 @@ class ReadFailureLogTest {
 
 class NeverPublishedCatalogueTest {
 
-    @Test fun `SWI68 never publishes battery power or battery temperature`() {
-        CarPropertyEvidence.Signal.entries.forEach { signal ->
-            assertTrue(
-                "$signal is proven absent on SWI68",
-                CarPropertyEvidence.isNeverPublished(signal, FirmwareInfo.Gen.SWI68),
+    @Test fun `SWI68 never publishes battery temperature`() {
+        assertTrue(
+            CarPropertyEvidence.isNeverPublished(
+                CarPropertyEvidence.Signal.BATTERY_TEMPERATURE_CELSIUS,
+                FirmwareInfo.Gen.SWI68,
             )
-        }
+        )
+    }
+
+    @Test fun `SWI68 battery power publishes through the vendor pack and is not validated yet`() {
+        assertFalse(
+            CarPropertyEvidence.isNeverPublished(
+                CarPropertyEvidence.Signal.BATTERY_POWER_KW,
+                FirmwareInfo.Gen.SWI68,
+            )
+        )
+        assertFalse(
+            CarPropertyEvidence.isValidated(
+                CarPropertyEvidence.Signal.BATTERY_POWER_KW,
+                FirmwareInfo.Gen.SWI68,
+            )
+        )
     }
 
     @Test fun `absent is not the same claim as validated`() {
@@ -141,13 +156,13 @@ class NeverPublishedCatalogueTest {
         // never be validated. Both must be false-for-validated and true-for-absent at once.
         assertFalse(
             CarPropertyEvidence.isValidated(
-                CarPropertyEvidence.Signal.BATTERY_POWER_KW,
+                CarPropertyEvidence.Signal.BATTERY_TEMPERATURE_CELSIUS,
                 FirmwareInfo.Gen.SWI68,
             )
         )
         assertTrue(
             CarPropertyEvidence.isNeverPublished(
-                CarPropertyEvidence.Signal.BATTERY_POWER_KW,
+                CarPropertyEvidence.Signal.BATTERY_TEMPERATURE_CELSIUS,
                 FirmwareInfo.Gen.SWI68,
             )
         )

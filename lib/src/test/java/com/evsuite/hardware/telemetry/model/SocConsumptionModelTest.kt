@@ -151,6 +151,24 @@ class SocConsumptionModelTest {
     }
 
     @Test
+    fun `weather that costs nothing falls back to two coefficients instead of refusing`() {
+        // The 10 °C drives cost less than the 20 °C ones, so a thermal term comes out negative.
+        val result = SocConsumptionFitter().fit(
+            listOf(
+                trip(drive(90.0, 20.0, 21.0, startAtMs = 0L)),
+                trip(drive(130.0, 20.0, 31.0, startAtMs = 100_000_000L)),
+                trip(drive(90.0, 10.0, 16.0, startAtMs = 200_000_000L)),
+                trip(drive(130.0, 10.0, 26.0, startAtMs = 300_000_000L)),
+            ),
+            generation,
+        )
+        val model = (result as SocConsumptionFitResult.Ready).model
+        assertEquals(0.0, model.thermalPercentPer100KmPerDegree, 1e-12)
+        assertTrue(model.predict(130.0, 15.0).value!! > model.predict(90.0, 15.0).value!!)
+        assertNull(model.predict(110.0, -5.0).value)
+    }
+
+    @Test
     fun `a hole in the track is not driven through`() {
         // Two minutes of missing samples across which the car covered kilometres nobody
         // recorded. Bridged, the charge they cost would land on the kilometres either side.
