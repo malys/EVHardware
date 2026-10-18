@@ -424,6 +424,16 @@ object RuntimeInterfaceProbe {
     ): InterfaceProbe {
         val target = binder
             ?: return InterfaceProbe(label, descriptor, BindVerdict.ABSENT, note = note)
+        // The hub may hand over a different interface at this bind point. Every call would then
+        // fail the remote descriptor check, which reads as a refusal and is not one: the
+        // interface is not here, so the entry is ABSENT and nothing is called.
+        val answersAs = runCatching { target.interfaceDescriptor }.getOrNull()
+        if (answersAs != null && answersAs != descriptor) {
+            return InterfaceProbe(
+                label, descriptor, BindVerdict.ABSENT,
+                note = "$note; the handle answers as $answersAs, so nothing was called",
+            )
+        }
         val values = calls.mapValues { (_, call) ->
             val args = call.args.toTypedArray()
             when (call.readAs) {

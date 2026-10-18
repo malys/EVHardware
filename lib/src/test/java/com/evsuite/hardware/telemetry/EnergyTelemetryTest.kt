@@ -81,6 +81,32 @@ class EnergyTelemetryTest {
         assertEquals(0.001666, result.regeneratedKwh!!, 0.000001)
     }
 
+    @Test fun `a trip started on the factory clock is dated from the corrected one`() {
+        val factory = 1_546_300_800_000L
+        val synced = 1_792_323_000_000L
+        val trip = EnergyTripAccumulator(factory, 80f)
+        trip.add(snapshot(factory, 30f, 5f))
+        trip.add(snapshot(factory + 1_000L, 30f, 5f))
+        trip.add(snapshot(synced, 30f, 5f))
+        trip.add(snapshot(synced + 1_000L, 30f, 5f))
+        val result = trip.snapshot(synced + 1_000L)
+
+        assertEquals(2_000L, result.durationMs)
+        assertEquals(synced - 1_000L, result.startedAtMs)
+    }
+
+    @Test fun `lifting off into regeneration is not a hard stop`() {
+        val trip = EnergyTripAccumulator(0L, 80f)
+        // 7 km/h a second is about 1.9 m/s², what regeneration on High does with no brake pedal.
+        listOf(50f, 43f, 36f, 29f, 22f, 15f).forEachIndexed { second, speed ->
+            trip.add(snapshot(second * 1_000L, speed, -10f))
+        }
+        val result = trip.snapshot(5_000L)
+
+        assertEquals(0, result.harshBrakings)
+        assertEquals(0L, result.harshMs)
+    }
+
     @Test fun `a hard stretch counts once, braking and accelerating apart, at the live rate`() {
         val trip = EnergyTripAccumulator(0L, 80f)
         listOf(0f, 30f, 60f, 60f, 40f, 20f, 20f, 20f, 0f).forEachIndexed { second, speed ->

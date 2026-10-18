@@ -221,7 +221,9 @@ data class ChargeEnergyReport(
                 " hours=${format(charge.session.durationHours)}" +
                 " watched=${charge.watched}" +
                 " max_entry_gap_ms=${charge.maxEntryGapMs}" +
-                " pack_delta_kwh=${format(charge.packDeltaKwh)}" +
+                // Unwatched, the integral only moved during the few seconds the app was up: a
+                // number there reads as a measured charge of nearly nothing.
+                " pack_delta_kwh=${format(charge.packDeltaKwh?.takeIf { charge.watched })}" +
                 " mean_power_kw=${format(charge.meanPowerKw)}" +
                 " consumed_delta_kwh=${format(charge.consumedDeltaKwh)}" +
                 " regenerated_delta_kwh=${format(charge.regeneratedDeltaKwh)}" +

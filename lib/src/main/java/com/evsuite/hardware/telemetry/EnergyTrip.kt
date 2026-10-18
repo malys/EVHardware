@@ -150,7 +150,7 @@ class EnergyTripAccumulator(
     fun samples(): List<TripSample> = track.samples()
 
     fun snapshot(nowMs: Long) = EnergyTripSummary(
-        startedAtMs = startedAtMs,
+        startedAtMs = startedAtMs(nowMs),
         endedAtMs = nowMs,
         durationMs = recordedMs,
         distanceKm = distanceKm,
@@ -168,6 +168,16 @@ class EnergyTripAccumulator(
         driveModeRaw = modeMs.maxByOrNull { it.value }?.key,
         regenLevelRaw = regenMs.maxByOrNull { it.value }?.key,
     )
+
+    /**
+     * A trip that started before the head unit's clock was set (it boots on its factory date and
+     * syncs later) would sort years back. Once the clock is right, its start is the end minus the
+     * time driven; the jump itself is a gap [add] already refuses to count.
+     */
+    private fun startedAtMs(nowMs: Long): Long =
+        if (startedAtMs < BatteryLedgerRecorder.MIN_PLAUSIBLE_CLOCK_MS &&
+            nowMs >= BatteryLedgerRecorder.MIN_PLAUSIBLE_CLOCK_MS
+        ) nowMs - recordedMs else startedAtMs
 
     private companion object {
         const val MAX_SAMPLE_GAP_MS = 5_000L

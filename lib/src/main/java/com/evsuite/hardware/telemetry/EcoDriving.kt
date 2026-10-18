@@ -343,8 +343,12 @@ class EcoDrivingMonitor(
          * Brisk rather than emergency. Eco-driving practice puts the useful line around here, and
          * the number is a calibration knob rather than physics: a heavier car, a different tyre or
          * a driver who simply disagrees moves it, and nothing else in this class assumes its value.
+         *
+         * 1.5 m/s² was too low on the car: ordinary town drives counted 7 to 16 hard stops every
+         * 10 km (bundle of 2026-10-18), and regeneration on High alone comes close to that line
+         * with no brake pedal at all. 2.5 sits above lift-off, where the brakes do the work.
          */
-        const val HARSH_ACCELERATION_MS2 = 1.5
+        const val HARSH_ACCELERATION_MS2 = 2.5
 
         /** Below this the levers are measuring a traffic light, not a drive. */
         const val MIN_LEVER_WINDOW_MS = 60_000L

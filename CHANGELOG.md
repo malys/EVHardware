@@ -6,6 +6,23 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Hard acceleration and hard braking start at 2.5 m/s², up from 1.5. On the car, ordinary town
+  drives counted 7 to 16 hard stops every 10 km, and regeneration on High alone comes close to
+  the old line. Trips recorded before keep the counts they were given.
+- `EnergySnapshot.climate.passengerTargetCelsius` is null when the car publishes no passenger
+  setpoint, instead of a copy of the driver's. A screen that shows one zone for both seats says so.
+
+### Fixed
+
+- Screen brightness rounds both ways: 10 % was written as native 25 and read back as 9 %.
+- A trip that started on the head unit's factory clock is dated from the corrected one.
+- `RuntimeInterfaceProbe` records ABSENT, not DENIED, when the hub hands over another interface:
+  ICarPowerService and IVehiclePropertyService answer as IVehicleSettingService on SWI68.
+- The charge diagnostic line shows `pack_delta_kwh=unavailable` for an unwatched charge.
+- The ACC/TJA and speed-limiter getters log the value they read.
+
 ## [1.18.0] - 2026-10-16
 
 ### Added

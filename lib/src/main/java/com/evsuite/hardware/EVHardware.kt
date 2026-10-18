@@ -1518,7 +1518,7 @@ object EVHardware {
         return try {
             val native = (g.javaClass.getMethod("getBrightness").invoke(g) as? Int) ?: return -1
             if (native < 0) return -1
-            val pct = (native * 100 / BRIGHTNESS_NATIVE_MAX).coerceIn(0, 100)
+            val pct = ((native * 100 + BRIGHTNESS_NATIVE_MAX / 2) / BRIGHTNESS_NATIVE_MAX).coerceIn(0, 100)
             AppLogger.d(TAG, "  getBrightness native=$native → $pct%")
             pct
         } catch (e: Exception) {
@@ -1529,7 +1529,7 @@ object EVHardware {
 
     private fun setBrightnessOldSdk(clampedPct: Int): Boolean {
         val g = sGeneral ?: return false
-        val native = (clampedPct * BRIGHTNESS_NATIVE_MAX / 100).coerceIn(0, BRIGHTNESS_NATIVE_MAX)
+        val native = ((clampedPct * BRIGHTNESS_NATIVE_MAX + 50) / 100).coerceIn(0, BRIGHTNESS_NATIVE_MAX)
         if (logEnabled) AppLogger.i(TAG, "setBrightness → $clampedPct% (native=$native/255)")
         return try {
             g.javaClass.getMethod("setBrightness", Int::class.javaPrimitiveType).invoke(g, native)
@@ -1556,12 +1556,12 @@ object EVHardware {
             AppLogger.w(TAG, "  A9 getBrightness Settings.System exc: ${e.message}"); return -1
         }
         if (native < 0) return -1
-        return (native * 100 / A9_BRIGHTNESS_NATIVE_MAX).coerceIn(0, 100)
+        return ((native * 100 + A9_BRIGHTNESS_NATIVE_MAX / 2) / A9_BRIGHTNESS_NATIVE_MAX).coerceIn(0, 100)
     }
 
     private fun setBrightnessA9(clampedPct: Int): Boolean {
         val resolver = sAppContext?.contentResolver ?: return false
-        val native = (clampedPct.coerceIn(0, 100) * A9_BRIGHTNESS_NATIVE_MAX / 100).coerceIn(1, A9_BRIGHTNESS_NATIVE_MAX)
+        val native = ((clampedPct.coerceIn(0, 100) * A9_BRIGHTNESS_NATIVE_MAX + 50) / 100).coerceIn(1, A9_BRIGHTNESS_NATIVE_MAX)
         return try {
             // Manual mode, otherwise auto-brightness overwrites the value at once
             android.provider.Settings.System.putInt(resolver,
@@ -2542,8 +2542,9 @@ object EVHardware {
     fun getAccTjaMode(): Int {
         val useNewApi = FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132
         val method = if (useNewApi) "getAccTjaState" else "getAccTjaMode"
-        if (logEnabled) AppLogger.i(TAG, "$method →")
-        return (callVsm(method) as? Int) ?: -1
+        val value = (callVsm(method) as? Int) ?: -1
+        if (logEnabled) AppLogger.i(TAG, "$method → $value")
+        return value
     }
 
     /** SWI68/SWI165 : setAccTjaMode(I)V   SWI69/SWI131/SWI132 : setAccTjaState(I)V — void */
@@ -2569,8 +2570,9 @@ object EVHardware {
     /** Lit le mode du limiteur de speed. Returns 0/2/3, ou -1 si unavailable. */
     fun getSpeedLimiterMode(): Int {
         val method = if (useSasApi()) "getSasMode" else "getSpeedAsstMode"
-        if (logEnabled) AppLogger.i(TAG, "$method →")
-        return (callVsm(method) as? Int) ?: -1
+        val value = (callVsm(method) as? Int) ?: -1
+        if (logEnabled) AppLogger.i(TAG, "$method → $value")
+        return value
     }
 
     /** Configure le mode du limiteur de speed. 0=Disabled, 2=Manual, 3=Intelligent. */

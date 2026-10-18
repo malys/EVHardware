@@ -112,11 +112,9 @@ class EvHardwareEnergySignalSource(context: Context) : EnergySignalSource {
             ?: EVHardware.getTemperatureSetCelsius(),
         // The passenger setpoint is its own signal only when the car publishes one: the vendor
         // service reads it with a default of 68, which its own converter maps to -1, and -1 is
-        // dropped upstream. With a single zone the driver's setpoint is what both seats get,
-        // so that is what the passenger reads — the same number, because it is the same air.
-        passengerTargetCelsius = SaicClimate.passengerTemp()?.toFloat()
-            ?: SaicClimate.driverTemp()?.toFloat()
-            ?: EVHardware.getTemperatureSetCelsius(),
+        // dropped upstream. Null then, not the driver's number: a screen that shows both seats
+        // the same air says so itself, and evidence captured here must not call a copy a reading.
+        passengerTargetCelsius = SaicClimate.passengerTemp()?.toFloat(),
     )
 }
 

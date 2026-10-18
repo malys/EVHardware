@@ -163,7 +163,7 @@ class EcoDrivingTest {
         var speed = 0f
         // Five stop-and-go cycles: 6 s of hard acceleration, then 18 s of cruising.
         repeat(5) {
-            repeat(6) { speed += 8f; monitor.add(atMs, speed); atMs += 1_000L }
+            repeat(6) { speed += 10f; monitor.add(atMs, speed); atMs += 1_000L }
             repeat(18) { monitor.add(atMs, speed); atMs += 1_000L }
             speed = 0f
         }
@@ -188,10 +188,10 @@ class EcoDrivingTest {
         val monitor = EcoDrivingMonitor()
         var atMs = 0L
         var speed = 0f
-        // Gentle launches (0.56 m/s²) and abrupt stops (2.2 m/s²): only the braking is harsh.
+        // Gentle launches (0.69 m/s²) and abrupt stops (2.8 m/s²): only the braking is harsh.
         repeat(5) {
-            repeat(24) { speed += 2f; monitor.add(atMs, speed); atMs += 1_000L }
-            repeat(6) { speed -= 8f; monitor.add(atMs, speed); atMs += 1_000L }
+            repeat(24) { speed += 2.5f; monitor.add(atMs, speed); atMs += 1_000L }
+            repeat(6) { speed -= 10f; monitor.add(atMs, speed); atMs += 1_000L }
         }
         // 6 hard seconds in every 30: the trip review's `DrivingStyle` reads the same 20 %.
         assertEquals(20.0, monitor.harshSharePercent()!!, 0.5)
@@ -212,7 +212,7 @@ class EcoDrivingTest {
         val samples = (0..24).map { index ->
             TripSample(
                 atMs = index * 5_500L,
-                speedKmh = if (index % 2 == 0) 0f else 36f,
+                speedKmh = if (index % 2 == 0) 0f else 60f,
                 batteryPowerKw = null,
                 socPercent = null,
                 outsideTempCelsius = null,
