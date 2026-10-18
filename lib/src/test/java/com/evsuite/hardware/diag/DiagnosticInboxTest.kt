@@ -17,7 +17,7 @@ class DiagnosticInboxTest {
 
     @Test fun `only a plain https address is an inbox`() {
         assertNull(DiagnosticInbox.refuse("https://nodered.example/evsuite"))
-        assertNotNull(DiagnosticInbox.refuse("http://192.168.0.12:1880/evsuite"))
+        assertNotNull(DiagnosticInbox.refuse("http://192.0.2.10:1880/evsuite"))
         assertNotNull(DiagnosticInbox.refuse("https://user:pw@host/evsuite"))
         assertNotNull(DiagnosticInbox.refuse("https://host/evsuite?token=1"))
         assertNotNull(DiagnosticInbox.refuse("evsuite"))
