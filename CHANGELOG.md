@@ -6,6 +6,12 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- `diag.DiagnosticInbox`: posts one diagnostic artifact (a bundle zip or a text report) to an
+  HTTPS inbox the driver runs at home, as one JSON object shared by every app. No redirect
+  followed; an address with credentials or a query is refused; 1 MiB cap.
+
 ### Changed
 
 - Hard acceleration and hard braking start at 2.5 m/s², up from 1.5. On the car, ordinary town
