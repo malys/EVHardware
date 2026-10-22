@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.19.0] - 2026-10-22
+
 ### Added
 
 - `diag.DiagnosticInbox`: posts one diagnostic artifact (a bundle zip or a text report) to an
