@@ -28,6 +28,8 @@ All notable changes to this project are documented here. Format follows
   ICarPowerService and IVehiclePropertyService answer as IVehicleSettingService on SWI68.
 - The charge diagnostic line shows `pack_delta_kwh=unavailable` for an unwatched charge.
 - The ACC/TJA and speed-limiter getters log the value they read.
+- `EnergyTripHistoryStore`: a trip saved while another store on the same file deleted one no
+  longer undoes the other. Every append, delete and clear holds one lock.
 
 ## [1.18.0] - 2026-10-16
 

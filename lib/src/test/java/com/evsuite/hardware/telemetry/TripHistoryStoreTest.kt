@@ -154,6 +154,20 @@ class TripHistoryStoreTest {
         assertEquals(listOf(3L, 1L), remaining.map { it.samples!!.single().atMs })
     }
 
+    @Test fun `a save and a delete from two stores on the same file both land`() {
+        val target = File(tempDirectory(), "trips.json")
+        val saver = EnergyTripHistoryStore(target)
+        val deleter = EnergyTripHistoryStore(target)
+        (1L..40L).forEach { assertTrue(saver.append(summary(it))) }
+
+        val saving = Thread { (41L..80L).forEach { saver.append(summary(it)) } }
+        val deleting = Thread { (1L..40L).forEach { deleter.deleteTrip(it) } }
+        saving.start(); deleting.start()
+        saving.join(); deleting.join()
+
+        assertEquals((80L downTo 41L).toList(), saver.read().map { it.summary.startedAtMs })
+    }
+
     @Test fun `deleting an unknown trip leaves the file unchanged`() {
         val directory = tempDirectory()
         val target = File(directory, "trips.json")

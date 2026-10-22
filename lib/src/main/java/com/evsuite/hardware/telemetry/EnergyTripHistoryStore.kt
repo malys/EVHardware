@@ -60,21 +60,20 @@ class EnergyTripHistoryStore(
 
     fun append(summary: EnergyTripSummary, samples: List<TripSample> = emptyList()): Boolean {
         val entry = StoredTrip(summary, samples.takeIf { it.isNotEmpty() })
-        val updated = bound(listOf(entry) + read())
-        return write(TripHistoryFile(trips = updated))
+        return synchronized(WRITE_LOCK) { write(TripHistoryFile(trips = bound(listOf(entry) + read()))) }
     }
 
     /** Removes exactly one trip identified by its recording start, preserving every other entry. */
-    fun deleteTrip(startedAtMs: Long): Boolean {
+    fun deleteTrip(startedAtMs: Long): Boolean = synchronized(WRITE_LOCK) {
         val trips = read()
         val index = trips.indexOfFirst { it.summary.startedAtMs == startedAtMs }
         if (index < 0) return false
         val updated = trips.toMutableList().also { it.removeAt(index) }
-        return write(TripHistoryFile(trips = updated))
+        write(TripHistoryFile(trips = updated))
     }
 
     /** Atomically replaces the history with a valid empty v2 envelope. */
-    fun clear(): Boolean = write(TripHistoryFile(trips = emptyList()))
+    fun clear(): Boolean = synchronized(WRITE_LOCK) { write(TripHistoryFile(trips = emptyList())) }
 
     /**
      * Reads both shapes: the v2 envelope, and the v1 bare array that shipped before it.
@@ -161,6 +160,15 @@ class EnergyTripHistoryStore(
 
     private fun sizeOf(trip: StoredTrip): Int =
         gson.toJson(trip).toByteArray(Charsets.UTF_8).size
+
+    private companion object {
+        /**
+         * Every read-modify-write of every instance. The service saves a trip on its sampler
+         * thread while the history screens delete on their own, each with its own store on the
+         * same file: without one lock, the last writer silently undid the other.
+         */
+        val WRITE_LOCK = Any()
+    }
 
     private fun write(file: TripHistoryFile): Boolean {
         val bytes = gson.toJson(file).toByteArray(Charsets.UTF_8)
