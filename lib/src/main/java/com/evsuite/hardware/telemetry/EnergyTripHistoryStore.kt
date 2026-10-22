@@ -63,6 +63,42 @@ class EnergyTripHistoryStore(
         return synchronized(WRITE_LOCK) { write(TripHistoryFile(trips = bound(listOf(entry) + read()))) }
     }
 
+    /**
+     * Saves a finished trip, joined onto the newest stored one when [TripJoin.shouldAutoJoin]
+     * says the stop between them was a pause. Returns the start of the trip as stored — the
+     * earlier one's when joined — or null when nothing could be written.
+     */
+    fun appendOrJoin(summary: EnergyTripSummary, samples: List<TripSample> = emptyList()): Long? =
+        synchronized(WRITE_LOCK) {
+            val entry = StoredTrip(summary, samples.takeIf { it.isNotEmpty() })
+            val trips = read()
+            val newest = trips.firstOrNull()
+            val updated = if (newest != null && TripJoin.shouldAutoJoin(newest.summary, summary)) {
+                listOf(TripJoin.join(newest, entry)) + trips.drop(1)
+            } else {
+                listOf(entry) + trips
+            }
+            if (write(TripHistoryFile(trips = bound(updated)))) updated.first().summary.startedAtMs else null
+        }
+
+    /**
+     * Joins the trip that started at [startedAtMs] onto the one recorded just before it — the
+     * driver's own call, so any stop length is accepted; [TripJoin.canJoin] still refuses a
+     * charge in between. Returns the joined trip's start, or null when nothing changed.
+     */
+    fun joinWithPrevious(startedAtMs: Long): Long? = synchronized(WRITE_LOCK) {
+        val trips = read()
+        val index = trips.indexOfFirst { it.summary.startedAtMs == startedAtMs }
+        val earlier = trips.getOrNull(index + 1) ?: return null
+        if (index < 0 || !TripJoin.canJoin(earlier.summary, trips[index].summary)) return null
+        val joined = TripJoin.join(earlier, trips[index])
+        val updated = trips.toMutableList().apply {
+            removeAt(index + 1)
+            set(index, joined)
+        }
+        if (write(TripHistoryFile(trips = bound(updated)))) joined.summary.startedAtMs else null
+    }
+
     /** Removes exactly one trip identified by its recording start, preserving every other entry. */
     fun deleteTrip(startedAtMs: Long): Boolean = synchronized(WRITE_LOCK) {
         val trips = read()

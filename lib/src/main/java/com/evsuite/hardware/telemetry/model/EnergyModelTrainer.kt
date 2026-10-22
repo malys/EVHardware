@@ -42,8 +42,8 @@ class EnergyModelTrainer(
         evidence: BatteryPowerEvidence,
     ): EnergyModelTrainingResult {
         // Both fits are accumulated in the one pass; the temperature span picks which to solve.
-        val equations = LeastSquares3()
-        val narrowed = LeastSquares3(2)
+        val equations = LeastSquares()
+        val narrowed = LeastSquares(2)
         var minSpeed = Double.POSITIVE_INFINITY
         var maxSpeed = Double.NEGATIVE_INFINITY
         var minTemp = Double.POSITIVE_INFINITY

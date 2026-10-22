@@ -32,9 +32,13 @@ import kotlin.math.sqrt
  * generations that publish power too; [EnergyModel] remains for the energy breakdown, which
  * genuinely needs to split kWh and has nothing to split without power.
  *
- * Same shape as [EnergyModel]: `rolling + aero × speed² + thermal × |outside − 20 °C|`, every
+ * Shape: `rolling + aero × speed² + aux ÷ speed + thermal × |outside − 20 °C|`, every
  * prediction structurally [Provenanced] as estimated, and nothing predicted outside the
- * envelope the fit actually saw.
+ * envelope the fit actually saw. The `aux ÷ speed` term is what [EnergyModel] lacks and this
+ * car needed: heating, cooling and electronics draw a power whatever the speed, so in town
+ * they cost more per kilometre. Without it the fit explained that cost by making speed look
+ * free — a negative aero coefficient — and refused every model the car's own history offered
+ * (2026-10-22 bundle: 143 segments over 77 km/h of span, `fit=refused(aero)`).
  */
 data class SocConsumptionModel(
     val schemaVersion: Int = SCHEMA_VERSION,
@@ -43,6 +47,8 @@ data class SocConsumptionModel(
     val rollingPercentPer100Km: Double,
     val aeroPercentPer100KmPerSpeedSquared: Double,
     val thermalPercentPer100KmPerDegree: Double,
+    /** Percent per 100 km at 1 km/h from the speed-independent load; 0 when not fitted. */
+    val auxPercentPer100KmTimesKmh: Double = 0.0,
     val residualRmsePercentPer100Km: Double,
     val segmentCount: Int,
     val envelope: EnergyModelEnvelope,
@@ -54,6 +60,7 @@ data class SocConsumptionModel(
         }
         val value = rollingPercentPer100Km +
             aeroPercentPer100KmPerSpeedSquared * speedKmh * speedKmh +
+            auxPercentPer100KmTimesKmh / speedKmh +
             thermalPercentPer100KmPerDegree * abs(outsideTempCelsius - EnergyModel.COMFORT_TEMP_CELSIUS)
         if (!value.isFinite() || value <= 0.0) {
             return Provenanced.unavailable(UnavailableReason.MODEL_NOT_TRAINED)
@@ -72,6 +79,7 @@ data class SocConsumptionModel(
             aeroPercentPer100KmPerSpeedSquared >= 0.0 &&
             thermalPercentPer100KmPerDegree.isFinite() &&
             thermalPercentPer100KmPerDegree >= 0.0 &&
+            auxPercentPer100KmTimesKmh.isFinite() && auxPercentPer100KmTimesKmh >= 0.0 &&
             residualRmsePercentPer100Km.isFinite() && residualRmsePercentPer100Km >= 0.0 &&
             segmentCount >= SocConsumptionFitter.MIN_SEGMENTS && envelope.isValid()
 
@@ -109,7 +117,7 @@ class SocConsumptionFitter(
     private val maxResidualRmse: Double = MAX_RESIDUAL_RMSE_PERCENT_PER_100_KM,
 ) {
     /** One training point: what a stretch of road cost, and the conditions it cost it in. */
-    internal data class Segment(
+    data class Segment(
         val distanceKm: Double,
         val meanSpeedKmh: Double,
         val meanOutsideTempCelsius: Double,
@@ -170,8 +178,25 @@ class SocConsumptionFitter(
         val solved = solve(segments, evidence)
         val model = solved.model ?: return "$line fit=refused(${solved.refusal})"
         val rmse = model.residualRmsePercentPer100Km
-        return line + String.format(Locale.ROOT, " fit=ready rmse=%.2f", rmse)
+        return line + String.format(
+            Locale.ROOT,
+            " fit=ready rmse=%.2f rolling=%.2f aero=%.6f aux=%.1f thermal=%.3f",
+            rmse,
+            model.rollingPercentPer100Km,
+            model.aeroPercentPer100KmPerSpeedSquared,
+            model.auxPercentPer100KmTimesKmh,
+            model.thermalPercentPer100KmPerDegree,
+        )
     }
+
+    /**
+     * The training points [fit] would use, for a diagnostic bundle: the 2026-10-22 refusal could
+     * not be replayed off the car because only trip totals left it.
+     */
+    fun segments(
+        trips: List<StoredTrip>,
+        generation: FirmwareInfo.Gen = FirmwareInfo.getGeneration(),
+    ): List<Segment> = if (generation == FirmwareInfo.Gen.UNKNOWN) emptyList() else collectAll(trips, generation)
 
     /** What [solve] produced: a model, or the name of the guard that refused one. */
     private class Solved(val model: SocConsumptionModel?, val refusal: String? = null)
@@ -201,69 +226,97 @@ class SocConsumptionFitter(
             ?: SocConsumptionFitResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED)
     }
 
-    /** The least-squares solve behind [fit], shared with [describe] so both report one answer. */
-    private fun solve(
-        segments: List<Segment>,
-        evidence: VehicleSpeedEvidence,
-        withWeather: Boolean = true,
-    ): Solved {
+    /**
+     * The least-squares solve behind [fit], shared with [describe] so both report one answer.
+     *
+     * Every coefficient is a physical quantity that cannot be negative, so the fit is bounded:
+     * the constant and speed² are always in, and the auxiliary and thermal terms are each tried
+     * in and out — the least-error model whose every coefficient is physical wins. A term that
+     * would only fit with a negative sign is left out rather than believed; speed² is never left
+     * out, because a model in which speed costs nothing cannot answer "what if I drove slower".
+     */
+    private fun solve(segments: List<Segment>, evidence: VehicleSpeedEvidence): Solved {
         val minSpeed = segments.minOf { it.meanSpeedKmh }
         val maxSpeed = segments.maxOf { it.meanSpeedKmh }
         val minTemp = segments.minOf { it.meanOutsideTempCelsius }
         val maxTemp = segments.maxOf { it.meanOutsideTempCelsius }
+        // A driver who has only recorded one kind of weather has no evidence about weather; the
+        // envelope keeps the narrow range, so the model refuses the cold instead of guessing.
+        val weather = maxTemp - minTemp >= MIN_TEMPERATURE_SPAN_CELSIUS
+        val base = listOf(LeastSquares.Term.CONSTANT, LeastSquares.Term.SPEED_SQUARED)
+        val optional = listOfNotNull(
+            LeastSquares.Term.INVERSE_SPEED,
+            LeastSquares.Term.TEMPERATURE.takeIf { weather },
+        )
+        val candidates = optional.indices.fold(listOf(emptyList<LeastSquares.Term>())) { sets, at ->
+            sets + sets.map { it + optional[at] }
+        }.sortedByDescending { it.size }
 
-        // A driver who has only recorded one kind of weather has no evidence about weather.
-        // Fitting two coefficients is the honest answer there; the envelope keeps the narrow
-        // temperature range, so this model refuses the cold instead of guessing at it.
-        val features = if (withWeather && maxTemp - minTemp >= MIN_TEMPERATURE_SPAN_CELSIUS) 3 else 2
-        val equations = LeastSquares3(features)
-        for (segment in segments) {
-            equations.add(
-                segment.meanSpeedKmh,
-                segment.meanOutsideTempCelsius,
-                segment.percentPer100Km,
-            )
+        var best: Pair<DoubleArray, List<LeastSquares.Term>>? = null
+        var bestError = Double.POSITIVE_INFINITY
+        // Candidates run fullest first, so the one left here is the base model's: the refusal a
+        // reader can act on ("aero" — speed looked free), not a degenerate richer fit's.
+        var baseRefusal: String? = null
+        for (extra in candidates) {
+            val terms = base + extra
+            val equations = LeastSquares(terms)
+            for (segment in segments) {
+                equations.add(segment.meanSpeedKmh, segment.meanOutsideTempCelsius, segment.percentPer100Km)
+            }
+            val coefficients = equations.solve()
+            val refusal = when {
+                coefficients == null -> "singular"
+                coefficients.any { !it.isFinite() } -> "nonfinite"
+                coefficients[0] <= 0.0 -> "rolling"
+                else -> terms.indices.drop(1).firstOrNull { coefficients[it] < 0.0 }?.let { name(terms[it]) }
+            }
+            if (refusal != null) {
+                baseRefusal = refusal
+                continue
+            }
+            val error = squaredError(segments, terms, checkNotNull(coefficients))
+            if (error < bestError) {
+                bestError = error
+                best = coefficients to terms
+            }
         }
-        val coefficients = equations.solve() ?: return Solved(null, "singular")
-        val rolling = coefficients[0]
-        val aero = coefficients[1]
-        val thermal = if (features == 3) coefficients[2] else 0.0
-        when {
-            coefficients.any { !it.isFinite() } -> return Solved(null, "nonfinite")
-            rolling <= 0.0 -> return Solved(null, "rolling")
-            aero < 0.0 -> return Solved(null, "aero")
-            // The weather recorded so far costs nothing measurable: the bundle of 2026-10-16
-            // refused 87 segments over 77 km/h of span on this alone, and the model never
-            // came out on the car. That is the single-weather case again — two coefficients,
-            // and the envelope still refuses a temperature the history never saw.
-            thermal < 0.0 -> return solve(segments, evidence, withWeather = false)
-        }
+        val (coefficients, terms) = best ?: return Solved(null, baseRefusal)
+        fun coefficient(term: LeastSquares.Term) = terms.indexOf(term).let { if (it < 0) 0.0 else coefficients[it] }
 
-        var squaredError = 0.0
-        for (segment in segments) {
-            val prediction = rolling +
-                aero * segment.meanSpeedKmh * segment.meanSpeedKmh +
-                thermal * abs(
-                    segment.meanOutsideTempCelsius - EnergyModel.COMFORT_TEMP_CELSIUS
-                )
-            val error = segment.percentPer100Km - prediction
-            squaredError += error * error
-        }
-        val rmse = sqrt(squaredError / segments.size)
+        val rmse = sqrt(bestError / segments.size)
         if (!rmse.isFinite() || rmse > maxResidualRmse) {
             return Solved(null, String.format(Locale.ROOT, "rmse=%.2f", rmse))
         }
-
         val model = SocConsumptionModel(
             speedEvidence = evidence,
-            rollingPercentPer100Km = rolling,
-            aeroPercentPer100KmPerSpeedSquared = aero,
-            thermalPercentPer100KmPerDegree = thermal,
+            rollingPercentPer100Km = coefficients[0],
+            aeroPercentPer100KmPerSpeedSquared = coefficient(LeastSquares.Term.SPEED_SQUARED),
+            thermalPercentPer100KmPerDegree = coefficient(LeastSquares.Term.TEMPERATURE),
+            auxPercentPer100KmTimesKmh = coefficient(LeastSquares.Term.INVERSE_SPEED),
             residualRmsePercentPer100Km = rmse,
             segmentCount = segments.size,
             envelope = EnergyModelEnvelope(minSpeed, maxSpeed, minTemp, maxTemp),
         )
         return if (model.isValid()) Solved(model) else Solved(null, "invalid")
+    }
+
+    private fun squaredError(
+        segments: List<Segment>,
+        terms: List<LeastSquares.Term>,
+        coefficients: DoubleArray,
+    ): Double = segments.sumOf { segment ->
+        val prediction = terms.indices.sumOf {
+            coefficients[it] * LeastSquares.value(terms[it], segment.meanSpeedKmh, segment.meanOutsideTempCelsius)
+        }
+        val error = segment.percentPer100Km - prediction
+        error * error
+    }
+
+    private fun name(term: LeastSquares.Term) = when (term) {
+        LeastSquares.Term.CONSTANT -> "rolling"
+        LeastSquares.Term.SPEED_SQUARED -> "aero"
+        LeastSquares.Term.INVERSE_SPEED -> "aux"
+        LeastSquares.Term.TEMPERATURE -> "thermal"
     }
 
     /**

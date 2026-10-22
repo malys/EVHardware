@@ -3,78 +3,77 @@ package com.evsuite.hardware.telemetry.model
 import kotlin.math.abs
 
 /**
- * The three-coefficient normal-equations fit both consumption models are built on.
+ * The normal-equations fit both consumption models are built on.
  *
- * `constant + a × speed² + b × |outside − comfort|` is the same shape whether the left-hand
- * side is kWh per 100 km or percent of charge per 100 km, and the arithmetic that solves it
- * has no opinion about units. It lives here so there is one of it: a second copy would drift
- * from this one on the day someone fixes a pivot and only remembers one file.
+ * `constant + a × speed² + b × |outside − comfort|` is the shape of the kWh model, and the
+ * charge model adds `c ÷ speed` — the auxiliary load, which costs a fixed power whatever the
+ * speed and therefore more per kilometre the slower the car goes. The arithmetic has no opinion
+ * about units or about which terms are in play; it lives here so there is one of it: a second
+ * copy would drift from this one on the day someone fixes a pivot and only remembers one file.
  *
  * O(1) working memory, O(n) in samples. Call from a worker thread.
  */
-internal class LeastSquares3(private val features: Int = FEATURES) {
-    private val matrix = Array(features) { DoubleArray(features) }
-    private val vector = DoubleArray(features)
+internal class LeastSquares(private val terms: List<Term>) {
+    enum class Term { CONSTANT, SPEED_SQUARED, INVERSE_SPEED, TEMPERATURE }
+
+    /** The kWh model's terms: the constant, speed², and — with three — the temperature. */
+    constructor(features: Int = 3) : this(KWH_TERMS.take(features)) {
+        require(features in 2..3) { "two or three features" }
+    }
+
+    private val size = terms.size
+    private val matrix = Array(size) { DoubleArray(size) }
+    private val vector = DoubleArray(size)
 
     init {
-        require(features in 2..FEATURES) { "two or three features" }
+        require(terms.isNotEmpty() && terms.first() == Term.CONSTANT) { "constant first" }
     }
 
     fun add(speedKmh: Double, outsideTempCelsius: Double, consumption: Double) {
-        val speedSquared = speedKmh * speedKmh
-        val temperatureOffset = abs(outsideTempCelsius - EnergyModel.COMFORT_TEMP_CELSIUS)
-        for (row in 0 until features) {
-            val rowValue = feature(row, speedSquared, temperatureOffset)
-            vector[row] += rowValue * consumption
-            for (column in 0 until features) {
-                matrix[row][column] += rowValue *
-                    feature(column, speedSquared, temperatureOffset)
-            }
+        val values = DoubleArray(size) { value(terms[it], speedKmh, outsideTempCelsius) }
+        for (row in 0 until size) {
+            vector[row] += values[row] * consumption
+            for (column in 0 until size) matrix[row][column] += values[row] * values[column]
         }
     }
 
-    private fun feature(index: Int, speedSquared: Double, temperatureOffset: Double) =
-        when (index) {
-            0 -> 1.0
-            1 -> speedSquared
-            else -> temperatureOffset
-        }
-
     /**
-     * The coefficients, or null when the points do not determine them.
+     * The coefficients in [terms] order, or null when the points do not determine them.
      *
-     * Two features is not a lesser fit, it is a different claim: a driver who has only ever
+     * Fewer terms is not a lesser fit, it is a different claim: a driver who has only ever
      * recorded trips at one outside temperature has no evidence about temperature, and a
-     * thermal coefficient invented from that would be read as knowledge. The envelope keeps
-     * the narrow range, so such a model refuses the cold rather than guessing at it.
+     * thermal coefficient invented from that would be read as knowledge.
      */
     fun solve(): DoubleArray? {
-        val augmented = Array(features) { row ->
-            DoubleArray(features + 1) { column ->
-                if (column == features) vector[row] else matrix[row][column]
-            }
+        val augmented = Array(size) { row ->
+            DoubleArray(size + 1) { column -> if (column == size) vector[row] else matrix[row][column] }
         }
-        for (column in 0 until features) {
-            val pivot = (column until features).maxBy { abs(augmented[it][column]) }
+        for (column in 0 until size) {
+            val pivot = (column until size).maxBy { abs(augmented[it][column]) }
             if (abs(augmented[pivot][column]) < MIN_PIVOT) return null
             val swap = augmented[column]
             augmented[column] = augmented[pivot]
             augmented[pivot] = swap
             val divisor = augmented[column][column]
-            for (index in column..features) augmented[column][index] /= divisor
-            for (row in 0 until features) {
+            for (index in column..size) augmented[column][index] /= divisor
+            for (row in 0 until size) {
                 if (row == column) continue
                 val factor = augmented[row][column]
-                for (index in column..features) {
-                    augmented[row][index] -= factor * augmented[column][index]
-                }
+                for (index in column..size) augmented[row][index] -= factor * augmented[column][index]
             }
         }
-        return DoubleArray(features) { augmented[it][features] }
+        return DoubleArray(size) { augmented[it][size] }
     }
 
-    private companion object {
-        const val FEATURES = 3
-        const val MIN_PIVOT = 1e-9
+    companion object {
+        private val KWH_TERMS = listOf(Term.CONSTANT, Term.SPEED_SQUARED, Term.TEMPERATURE)
+        private const val MIN_PIVOT = 1e-9
+
+        fun value(term: Term, speedKmh: Double, outsideTempCelsius: Double): Double = when (term) {
+            Term.CONSTANT -> 1.0
+            Term.SPEED_SQUARED -> speedKmh * speedKmh
+            Term.INVERSE_SPEED -> 1.0 / speedKmh
+            Term.TEMPERATURE -> abs(outsideTempCelsius - EnergyModel.COMFORT_TEMP_CELSIUS)
+        }
     }
 }

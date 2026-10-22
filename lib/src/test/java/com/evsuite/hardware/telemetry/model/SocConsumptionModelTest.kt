@@ -264,7 +264,7 @@ class SocConsumptionModelTest {
         // from a solve that refused one.
         val ready = SocConsumptionFitter().describe(history(), generation)
         assertTrue(ready, ready.startsWith("used=4/4 segments="))
-        assertTrue(ready, Regex(""" fit=ready rmse=\d+\.\d{2}$""").containsMatchIn(ready))
+        assertTrue(ready, Regex(""" fit=ready rmse=\d+\.\d{2} rolling=""").containsMatchIn(ready))
 
         // Faster costs less: a negative aero term, which the fit refuses by name.
         val backwards = listOf(
@@ -280,5 +280,39 @@ class SocConsumptionModelTest {
 
         val strict = SocConsumptionFitter(maxResidualRmse = -1.0).describe(history(), generation)
         assertTrue(strict, Regex(""" fit=refused\(rmse=\d+\.\d{2}\)$""").containsMatchIn(strict))
+    }
+
+    /**
+     * The 2026-10-22 refusal, reproduced: a history mostly in town, where heating and the
+     * electronics cost more per kilometre the slower the car goes. Fitted as rolling + aero
+     * alone, these points give a negative aero coefficient and the fit was refused. With the
+     * auxiliary term the true shape comes back, and faster still costs more on the motorway.
+     */
+    @Test
+    fun `a town-heavy history fits once the auxiliary load has its own term`() {
+        val truth = { v: Double -> 9.0 + 0.0006 * v * v + 300.0 / v }
+        val history = listOf(25.0, 30.0, 40.0, 50.0, 90.0).mapIndexed { index, speed ->
+            trip(drive(speed, 20.0, truth(speed), startAtMs = index * 100_000_000L))
+        }
+
+        val result = SocConsumptionFitter().fit(history, generation)
+        assertTrue("$result", result is SocConsumptionFitResult.Ready)
+        val model = (result as SocConsumptionFitResult.Ready).model
+        assertTrue(model.aeroPercentPer100KmPerSpeedSquared >= 0.0)
+        assertEquals(300.0, model.auxPercentPer100KmTimesKmh, 30.0)
+        assertEquals(truth(30.0), model.predict(30.0, 20.0).value!!, 0.5)
+        assertTrue(model.predict(90.0, 20.0).value!! > model.predict(60.0, 20.0).value!!)
+        assertTrue(SocConsumptionFitter().describe(history, generation).contains("fit=ready"))
+    }
+
+    @Test
+    fun `a term that only fits negative is left out, not believed`() {
+        // Pure speed² data: the auxiliary term has nothing to explain and must not go negative.
+        val history = listOf(40.0, 70.0, 100.0, 130.0).mapIndexed { index, speed ->
+            trip(drive(speed, 20.0, 12.0 + 0.0008 * speed * speed, startAtMs = index * 100_000_000L))
+        }
+        val model = (SocConsumptionFitter().fit(history, generation) as SocConsumptionFitResult.Ready).model
+        assertTrue(model.auxPercentPer100KmTimesKmh >= 0.0)
+        assertEquals(12.0 + 0.0008 * 100.0 * 100.0, model.predict(100.0, 20.0).value!!, 0.5)
     }
 }
