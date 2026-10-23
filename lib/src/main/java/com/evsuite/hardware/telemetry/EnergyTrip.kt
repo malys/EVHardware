@@ -203,6 +203,11 @@ object EnergyTripSession {
     }
     @Synchronized fun add(sample: EnergySnapshot) = accumulator?.add(sample)
     @Synchronized fun current(nowMs: Long) = accumulator?.snapshot(nowMs)
+
+    /** The drive in progress with its track so far: a recent-distance trace needs where it was spent. */
+    @Synchronized fun currentTrip(nowMs: Long): StoredTrip? = accumulator?.let {
+        StoredTrip(it.snapshot(nowMs), it.samples().takeIf { samples -> samples.isNotEmpty() })
+    }
     @Synchronized fun stop(nowMs: Long): RecordedTrip? {
         val finished = accumulator ?: return null
         accumulator = null

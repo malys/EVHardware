@@ -246,6 +246,17 @@ class TripHistoryStoreTest {
         assertEquals(0L, recorded.summary.startedAtMs)
     }
 
+    @Test fun `the drive in progress carries its track so far`() {
+        EnergyTripSession.stop(0L)
+        EnergyTripSession.start(snapshot(at = 0L))
+        repeat(20) { second -> EnergyTripSession.add(snapshot(at = second * 1_000L)) }
+
+        val live = EnergyTripSession.currentTrip(20_000L)
+        EnergyTripSession.stop(20_000L)
+        assertTrue(live!!.samples!!.isNotEmpty())
+        assertNull(EnergyTripSession.currentTrip(21_000L))
+    }
+
     private fun tempDirectory(): File =
         Files.createTempDirectory("trip-history").toFile()
 

@@ -10,9 +10,12 @@ All notable changes to this project are documented here. Format follows
 
 - `telemetry.TripJoin`: two consecutive trips told as one drive with a stop in it. Totals add,
   tracks concatenate, the stop counts in neither duration nor distance; never across a charge
-  (more than one point of rise) or across different power/speed conversions.
+  (more than one point of rise) or across different power/speed conversions. Power and speed
+  evidence survive only when both halves carry it: an unrecorded half is never promoted.
 - `EnergyTripHistoryStore.appendOrJoin`: the save at P joins the newest stored trip when the stop
   was ten minutes or less and both charge levels were read; returns the stored trip's start.
+  Never onto a trip started before `noJoinBeforeMs` (a count the driver reset).
+- `EnergyTripSession.currentTrip`: the drive in progress with its track so far.
 - `EnergyTripHistoryStore.joinWithPrevious`: the driver's own join, any stop length, still
   refused across a charge.
 - `SocConsumptionFitter.segments`: the fit's training points, for a diagnostic bundle.

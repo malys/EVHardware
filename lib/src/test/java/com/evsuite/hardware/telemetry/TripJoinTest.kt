@@ -1,5 +1,7 @@
 package com.evsuite.hardware.telemetry
 
+import com.evsuite.hardware.FirmwareInfo
+import com.evsuite.hardware.VehicleSpeedEvidence
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -27,6 +29,16 @@ class TripJoinTest {
         assertEquals(70f, joined.summary.endSocPercent)
         assertEquals(4.0, joined.summary.consumedKwh!!, 1e-9)
         assertEquals(2, joined.samples!!.size)
+    }
+
+    @Test fun `a reset between two drives keeps them apart`() {
+        val store = EnergyTripHistoryStore(File(Files.createTempDirectory("join").toFile(), "trips.json"))
+        store.append(trip(0L, 20 * minute, 80f, 75f))
+        val reset = 22 * minute
+        assertEquals(25 * minute, store.appendOrJoin(trip(25 * minute, 45 * minute, 75f, 70f), noJoinBeforeMs = reset))
+        assertEquals(2, store.read().size)
+        // Both drives after the reset: the pause still joins.
+        assertEquals(25 * minute, store.appendOrJoin(trip(50 * minute, 60 * minute, 70f, 68f), noJoinBeforeMs = reset))
     }
 
     @Test fun `a long stop or a charge keeps two trips`() {
@@ -67,6 +79,18 @@ class TripJoinTest {
         assertNull(joined.regeneratedKwh)
         assertNull(joined.batteryPowerEvidence)
         assertNull(joined.harshBrakings)
+    }
+
+    @Test fun `evidence missing on one half is not borrowed from the other`() {
+        val evidence = VehicleSpeedEvidence(FirmwareInfo.Gen.SWI68, VehicleSpeedEvidence.CURRENT)
+        val validated = trip(0L, minute, 80f, 79f).copy(speedEvidence = evidence)
+        val legacy = trip(2 * minute, 3 * minute, 79f, 78f)
+        assertNull(TripJoin.join(StoredTrip(validated), StoredTrip(legacy)).summary.speedEvidence)
+        assertNull(TripJoin.join(StoredTrip(legacy.copy(startedAtMs = 0L, endedAtMs = minute)),
+            StoredTrip(validated.copy(startedAtMs = 2 * minute, endedAtMs = 3 * minute))).summary.speedEvidence)
+        val both = TripJoin.join(StoredTrip(validated),
+            StoredTrip(legacy.copy(speedEvidence = evidence))).summary
+        assertEquals(evidence, both.speedEvidence)
     }
 
     private fun trip(start: Long, end: Long, from: Float, to: Float?) = EnergyTripSummary(

@@ -66,14 +66,22 @@ class EnergyTripHistoryStore(
     /**
      * Saves a finished trip, joined onto the newest stored one when [TripJoin.shouldAutoJoin]
      * says the stop between them was a pause. Returns the start of the trip as stored — the
-     * earlier one's when joined — or null when nothing could be written.
+     * earlier one's when joined — or null when nothing could be written. A trip started before
+     * [noJoinBeforeMs], a count the driver reset, is never joined onto: the join would carry the
+     * new drive back across the reset and out of the count.
      */
-    fun appendOrJoin(summary: EnergyTripSummary, samples: List<TripSample> = emptyList()): Long? =
+    fun appendOrJoin(
+        summary: EnergyTripSummary,
+        samples: List<TripSample> = emptyList(),
+        noJoinBeforeMs: Long = 0L,
+    ): Long? =
         synchronized(WRITE_LOCK) {
             val entry = StoredTrip(summary, samples.takeIf { it.isNotEmpty() })
             val trips = read()
             val newest = trips.firstOrNull()
-            val updated = if (newest != null && TripJoin.shouldAutoJoin(newest.summary, summary)) {
+            val updated = if (newest != null && newest.summary.startedAtMs >= noJoinBeforeMs &&
+                TripJoin.shouldAutoJoin(newest.summary, summary)
+            ) {
                 listOf(TripJoin.join(newest, entry)) + trips.drop(1)
             } else {
                 listOf(entry) + trips

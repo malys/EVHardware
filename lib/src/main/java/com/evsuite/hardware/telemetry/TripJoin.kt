@@ -63,9 +63,10 @@ object TripJoin {
             } else {
                 distance
             },
-            batteryPowerEvidence = (a.batteryPowerEvidence ?: b.batteryPowerEvidence)
-                .takeIf { power },
-            speedEvidence = (a.speedEvidence ?: b.speedEvidence).takeIf { distance },
+            // Kept only when both halves carry it: an unrecorded half is unvalidated, never promoted.
+            batteryPowerEvidence = a.batteryPowerEvidence
+                .takeIf { power && it == b.batteryPowerEvidence },
+            speedEvidence = a.speedEvidence.takeIf { distance && it == b.speedEvidence },
             movingMs = sum(a.movingMs, b.movingMs),
             harshMs = sum(a.harshMs, b.harshMs),
             harshAccelerations = sum(a.harshAccelerations, b.harshAccelerations),
