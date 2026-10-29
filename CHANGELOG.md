@@ -31,6 +31,9 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- `ChargeDuration`: a band nobody watched above the current one no longer blanks the answer;
+  `Refused.partial` carries the time to the start of that band. On the car the top bands are the
+  overnight ones, slept through, so "no end time" hid the part the history did cover.
 - `SocConsumptionFitter` judges a fit on ten-kilometre windows of one trip (`WINDOW_KM`),
   not on 2 km segments, and falls back to the segments when fewer than 12 windows exist. The
   2026-10-29 history (318 segments, motorway added) read `rmse=13,03` and every model was

@@ -56,7 +56,14 @@ class ChargeDurationTest {
     @Test
     fun `a band nobody watched is refused, never extrapolated`() {
         val refused = ChargeDuration.estimate(listOf(charge(20, 80, minutesOf = tapered)), 50.0, 100, null)
-        assertEquals(ChargeDurationResult.Refused(ChargeDurationRefusal.MISSING_BAND, 80), refused)
+        refused as ChargeDurationResult.Refused
+        assertEquals(ChargeDurationRefusal.MISSING_BAND, refused.reason)
+        assertEquals(80, refused.bandFromPercent)
+        // The bands that were watched still answer, up to the one that was not.
+        assertEquals(80, refused.partial!!.targetPercent)
+        assertEquals(30 * 3.0, refused.partial!!.minutes, 1e-6)
+        val next = ChargeDuration.estimate(listOf(charge(20, 80, minutesOf = tapered)), 85.0, 100, null)
+        assertNull((next as ChargeDurationResult.Refused).partial)
         assertEquals(
             ChargeDurationResult.Refused(ChargeDurationRefusal.NO_WATCHED_CHARGE),
             ChargeDuration.estimate(emptyList(), 50.0, 100, null),

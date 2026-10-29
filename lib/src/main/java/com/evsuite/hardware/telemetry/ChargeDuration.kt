@@ -28,8 +28,16 @@ data class ChargeDurationEstimate(
 
 sealed interface ChargeDurationResult {
     data class Ready(val estimate: ChargeDurationEstimate) : ChargeDurationResult
-    data class Refused(val reason: ChargeDurationRefusal, val bandFromPercent: Int? = null) :
-        ChargeDurationResult
+    data class Refused(
+        val reason: ChargeDurationRefusal,
+        val bandFromPercent: Int? = null,
+        /**
+         * For [ChargeDurationRefusal.MISSING_BAND] above the current band: the time to the start of
+         * the band nobody watched, which the history does cover. Null when the very next band is
+         * the missing one.
+         */
+        val partial: ChargeDurationEstimate? = null,
+    ) : ChargeDurationResult
 }
 
 enum class ChargeDurationRefusal { AT_TARGET, NO_WATCHED_CHARGE, MISSING_BAND }
@@ -102,7 +110,18 @@ object ChargeDuration {
         val last = ceil(targetPercent / BAND_PERCENT.toDouble()).toInt() - 1
         for (band in first..last) {
             val past = history[band]?.sorted()
-                ?: return ChargeDurationResult.Refused(ChargeDurationRefusal.MISSING_BAND, band * BAND_PERCENT)
+                ?: return ChargeDurationResult.Refused(
+                    ChargeDurationRefusal.MISSING_BAND,
+                    band * BAND_PERCENT,
+                    // Measured as far as it goes: overnight charges are slept through, so the
+                    // top bands are often the unwatched ones and the bands below still answer.
+                    if (band > first) {
+                        (along(history, socPercent, band * BAND_PERCENT, similar) as? ChargeDurationResult.Ready)
+                            ?.estimate
+                    } else {
+                        null
+                    },
+                )
             val from = maxOf(socPercent, band * BAND_PERCENT.toDouble())
             val to = minOf(targetPercent.toDouble(), (band + 1) * BAND_PERCENT.toDouble())
             val median = past[past.size / 2]
