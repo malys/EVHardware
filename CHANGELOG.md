@@ -31,6 +31,10 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- `EcoScore` (CP-093, the car's 20 newest trips): smoothness reaches zero at 1 % of moving time
+  spent hard, not 25 %. The share ran 0,00–0,85 % on every drive, so smoothness read 97–100 and
+  the score was anticipation alone. A trip under `MIN_DISTANCE_KM` (2 km) has no score: 600 m and
+  900 m crawls scored 100 and counted in the average, the record and the run.
 - `ChargeDuration`: a band nobody watched above the current one no longer blanks the answer;
   `Refused.partial` carries the time to the start of that band. On the car the top bands are the
   overnight ones, slept through, so "no end time" hid the part the history did cover.

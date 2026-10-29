@@ -26,11 +26,12 @@ data class EcoScore(
 ) {
     companion object {
         fun of(summary: EnergyTripSummary, verdict: EcoVerdict?): EcoScore? {
-            val distanceKm = summary.recordedDistanceKm
+            // Under a junction's length nothing was measured: a 600 m crawl across a car park
+            // scored 100 on smoothness alone and counted in the average, the record and the run
+            // like a 250 km drive (2026-10-26/29 history).
+            val distanceKm = summary.recordedDistanceKm?.takeIf { it >= MIN_DISTANCE_KM } ?: return null
             val anticipation = summary.harshBrakings?.let { brakings ->
-                distanceKm?.takeIf { it >= MIN_DISTANCE_KM }?.let { km ->
-                    scale(brakings / km * PER_10_KM, best = 0.0, worst = BRAKINGS_PER_10_KM_AT_ZERO)
-                }
+                scale(brakings / distanceKm * PER_10_KM, best = 0.0, worst = BRAKINGS_PER_10_KM_AT_ZERO)
             }
             val smoothness = summary.harshMs?.let { harsh ->
                 summary.movingMs?.takeIf { it >= MIN_MOVING_MS }?.let { moving ->
@@ -64,8 +65,13 @@ data class EcoScore(
         /** Six hard stops every 10 km is a drive with no anticipation left to measure. */
         const val BRAKINGS_PER_10_KM_AT_ZERO = 6.0
 
-        /** A quarter of moving time spent hard is the bottom of the scale. */
-        const val HARSH_SHARE_AT_ZERO = 25.0
+        /**
+         * One percent of moving time spent hard is the bottom of the scale. It was 25 %: on the
+         * car's 20 newest trips the share ran 0,00–0,85 %, so smoothness read 97–100 on every
+         * drive and said nothing. The roughest of them (0,85 %, a 3 km drive with 4 hard stops
+         * and 5 hard starts) now reads 15.
+         */
+        const val HARSH_SHARE_AT_ZERO = 1.0
 
         /** 15 % under the driver's own expectation is full marks; 25 % over is none. */
         const val DELTA_AT_FULL = -15.0
