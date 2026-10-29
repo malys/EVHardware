@@ -279,7 +279,8 @@ class SocConsumptionModelTest {
         assertTrue(refused, refused.endsWith("span=40/20 km/h fit=refused(aero)"))
 
         val strict = SocConsumptionFitter(maxResidualRmse = -1.0).describe(history(), generation)
-        assertTrue(strict, Regex(""" fit=refused\(rmse=\d+\.\d{2}\)$""").containsMatchIn(strict))
+        assertTrue(strict, Regex(""" fit=refused\((window_rmse=\d+\.\d{2} )?rmse=\d+\.\d{2}\)$""").containsMatchIn(strict))
+        assertTrue(ready, Regex(""" window_rmse=\d+\.\d{2}$""").containsMatchIn(ready))
     }
 
     /**
@@ -314,5 +315,35 @@ class SocConsumptionModelTest {
         val model = (SocConsumptionFitter().fit(history, generation) as SocConsumptionFitResult.Ready).model
         assertTrue(model.auxPercentPer100KmTimesKmh >= 0.0)
         assertEquals(12.0 + 0.0008 * 100.0 * 100.0, model.predict(100.0, 20.0).value!!, 0.5)
+    }
+
+    /**
+     * CP-095. The car's 2026-10-29 history: 2 km segments scattered ±15 points around a fit that
+     * is right over a drive. Judged per segment that is a refusal; over ten kilometres it is not.
+     */
+    @Test
+    fun `segment noise that averages out over ten kilometres is not a bad fit`() {
+        val noisy = (0 until 60).map { i ->
+            SocConsumptionFitter.Segment(2.0, 90.0, 20.0, if (i % 2 == 0) 0.2 else 0.8, trip = i / 10)
+        }
+        val window = SocConsumptionFitter().windowRmse(noisy) { 25.0 }
+        assertNotNull(window)
+        assertEquals(3.0, window!!, 1e-6)
+    }
+
+    @Test
+    fun `whole drives that disagree with the fit are still judged a bad fit`() {
+        val apart = (0 until 60).map { i ->
+            val trip = i / 5
+            SocConsumptionFitter.Segment(2.0, 90.0, 20.0, if (trip % 2 == 0) 0.2 else 0.8, trip = trip)
+        }
+        assertEquals(15.0, SocConsumptionFitter().windowRmse(apart) { 25.0 }!!, 1e-6)
+    }
+
+    @Test
+    fun `a window never joins two trips, and too few windows leave the segments to judge`() {
+        // Twelve trips of 8 km: no trip reaches ten kilometres on its own.
+        val short = (0 until 48).map { i -> SocConsumptionFitter.Segment(2.0, 50.0, 20.0, 0.5, trip = i / 4) }
+        assertNull(SocConsumptionFitter().windowRmse(short) { 25.0 })
     }
 }

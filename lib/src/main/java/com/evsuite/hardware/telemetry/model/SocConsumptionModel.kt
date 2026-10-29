@@ -122,6 +122,8 @@ class SocConsumptionFitter(
         val meanSpeedKmh: Double,
         val meanOutsideTempCelsius: Double,
         val socDropPercent: Double,
+        /** Which collected trip it came from: [windowRmse] never joins two trips. */
+        val trip: Int = 0,
     ) {
         val percentPer100Km: Double get() = socDropPercent * 100.0 / distanceKm
     }
@@ -139,9 +141,12 @@ class SocConsumptionFitter(
     /** The training points a history yields, in one pass, capped at [maxSegments]. */
     private fun collectAll(trips: List<StoredTrip>, generation: FirmwareInfo.Gen): List<Segment> {
         val segments = ArrayList<Segment>()
-        for (trip in trips) {
+        val track = ArrayList<Segment>()
+        for ((index, trip) in trips.withIndex()) {
             if (!usable(trip, generation)) continue
-            collect(trip.samples.orEmpty(), segments)
+            track.clear()
+            collect(trip.samples.orEmpty(), track)
+            track.mapTo(segments) { it.copy(trip = index) }
             if (segments.size >= maxSegments) break
         }
         return segments
@@ -186,7 +191,7 @@ class SocConsumptionFitter(
             model.aeroPercentPer100KmPerSpeedSquared,
             model.auxPercentPer100KmTimesKmh,
             model.thermalPercentPer100KmPerDegree,
-        )
+        ) + (solved.windowRmse?.let { String.format(Locale.ROOT, " window_rmse=%.2f", it) } ?: "")
     }
 
     /**
@@ -199,7 +204,11 @@ class SocConsumptionFitter(
     ): List<Segment> = if (generation == FirmwareInfo.Gen.UNKNOWN) emptyList() else collectAll(trips, generation)
 
     /** What [solve] produced: a model, or the name of the guard that refused one. */
-    private class Solved(val model: SocConsumptionModel?, val refusal: String? = null)
+    private class Solved(
+        val model: SocConsumptionModel?,
+        val refusal: String? = null,
+        val windowRmse: Double? = null,
+    )
 
     fun fit(
         trips: List<StoredTrip>,
@@ -284,7 +293,18 @@ class SocConsumptionFitter(
         fun coefficient(term: LeastSquares.Term) = terms.indexOf(term).let { if (it < 0) 0.0 else coefficients[it] }
 
         val rmse = sqrt(bestError / segments.size)
-        if (!rmse.isFinite() || rmse > maxResidualRmse) {
+        // The gate reads the error at the scale a prediction is used at. A 2 km segment is a few
+        // tenths of a gauge point and one climb or descent; grade is not in the model and only
+        // averages out over a drive. On 2026-10-29 the car's 318 segments read 13,03 and were
+        // refused, while the same fit judged on ten-kilometre windows read 7,24 (CP-095).
+        // The band the model carries stays the per-segment figure: wider, never narrower.
+        val window = windowRmse(segments) { predict(it, terms, coefficients) }
+        if (!rmse.isFinite()) return Solved(null, "rmse=nonfinite")
+        if (window != null) {
+            if (!window.isFinite() || window > maxResidualRmse) {
+                return Solved(null, String.format(Locale.ROOT, "window_rmse=%.2f rmse=%.2f", window, rmse))
+            }
+        } else if (rmse > maxResidualRmse) {
             return Solved(null, String.format(Locale.ROOT, "rmse=%.2f", rmse))
         }
         val model = SocConsumptionModel(
@@ -297,18 +317,53 @@ class SocConsumptionFitter(
             segmentCount = segments.size,
             envelope = EnergyModelEnvelope(minSpeed, maxSpeed, minTemp, maxTemp),
         )
-        return if (model.isValid()) Solved(model) else Solved(null, "invalid")
+        return if (model.isValid()) Solved(model, windowRmse = window) else Solved(null, "invalid")
     }
+
+    /**
+     * RMSE over consecutive segments of one trip summed to [WINDOW_KM], distance-weighted; a
+     * trip's remainder shorter than that is dropped. Null when fewer than [MIN_SEGMENTS] windows
+     * exist, and the caller then judges the segments themselves, as before.
+     */
+    internal fun windowRmse(segments: List<Segment>, predict: (Segment) -> Double): Double? {
+        var squared = 0.0
+        var windows = 0
+        var trip = Int.MIN_VALUE
+        var km = 0.0
+        var drop = 0.0
+        var predictedKm = 0.0
+        for (segment in segments) {
+            if (segment.trip != trip) {
+                trip = segment.trip
+                km = 0.0
+                drop = 0.0
+                predictedKm = 0.0
+            }
+            km += segment.distanceKm
+            drop += segment.socDropPercent
+            predictedKm += predict(segment) * segment.distanceKm
+            if (km < WINDOW_KM) continue
+            val error = drop * 100.0 / km - predictedKm / km
+            squared += error * error
+            windows++
+            km = 0.0
+            drop = 0.0
+            predictedKm = 0.0
+        }
+        return if (windows < MIN_SEGMENTS) null else sqrt(squared / windows)
+    }
+
+    private fun predict(segment: Segment, terms: List<LeastSquares.Term>, coefficients: DoubleArray): Double =
+        terms.indices.sumOf {
+            coefficients[it] * LeastSquares.value(terms[it], segment.meanSpeedKmh, segment.meanOutsideTempCelsius)
+        }
 
     private fun squaredError(
         segments: List<Segment>,
         terms: List<LeastSquares.Term>,
         coefficients: DoubleArray,
     ): Double = segments.sumOf { segment ->
-        val prediction = terms.indices.sumOf {
-            coefficients[it] * LeastSquares.value(terms[it], segment.meanSpeedKmh, segment.meanOutsideTempCelsius)
-        }
-        val error = segment.percentPer100Km - prediction
+        val error = segment.percentPer100Km - predict(segment, terms, coefficients)
         error * error
     }
 
@@ -435,6 +490,9 @@ class SocConsumptionFitter(
         const val MAX_SEGMENTS = 5_000
         const val MAX_RESIDUAL_RMSE_PERCENT_PER_100_KM = 12.0
         const val MIN_SEGMENT_KM = 2.0
+
+        /** The distance [windowRmse] judges a fit over: shorter than most drives, longer than a hill. */
+        const val WINDOW_KM = 10.0
 
         private const val MIN_SPEED_KMH = 10.0
         private const val MAX_SPEED_KMH = 180.0

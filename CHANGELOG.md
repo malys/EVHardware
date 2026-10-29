@@ -31,6 +31,12 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- `SocConsumptionFitter` judges a fit on ten-kilometre windows of one trip (`WINDOW_KM`),
+  not on 2 km segments, and falls back to the segments when fewer than 12 windows exist. The
+  2026-10-29 history (318 segments, motorway added) read `rmse=13,03` and every model was
+  refused — eco band, adaptive range and the score's efficiency part with it — while the same
+  fit over ten kilometres read 7,2. The model's band stays the per-segment figure. `describe`
+  appends `window_rmse=`; a refusal on the window reads `fit=refused(window_rmse=… rmse=…)`.
 - `ChargeEnergy`: a watched charge whose pack integral stayed flat carries no mean power and no
   curve steps. SWI68's two watched DC charges (+49,8 and +30,9 points) both integrated 0,00 kWh,
   and were shown as measured charges of nothing, pulling every SOC band they crossed to 0 kW.
