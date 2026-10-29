@@ -182,6 +182,31 @@ class ChargeEnergyTest {
         assertTrue(report.describe().any { it.startsWith("soc_band 80-90 mean_power_kw=3.50") })
     }
 
+    @Test fun `a watched charge the pack pair never integrated carries no power and no curve`() {
+        // SWI68, 2026-10-29: a DC stop of +30,9 points in eleven minutes, watched, integral flat.
+        // An AC charge afterwards keeps its 7 kW band; the DC one must not drag it to zero.
+        val entries = listOf(
+            entry(0L, 28f, pack = 50.0, odometer = 10_000f),
+            entry(4 * MINUTE, 40f, pack = 50.0, odometer = 10_000f),
+            entry(8 * MINUTE, 50f, pack = 50.0, odometer = 10_000f),
+            entry(11 * MINUTE, 59f, pack = 50.0, odometer = 10_000f),
+            // A drive in between, so the AC charge is its own session.
+            entry(2 * HOUR, 52f, pack = 58.0, odometer = 10_080f),
+            entry(2 * HOUR + 6 * MINUTE, 53f, pack = 57.3, odometer = 10_080f),
+            entry(2 * HOUR + 12 * MINUTE, 54f, pack = 56.6, odometer = 10_080f),
+        )
+
+        val report = analyse(entries)
+        val dc = report.charges.first()
+        assertTrue(dc.watched)
+        assertEquals(ChargePackSign.FLAT, dc.sign)
+        assertNull(dc.meanPowerKw)
+        assertNull(dc.peakPowerKw)
+        assertEquals(ChargePackSign.ENERGY_FELL, report.packSign)
+        assertEquals(listOf(50), report.powerBySocBand().map { it.fromPercent })
+        assertEquals(7.0, report.powerBySocBand().single().meanPowerKw, 1e-6)
+    }
+
     @Test fun `the description names every question and stays one line per charge`() {
         val entries = listOf(
             entry(0L, 40f, pack = 100.0, odometer = 10_000f, status = 2),

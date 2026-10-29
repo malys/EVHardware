@@ -29,6 +29,13 @@ All notable changes to this project are documented here. Format follows
   they come out non-negative, least error wins. `describe` prints the coefficients.
 - `LeastSquares3` is `LeastSquares`, taking its terms as a list; the kWh model is unchanged.
 
+### Fixed
+
+- `ChargeEnergy`: a watched charge whose pack integral stayed flat carries no mean power and no
+  curve steps. SWI68's two watched DC charges (+49,8 and +30,9 points) both integrated 0,00 kWh,
+  and were shown as measured charges of nothing, pulling every SOC band they crossed to 0 kW.
+  The sign still reports `FLAT`.
+
 ## [1.19.0] - 2026-10-22
 
 ### Added

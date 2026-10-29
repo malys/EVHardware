@@ -79,7 +79,10 @@ data class ChargeEnergy(
     val maxEntryGapMs: Long,
     /** Signed, as the integral moved. Negative is the declared convention; see [ChargePackSign]. */
     val packDeltaKwh: Double?,
-    /** Magnitude over the wall clock, and only where the whole session was watched. */
+    /**
+     * Magnitude over the wall clock, and only where the whole session was watched and the
+     * integral actually moved: a [ChargePackSign.FLAT] charge carries none.
+     */
     val meanPowerKw: Double?,
     val counterBehaviour: ChargeCounterBehaviour,
     val consumedDeltaKwh: Double?,
@@ -96,7 +99,8 @@ data class ChargeEnergy(
     val chargingStatuses: List<Int>,
     /**
      * Pack power between each pair of watched ledger entries, which the recorder writes once
-     * per point of charge: this is the charge curve, one step per point. Empty when unwatched.
+     * per point of charge: this is the charge curve, one step per point. Empty when unwatched
+     * or when the integral stayed flat.
      */
     val steps: List<ChargePowerStep> = emptyList(),
     /** Outside temperature over the session, named as such: the pack's own is unpublished. */
@@ -295,22 +299,22 @@ class ChargeEnergyAnalyzer(
         val regenerated = span(slice.mapNotNull { it.vehicleRegeneratedKwh?.toDouble() })
         val hours = session.durationHours
         val temps = slice.mapNotNull { it.outsideTempCelsius?.toDouble() }
+        // Watched and still flat is the pack pair not integrating, not a charge of nothing:
+        // SWI68's two watched DC charges (+49,8 and +30,9 points, 2026-10-26/29) both read
+        // 0,00 kWh. The sign keeps reporting FLAT; only the power is withheld.
+        val integrated = watched && packDelta != null && abs(packDelta) >= MIN_ENERGY_KWH
         return ChargeEnergy(
             session = session,
             watched = watched,
             maxEntryGapMs = gap,
             packDeltaKwh = packDelta,
-            meanPowerKw = if (watched && packDelta != null && hours > 0.0) {
-                abs(packDelta) / hours
-            } else {
-                null
-            },
+            meanPowerKw = if (integrated && hours > 0.0) abs(checkNotNull(packDelta)) / hours else null,
             counterBehaviour = behaviourOf(consumed, regenerated),
             consumedDeltaKwh = consumed,
             regeneratedDeltaKwh = regenerated,
             movedKm = span(slice.mapNotNull { it.odometerKm?.toDouble() }),
             chargingStatuses = slice.mapNotNull { it.chargingStatus }.distinct(),
-            steps = if (watched) steps(slice) else emptyList(),
+            steps = if (integrated) steps(slice) else emptyList(),
             minOutsideTempCelsius = temps.minOrNull(),
             maxOutsideTempCelsius = temps.maxOrNull(),
         )
