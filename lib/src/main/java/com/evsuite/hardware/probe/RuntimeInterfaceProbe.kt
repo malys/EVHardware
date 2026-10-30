@@ -156,7 +156,14 @@ object RuntimeInterfaceProbe {
         binder = engModeService(ENG_DID),
         calls = DID_CALLS,
         note = "engmode hub:did; an engineering interface may legitimately refuse us",
-    )
+    ).let { probe ->
+        // The bundle promises no serial, and it leaves the car (stick, inbox). Whether one was
+        // answered is the finding; its value identifies this one head unit.
+        probe.copy(values = probe.values.mapValues { (name, value) -> redactSerial(name, value) })
+    }
+
+    internal fun redactSerial(name: String, value: String?): String? =
+        if (name == DID_SERIAL && value != null) "redacted (${value.trim().length} chars)" else value
 
     /**
      * RI-008: a second opinion on vehicle speed.
@@ -551,12 +558,14 @@ object RuntimeInterfaceProbe {
         "getCurrentPowerMode" to Call(11),
     )
 
+    private const val DID_SERIAL = "getProductSerialNum"
+
     /** RI-005's four identity strings. */
     private val DID_CALLS = mapOf(
         "getAssemblyPartNum" to Call(1, ReadAs.STRING),
         "getHardwarePartNum" to Call(2, ReadAs.STRING),
         "getSoftwarePartNum" to Call(3, ReadAs.STRING),
-        "getProductSerialNum" to Call(4, ReadAs.STRING),
+        DID_SERIAL to Call(4, ReadAs.STRING),
     )
 
     /** RI-008's speed, and the three reads that say what moment it was taken in. */

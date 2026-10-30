@@ -31,6 +31,9 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- `RuntimeInterfaceProbe.deviceIdentity`: the head unit's product serial is exported as
+  `redacted (N chars)`. It went out verbatim in every interfaces survey while the report states
+  `privacy_excluded=VIN,serial`, and bundles leave the car (USB stick, diagnostic inbox).
 - `EcoScore` (CP-093, the car's 20 newest trips): smoothness reaches zero at 1 % of moving time
   spent hard, not 25 %. The share ran 0,00–0,85 % on every drive, so smoothness read 97–100 and
   the score was anticipation alone. A trip under `MIN_DISTANCE_KM` (2 km) has no score: 600 m and

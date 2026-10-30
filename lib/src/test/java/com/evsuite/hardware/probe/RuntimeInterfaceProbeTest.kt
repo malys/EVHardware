@@ -112,4 +112,14 @@ class RuntimeInterfaceProbeTest {
         assertEquals(BindVerdict.ANSWERED, entry.verdict)
         assertEquals(mapOf("services" to "0"), entry.values)
     }
+
+    @Test
+    fun `the head unit serial leaves the car as a length, never as its value`() {
+        assertEquals(
+            "redacted (15 chars)",
+            RuntimeInterfaceProbe.redactSerial("getProductSerialNum", " 7XXXXXXXXXXXXXX"),
+        )
+        assertEquals(null, RuntimeInterfaceProbe.redactSerial("getProductSerialNum", null))
+        assertEquals("11-95-8-58-1", RuntimeInterfaceProbe.redactSerial("getSoftwarePartNum", "11-95-8-58-1"))
+    }
 }
