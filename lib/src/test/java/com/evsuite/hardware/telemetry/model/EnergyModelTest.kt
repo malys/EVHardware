@@ -46,6 +46,19 @@ class EnergyModelTest {
         )
     }
 
+    @Test fun `the bundle line names the gate that refused`() {
+        val swi68 = BatteryPowerEvidence(FirmwareInfo.Gen.SWI68, BatteryPowerEvidence.PACK_PAIR_DERIVED_V2)
+        val full = storedTrip(syntheticTrip().samples, swi68)
+        val sparse = storedTrip(syntheticTrip().samples?.take(10), swi68)
+
+        val ready = trainer.describe(listOf(full), FirmwareInfo.Gen.SWI68)
+        assertTrue(ready, ready.startsWith("used=1/1 windows="))
+        assertTrue(ready, ready.contains(" fit=ready rmse="))
+        val refused = trainer.describe(listOf(sparse), FirmwareInfo.Gen.SWI68)
+        assertTrue(refused, refused.matches(Regex("used=1/1 windows=\\d+/12 span=\\d+/20 km/h")))
+        assertEquals("firmware=unvalidated", trainer.describe(listOf(full), FirmwareInfo.Gen.SWI69))
+    }
+
     @Test fun `SWI68 trains on the pack pair rather than refusing`() {
         // The car this project runs on has no validated power conversion and will not get one
         // from a desk. Refusing to train left the speed comparison permanently empty; the model

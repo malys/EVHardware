@@ -5,6 +5,7 @@ import com.evsuite.hardware.CarPropertyEvidence
 import com.evsuite.hardware.FirmwareInfo
 import com.evsuite.hardware.telemetry.StoredTrip
 import com.evsuite.hardware.telemetry.UnavailableReason
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.sqrt
@@ -40,7 +41,27 @@ class EnergyModelTrainer(
     internal fun fit(
         trips: List<StoredTrip>,
         evidence: BatteryPowerEvidence,
-    ): EnergyModelTrainingResult {
+    ): EnergyModelTrainingResult = fitExplained(trips, evidence).first
+
+    /**
+     * One line for a diagnostic bundle, in [SocConsumptionFitter.describe]'s shape: the reason
+     * code alone cannot say which of four gates refused, and the 2026-10-30 refusal could not be
+     * replayed off the car because only trip totals left it.
+     *
+     * Diagnostic only: it runs the fit a second time, so call it from a probe, not a screen.
+     */
+    fun describe(trips: List<StoredTrip>, firmware: FirmwareInfo.Gen): String {
+        if (firmware == FirmwareInfo.Gen.UNKNOWN) return "firmware=unknown"
+        val evidence = CarPropertyEvidence.powerModelEvidence(firmware) ?: return "firmware=unvalidated"
+        val used = trips.count { it.summary.batteryPowerEvidence == evidence && !it.samples.isNullOrEmpty() }
+        return "used=$used/${trips.size} " + fitExplained(trips, evidence).second
+    }
+
+    /** The fit, and the line [describe] prints for it. */
+    private fun fitExplained(
+        trips: List<StoredTrip>,
+        evidence: BatteryPowerEvidence,
+    ): Pair<EnergyModelTrainingResult, String> {
         // Both fits are accumulated in the one pass; the temperature span picks which to solve.
         val equations = LeastSquares()
         val narrowed = LeastSquares(2)
@@ -56,22 +77,32 @@ class EnergyModelTrainer(
             minTemp = minOf(minTemp, temp)
             maxTemp = maxOf(maxTemp, temp)
         }
+        val gates = String.format(
+            Locale.ROOT, "windows=%d/%d span=%.0f/%.0f km/h", count, MIN_TRAINING_SAMPLES,
+            if (count > 0) maxSpeed - minSpeed else 0.0, MIN_SPEED_SPAN_KMH,
+        )
         if (count < MIN_TRAINING_SAMPLES || maxSpeed - minSpeed < MIN_SPEED_SPAN_KMH) {
-            return EnergyModelTrainingResult.Unavailable(UnavailableReason.INSUFFICIENT_SAMPLES)
+            return EnergyModelTrainingResult.Unavailable(UnavailableReason.INSUFFICIENT_SAMPLES) to gates
         }
 
         // As in SocConsumptionFitter: one kind of weather is no evidence about weather, so two
         // coefficients are fitted and the narrow envelope refuses the cold instead of guessing.
         val features = if (maxTemp - minTemp >= MIN_TEMPERATURE_SPAN_CELSIUS) 3 else 2
         val coefficients = (if (features == 3) equations else narrowed).solve()
-            ?: return EnergyModelTrainingResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED)
+            ?: return EnergyModelTrainingResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED) to
+                "$gates features=$features fit=refused(singular)"
         val rolling = coefficients[0]
         val aero = coefficients[1]
         val thermal = if (features == 3) coefficients[2] else 0.0
+        val solved = String.format(
+            Locale.ROOT, "%s features=%d rolling=%.2f aero=%.6f thermal=%.3f",
+            gates, features, rolling, aero, thermal,
+        )
         if (rolling <= 0.0 || aero < 0.0 || thermal < 0.0 ||
             coefficients.any { !it.isFinite() }
         ) {
-            return EnergyModelTrainingResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED)
+            return EnergyModelTrainingResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED) to
+                "$solved fit=refused(coefficients)"
         }
 
         var squaredError = 0.0
@@ -82,8 +113,10 @@ class EnergyModelTrainer(
             squaredError += error * error
         }
         val rmse = sqrt(squaredError / residualCount)
+        val residual = String.format(Locale.ROOT, "rmse=%.2f/%.1f", rmse, maxResidualRmse)
         if (!rmse.isFinite() || rmse > maxResidualRmse) {
-            return EnergyModelTrainingResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED)
+            return EnergyModelTrainingResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED) to
+                "$solved fit=refused($residual)"
         }
 
         val model = EnergyModel(
@@ -95,7 +128,7 @@ class EnergyModelTrainer(
             sampleCount = count,
             envelope = EnergyModelEnvelope(minSpeed, maxSpeed, minTemp, maxTemp),
         )
-        return EnergyModelTrainingResult.Ready(model)
+        return EnergyModelTrainingResult.Ready(model) to "$solved fit=ready $residual"
     }
 
     /**
