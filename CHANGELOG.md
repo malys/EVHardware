@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.20.0] - 2026-10-31
+
 ### Added
 
 - Rule variables in the catalogue: conditions `CURRENT_TIME` (the clock as one time of day,
