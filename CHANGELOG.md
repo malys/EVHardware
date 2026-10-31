@@ -8,6 +8,10 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Rule variables in the catalogue: conditions `CURRENT_TIME` (the clock as one time of day,
+  comparable), `VARIABLE_FLAG` and `VARIABLE_NUMBER`; actions `SET_VARIABLE_FLAG` and
+  `SET_VARIABLE_NUMBER`; value kinds `VARIABLE_FLAG` and `VARIABLE_NUMBER`. All local, no
+  snapshot key, no bridge action, firmware-independent.
 - `telemetry.TripJoin`: two consecutive trips told as one drive with a stop in it. Totals add,
   tracks concatenate, the stop counts in neither duration nor distance; never across a charge
   (more than one point of rise) or across different power/speed conversions. Power and speed

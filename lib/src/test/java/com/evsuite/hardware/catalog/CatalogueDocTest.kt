@@ -76,6 +76,8 @@ class CatalogueDocTest {
             ValueKind.LOCATION -> "a point and a radius" + unit.trim().let { if (it.isEmpty()) "" else " ($it)" }
             ValueKind.WEBHOOK -> "a URL, and an optional body"
             ValueKind.PHYSICAL_BUTTON -> "a button, short or long press"
+            ValueKind.VARIABLE_FLAG -> "a variable name, true or false"
+            ValueKind.VARIABLE_NUMBER -> "a variable name and a number"
         }
     }
 

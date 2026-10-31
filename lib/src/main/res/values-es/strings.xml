@@ -199,6 +199,11 @@
     <string name="unit_minute">min</string>
     <string name="act_enable_rule">Activar una regla</string>
     <string name="act_disable_rule">Desactivar una regla</string>
+    <string name="cond_current_time">Hora actual</string>
+    <string name="cond_variable_flag">Variable (verdadero/falso)</string>
+    <string name="cond_variable_number">Variable (número)</string>
+    <string name="act_set_variable_flag">Fijar una variable (verdadero/falso)</string>
+    <string name="act_set_variable_number">Fijar una variable (número)</string>
     <string name="act_media_control">Control multimedia</string>
     <string name="media_play_pause">Reproducir / pausar</string>
     <string name="media_next">Pista siguiente</string>

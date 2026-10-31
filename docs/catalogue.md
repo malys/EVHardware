@@ -17,6 +17,9 @@ Every condition a rule can test and every action it can run, straight out of `Co
 | Time of day | `TIME_OF_DAY` | a start and an end time | any |
 | Day of week | `DAY_OF_WEEK` | weekdays | any |
 | Exact date | `DATE` | a calendar date | any |
+| Time now | `CURRENT_TIME` | a time of day (=, <, >) | any |
+| Variable (true/false) | `VARIABLE_FLAG` | a variable name, true or false | any |
+| Variable (number) | `VARIABLE_NUMBER` | a variable name and a number (=, <, >) | any |
 | Firmware generation | `FIRMWARE_GEN` | a list the app fills in | any |
 | Near a place | `LOCATION_WITHIN` | a point and a radius (m) | any |
 | Physical buttons | `PHYSICAL_BUTTON` | a button, short or long press | any |
@@ -245,6 +248,8 @@ A reading the car does not answer makes the rule **not evaluable**: it does not 
 | Send a text message | `SEND_SMS` | a number or a contact, and a message | — | any |
 | Enable a rule | `ENABLE_RULE` | one of your rules | — | any |
 | Disable a rule | `DISABLE_RULE` | one of your rules | — | any |
+| Set a variable (true/false) | `SET_VARIABLE_FLAG` | a variable name, true or false | — | any |
+| Set a variable (number) | `SET_VARIABLE_NUMBER` | a variable name and a number | — | any |
 | Media control | `MEDIA_CONTROL` | Play / pause, Next track, Previous track | — | any |
 | Bluetooth | `SET_BLUETOOTH` | on / off | — | any |
 | Wi-Fi | `SET_WIFI` | on / off | — | any |

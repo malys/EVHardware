@@ -103,6 +103,30 @@ enum class ConditionType(
         R.string.cond_date, ConditionGroup.CONTEXT,
         ValueSpec(ValueKind.DATE), snapshotKey = null
     ),
+    /**
+     * The clock, compared as one time of day rather than tested against a range.
+     *
+     * [TIME_OF_DAY] answers "between 22:00 and 06:00"; this answers "after sunset", once the
+     * other side of the comparison is a variable rather than a fixed time.
+     */
+    CURRENT_TIME(
+        R.string.cond_current_time, ConditionGroup.CONTEXT,
+        ValueSpec(ValueKind.TIME), snapshotKey = null, comparable = true
+    ),
+    /**
+     * A variable: one a rule set, or one computed for every cycle (night, sunrise…).
+     *
+     * A variable nothing has set is unavailable, never false — same rule as a reading the
+     * car does not answer.
+     */
+    VARIABLE_FLAG(
+        R.string.cond_variable_flag, ConditionGroup.CONTEXT,
+        ValueSpec(ValueKind.VARIABLE_FLAG), snapshotKey = null
+    ),
+    VARIABLE_NUMBER(
+        R.string.cond_variable_number, ConditionGroup.CONTEXT,
+        ValueSpec(ValueKind.VARIABLE_NUMBER), snapshotKey = null, comparable = true
+    ),
     FIRMWARE_GEN(
         R.string.cond_firmware, ConditionGroup.CONTEXT,
         ValueSpec(ValueKind.ENUM), snapshotKey = SnapshotKeys.KEY_FIRMWARE_GEN

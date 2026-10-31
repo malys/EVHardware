@@ -44,7 +44,11 @@ class FirmwareSupportTest {
         // La connexion du poste, comptée par Android : elle dépend d'une permission, pas
         // d'une génération de firmware.
         ConditionType.DATA_USED_TODAY,
-        ConditionType.DATA_USED_MONTH
+        ConditionType.DATA_USED_MONTH,
+        // L'horloge et les variables des règles : rien n'est lu dans la voiture.
+        ConditionType.CURRENT_TIME,
+        ConditionType.VARIABLE_FLAG,
+        ConditionType.VARIABLE_NUMBER
     )
     private val firmwareIndependentActions = setOf(
         ActionType.LAUNCH_APP,
@@ -62,7 +66,9 @@ class FirmwareSupportTest {
         ActionType.DISABLE_RULE,
         ActionType.MEDIA_CONTROL,
         ActionType.SET_BLUETOOTH,
-        ActionType.SET_WIFI
+        ActionType.SET_WIFI,
+        ActionType.SET_VARIABLE_FLAG,
+        ActionType.SET_VARIABLE_NUMBER
     )
 
     @Test

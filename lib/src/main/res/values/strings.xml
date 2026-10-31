@@ -221,6 +221,11 @@
     <string name="unit_minute">min</string>
     <string name="act_enable_rule">Enable a rule</string>
     <string name="act_disable_rule">Disable a rule</string>
+    <string name="cond_current_time">Time now</string>
+    <string name="cond_variable_flag">Variable (true/false)</string>
+    <string name="cond_variable_number">Variable (number)</string>
+    <string name="act_set_variable_flag">Set a variable (true/false)</string>
+    <string name="act_set_variable_number">Set a variable (number)</string>
     <string name="act_media_control">Media control</string>
     <string name="media_play_pause">Play / pause</string>
     <string name="media_next">Next track</string>

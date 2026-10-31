@@ -95,6 +95,15 @@ enum class ValueKind {
     RADIO,
     /** Physical button + short/long event, edited with two dropdowns. */
     PHYSICAL_BUTTON,
+    /**
+     * A named true/false variable: the name in `text`, the value in `flag`.
+     *
+     * Its own kind rather than [BOOL] with a name beside it: the editor has to offer the
+     * variables that exist, and a name typed wrong is a condition that can never be read.
+     */
+    VARIABLE_FLAG,
+    /** A named numeric variable: the name in `text`, the value in `number`. */
+    VARIABLE_NUMBER,
     /** Nothing to enter. */
     NONE
 }

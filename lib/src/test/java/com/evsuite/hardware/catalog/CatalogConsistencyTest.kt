@@ -71,7 +71,8 @@ class CatalogConsistencyTest {
             ActionType.NAVIGATE_TO, ActionType.WEBHOOK, ActionType.ASK_CONFIRM,
             ActionType.DELAY, ActionType.SEND_SMS,
             ActionType.ENABLE_RULE, ActionType.DISABLE_RULE, ActionType.MEDIA_CONTROL,
-            ActionType.SET_BLUETOOTH, ActionType.SET_WIFI
+            ActionType.SET_BLUETOOTH, ActionType.SET_WIFI,
+            ActionType.SET_VARIABLE_FLAG, ActionType.SET_VARIABLE_NUMBER
         )
 
         ActionType.entries.filterNot { it in localOnly }.forEach { type ->
@@ -86,7 +87,8 @@ class CatalogConsistencyTest {
             ActionType.NAVIGATE_TO, ActionType.WEBHOOK, ActionType.ASK_CONFIRM,
             ActionType.DELAY, ActionType.SEND_SMS,
             ActionType.ENABLE_RULE, ActionType.DISABLE_RULE, ActionType.MEDIA_CONTROL,
-            ActionType.SET_BLUETOOTH, ActionType.SET_WIFI
+            ActionType.SET_BLUETOOTH, ActionType.SET_WIFI,
+            ActionType.SET_VARIABLE_FLAG, ActionType.SET_VARIABLE_NUMBER
         ).forEach { type ->
             assertTrue(
                 "${type.name} ne touche pas le véhicule et ne doit pas avoir de bridgeAction",
@@ -143,7 +145,11 @@ class CatalogConsistencyTest {
             ConditionType.DATE,
             ConditionType.LOCATION_WITHIN,
             // Tiré au sort à l'évaluation : il n'y a rien à lire.
-            ConditionType.RANDOM_CHANCE
+            ConditionType.RANDOM_CHANCE,
+            // L'horloge et les variables des règles, tenues par l'app.
+            ConditionType.CURRENT_TIME,
+            ConditionType.VARIABLE_FLAG,
+            ConditionType.VARIABLE_NUMBER
         )
 
         ConditionType.entries.filterNot { it in localOnly }.forEach { type ->

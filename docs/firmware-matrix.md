@@ -11,6 +11,9 @@
 | TIME_OF_DAY | — | — | — | — | — | — |
 | DAY_OF_WEEK | — | — | — | — | — | — |
 | DATE | — | — | — | — | — | — |
+| CURRENT_TIME | — | — | — | — | — | — |
+| VARIABLE_FLAG | — | — | — | — | — | — |
+| VARIABLE_NUMBER | — | — | — | — | — | — |
 | FIRMWARE_GEN | — | — | — | — | — | — |
 | LOCATION_WITHIN | — | — | — | — | — | — |
 | PHYSICAL_BUTTON | — | — | — | — | — | — |
@@ -91,6 +94,8 @@
 | SEND_SMS | — | — | — | — | — | — |
 | ENABLE_RULE | — | — | — | — | — | — |
 | DISABLE_RULE | — | — | — | — | — | — |
+| SET_VARIABLE_FLAG | — | — | — | — | — | — |
+| SET_VARIABLE_NUMBER | — | — | — | — | — | — |
 | MEDIA_CONTROL | — | — | — | — | — | — |
 | SET_BLUETOOTH | — | — | — | — | — | — |
 | SET_WIFI | — | — | — | — | — | — |

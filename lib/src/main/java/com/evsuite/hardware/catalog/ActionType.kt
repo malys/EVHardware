@@ -773,6 +773,20 @@ enum class ActionType(
         ValueSpec(ValueKind.RULE), bridgeAction = null
     ),
     /**
+     * Sets a named variable that later conditions can read — in this cycle, and in later
+     * ones until it is set again or, for one not kept, until the next ignition.
+     *
+     * Nothing leaves the app: the value is the rule's own memory, not a vehicle setting.
+     */
+    SET_VARIABLE_FLAG(
+        R.string.act_set_variable_flag, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.VARIABLE_FLAG), bridgeAction = null
+    ),
+    SET_VARIABLE_NUMBER(
+        R.string.act_set_variable_number, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.VARIABLE_NUMBER), bridgeAction = null
+    ),
+    /**
      * Play/pause, next or previous — sent to the source that is actually playing.
      *
      * Not a media key, which is the implementation this started as. The car publishes one
