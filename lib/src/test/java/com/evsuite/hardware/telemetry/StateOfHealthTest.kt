@@ -25,13 +25,13 @@ class StateOfHealthTest {
         assertNotNull(ready.estimate.stateOfHealthPercent.uncertainty)
     }
 
-    @Test fun `five discharges refuse rather than estimate`() {
+    @Test fun `two discharges refuse rather than estimate`() {
         val result = StateOfHealthEstimator()
-            .estimate(counterLedger(windows = 5, capacityKwh = 60.0), CAPACITY_WHEN_NEW)
+            .estimate(counterLedger(windows = 2, capacityKwh = 60.0), CAPACITY_WHEN_NEW)
 
         val unavailable = result as StateOfHealthResult.Unavailable
         assertEquals(UnavailableReason.INSUFFICIENT_SAMPLES, unavailable.reason)
-        assertEquals(5, unavailable.windowsSeen)
+        assertEquals(2, unavailable.windowsSeen)
     }
 
     @Test fun `the band is never tighter than the counter's own whole kilowatt-hour`() {
@@ -41,9 +41,9 @@ class StateOfHealthTest {
 
         // Identical windows have no spread at all, so a floor is all that is left — and for the
         // car's own counter the coarser of the two is its whole-kWh step, not the charge gauge.
-        val expected = StateOfHealthEstimator.COUNTER_STEP_KWH * 100.0 / 60.0
+        val expected = StateOfHealthEstimator.COUNTER_STEP_KWH * 100.0 / 60.0 / kotlin.math.sqrt(8.0)
         assertEquals(expected, ready.estimate.usableCapacityKwh.uncertainty!!, 1e-6)
-        assertTrue(expected > 60.0 * StateOfHealthEstimator.SOC_STEP_PERCENT / 60.0)
+        assertTrue(expected > 60.0 * StateOfHealthEstimator.SOC_STEP_PERCENT / 60.0 / kotlin.math.sqrt(8.0))
     }
 
     @Test fun `an integral has no step of its own, so the gauge is its floor`() {
@@ -51,16 +51,44 @@ class StateOfHealthTest {
             .estimate(packPairLedger(windows = 8, capacityKwh = 58.0), CAPACITY_WHEN_NEW)
                 as StateOfHealthResult.Ready
 
-        val expected = 58.0 * StateOfHealthEstimator.SOC_STEP_PERCENT / 60.0
+        val expected = 58.0 * StateOfHealthEstimator.SOC_STEP_PERCENT / 60.0 / kotlin.math.sqrt(8.0)
         assertEquals(expected, ready.estimate.usableCapacityKwh.uncertainty!!, 1e-3)
+    }
+
+    @Test fun `the band narrows as windows add up`() {
+        fun band(windows: Int) = (StateOfHealthEstimator()
+            .estimate(packPairLedger(windows, capacityKwh = 58.0), CAPACITY_WHEN_NEW)
+                as StateOfHealthResult.Ready).estimate.usableCapacityKwh.uncertainty!!
+        assertEquals(band(3) / 2.0, band(12), 1e-9)
     }
 
     @Test fun `a window under the minimum drop contributes nothing`() {
         val entries = listOf(
+            packEntry(day(0), 60f, packKwh = 0.0, odometerKm = 10_000f, integratedKm = 0.0),
+            packEntry(day(1), 46f, packKwh = 8.4, odometerKm = 10_060f, integratedKm = 60.0),
+        )
+        assertTrue(StateOfHealthEstimator().windows(entries).isEmpty())
+    }
+
+    @Test fun `a window too short for the counter's whole kWh is measured by the integral`() {
+        val counters = listOf(
             entry(day(0), 60f, consumed = 0f),
             entry(day(1), 40f, consumed = 12.0f),
         )
-        assertTrue(StateOfHealthEstimator().windows(entries).isEmpty())
+        assertTrue(StateOfHealthEstimator().windows(counters).isEmpty())
+        val both = listOf(
+            BatteryLedgerEntry(
+                atMs = day(0), socPercent = 60f, odometerKm = 10_000f, outsideTempCelsius = 18f,
+                vehicleConsumedKwh = 0f, vehicleRegeneratedKwh = 0f,
+                packEnergyKwh = 0.0, integratedDistanceKm = 0.0,
+            ),
+            BatteryLedgerEntry(
+                atMs = day(1), socPercent = 40f, odometerKm = 10_080f, outsideTempCelsius = 18f,
+                vehicleConsumedKwh = 12f, vehicleRegeneratedKwh = 0f,
+                packEnergyKwh = 11.6, integratedDistanceKm = 80.0,
+            ),
+        )
+        assertEquals(SohEnergySource.PACK_PAIR_INTEGRAL, StateOfHealthEstimator().windows(both).single().source)
     }
 
     @Test fun `a charge splits the window it falls in`() {

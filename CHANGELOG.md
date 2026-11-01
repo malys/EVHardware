@@ -18,6 +18,11 @@ All notable changes to this project are documented here. Format follows
   from models stored before it), and each optional term is tried in and out: a term that only
   fits with a negative sign is left out instead of refusing the whole model. The car's
   2026-11-01 fit had refused on `aero=-0,000289 thermal=-0,152`.
+- State of health reaches a figure, and its band narrows. The gauge reads in tenths, not whole
+  points (`SOC_STEP_PERCENT` 0.1); a window needs 15 points (25 on the car's whole-kWh counters,
+  `COUNTER_MIN_SOC_DROP_PERCENT`) and the estimate three windows instead of six; the band is the
+  median's, over √n. The car's 20 trips to 2026-11-01 held two discharges past 25 points, so the
+  old gates left the screen on "0 / 6".
 
 ## [1.20.0] - 2026-10-31
 

@@ -1,6 +1,7 @@
 package com.evsuite.hardware.telemetry
 
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 /** Where a window's kilowatt-hours came from. Two sources are never averaged together. */
 enum class SohEnergySource {
@@ -73,11 +74,11 @@ sealed interface StateOfHealthResult {
  * the pack over the charge it cost is a capacity, and both halves of it are recorded in the
  * [BatteryLedgerEntry] stream.
  *
- * **What this can and cannot see.** A charge step on this car is about one point, so a window
- * of 25 points carries ±4 % before anything else goes wrong, and a year of real degradation is
- * two or three points. One window is therefore never a health figure: the estimate is the
- * median of at least [MIN_WINDOWS], and the band never claims to be tighter than the
- * quantisation allows. The absolute figure also inherits whatever node the source measures at
+ * **What this can and cannot see.** The charge gauge reads in tenths of a point, so a window
+ * of 15 points carries under ±1 % from the gauge; the car's own counter steps a whole kWh, which
+ * is why its windows need [COUNTER_MIN_SOC_DROP_PERCENT]. A year of real degradation is two or
+ * three points. The estimate is the median of at least [MIN_WINDOWS], and its band is the
+ * median's: what one window could be wrong by, over the square root of how many agree. The absolute figure also inherits whatever node the source measures at
  * — pack terminals or somewhere downstream, unknowable from here — which is why
  * [StateOfHealthEstimate.trendPercentPoints] is the figure worth reading and the absolute one
  * is shown beside it with its source named.
@@ -120,7 +121,9 @@ class StateOfHealthEstimator(
         val spread = (percentile(capacities, 0.75) - percentile(capacities, 0.25)) / 2.0
         val quantisation = capacity * SOC_STEP_PERCENT / median(drops)
         val resolution = sourceStepKwh(chosen.first().source) * 100.0 / median(drops)
-        val band = maxOf(spread, quantisation, resolution)
+        // Each window's error is its own (where the gauge rounded, which kWh the counter ticked),
+        // so the median's band narrows as windows add up, as CP-087 says it should.
+        val band = maxOf(spread, quantisation, resolution) / sqrt(chosen.size.toDouble())
         val health = capacity * 100.0 / usableCapacityKwhWhenNew
         val healthBand = band * 100.0 / usableCapacityKwhWhenNew
 
@@ -173,7 +176,7 @@ class StateOfHealthEstimator(
         if (drop < minSocDropPercent) return null
         val temp = meanTemp(start, end)
         val distance = distanceOf(start, end)
-        vehicleCounterKwh(start, end)?.let { net ->
+        vehicleCounterKwh(start, end)?.takeIf { drop >= COUNTER_MIN_SOC_DROP_PERCENT }?.let { net ->
             return SohWindow(
                 start.atMs, end.atMs, drop, net, SohEnergySource.VEHICLE_COUNTERS, temp, distance,
             )
@@ -252,14 +255,20 @@ class StateOfHealthEstimator(
 
     companion object {
         /**
-         * Below this a window says more about the gauge's resolution than about the pack:
-         * one point of quantisation at each end is ±4 % over 25 points, and real degradation
-         * is two or three points a year.
+         * Below this a window says more about the gauge than about the pack. Not lower, because
+         * a driver who charges every other day rarely lets the charge fall further: the car's
+         * twenty trips to 2026-11-01 held three discharges past 15 points and two past 25.
          */
-        const val MIN_SOC_DROP_PERCENT = 25.0
+        const val MIN_SOC_DROP_PERCENT = 15.0
 
-        /** A median needs a majority to mean anything, and six is where the band stops moving. */
-        const val MIN_WINDOWS = 6
+        /**
+         * The car's counter steps a whole kWh ([COUNTER_STEP_KWH]), ±6 % over 25 points of a
+         * 60 kWh pack; a shorter window on the counters is measured by the integral instead.
+         */
+        const val COUNTER_MIN_SOC_DROP_PERCENT = 25.0
+
+        /** A median of three is the smallest that outvotes one bad window. */
+        const val MIN_WINDOWS = 3
 
         /** A cold pack delivers less usable energy, and that is weather rather than health. */
         const val MIN_TEMP_CELSIUS = 5.0
@@ -267,8 +276,12 @@ class StateOfHealthEstimator(
         /** How far the app's own integral may fall short of the odometer before the window is refused. */
         const val DISTANCE_TOLERANCE = 0.10
 
-        /** The step this car's charge gauge takes, and so one floor under every band. */
-        const val SOC_STEP_PERCENT = 1.0
+        /**
+         * The step this car's charge gauge takes, and so one floor under every band. Tenths: the
+         * 2026-11-01 bundle's trips start and end at 58,3, 63,8, 58,6 → 58,4 %. CP-087's "one
+         * point" was the ledger's write step, not the gauge's.
+         */
+        const val SOC_STEP_PERCENT = 0.1
 
         /**
          * The step the vehicle's own counter takes — a whole kilowatt-hour.
