@@ -41,7 +41,9 @@ data class EnergyModelEnvelope(
 /**
  * Driver-specific consumption fit in kWh/100 km.
  *
- * `rolling + aero × speed² + thermal × |outside - 20 °C|` is intentionally the whole model.
+ * `rolling + aero × speed² + thermal × |outside - 20 °C| + aux ÷ speed` is intentionally the
+ * whole model; the last term is also where pulling away in town lands, regeneration being a
+ * separate ledger line.
  * Grade is absent until CP-031 decides on a trustworthy input, and HVAC attribution remains a
  * residual owned by CP-033. Every prediction is structurally [Provenanced] as estimated.
  */
@@ -51,6 +53,8 @@ data class EnergyModel(
     val rollingKwhPer100Km: Double,
     val aeroKwhPer100KmPerSpeedSquared: Double,
     val thermalKwhPer100KmPerDegree: Double,
+    /** Absent from models stored before it; Gson then reads 0, the model they were fitted as. */
+    val auxKwhPer100KmTimesKmh: Double = 0.0,
     val residualRmseKwhPer100Km: Double,
     val sampleCount: Int,
     val envelope: EnergyModelEnvelope,
@@ -61,7 +65,8 @@ data class EnergyModel(
         }
         val value = rollingKwhPer100Km +
             aeroKwhPer100KmPerSpeedSquared * speedKmh * speedKmh +
-            thermalKwhPer100KmPerDegree * abs(outsideTempCelsius - COMFORT_TEMP_CELSIUS)
+            thermalKwhPer100KmPerDegree * abs(outsideTempCelsius - COMFORT_TEMP_CELSIUS) +
+            auxKwhPer100KmTimesKmh / speedKmh
         if (!value.isFinite() || value <= 0.0) {
             return Provenanced.unavailable(UnavailableReason.MODEL_NOT_TRAINED)
         }
@@ -79,6 +84,7 @@ data class EnergyModel(
             aeroKwhPer100KmPerSpeedSquared.isFinite() &&
             aeroKwhPer100KmPerSpeedSquared >= 0.0 &&
             thermalKwhPer100KmPerDegree.isFinite() && thermalKwhPer100KmPerDegree >= 0.0 &&
+            auxKwhPer100KmTimesKmh.isFinite() && auxKwhPer100KmTimesKmh >= 0.0 &&
             residualRmseKwhPer100Km.isFinite() && residualRmseKwhPer100Km >= 0.0 &&
             sampleCount >= EnergyModelTrainer.MIN_TRAINING_SAMPLES && envelope.isValid()
 

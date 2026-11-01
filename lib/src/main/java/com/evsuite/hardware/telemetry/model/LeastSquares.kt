@@ -5,9 +5,9 @@ import kotlin.math.abs
 /**
  * The normal-equations fit both consumption models are built on.
  *
- * `constant + a × speed² + b × |outside − comfort|` is the shape of the kWh model, and the
- * charge model adds `c ÷ speed` — the auxiliary load, which costs a fixed power whatever the
- * speed and therefore more per kilometre the slower the car goes. The arithmetic has no opinion
+ * `constant + a × speed² + b × |outside − comfort|` is the shape of both models, with
+ * `c ÷ speed` — the auxiliary load, which costs a fixed power whatever the speed and therefore
+ * more per kilometre the slower the car goes. The arithmetic has no opinion
  * about units or about which terms are in play; it lives here so there is one of it: a second
  * copy would drift from this one on the day someone fixes a pivot and only remembers one file.
  *
@@ -15,11 +15,6 @@ import kotlin.math.abs
  */
 internal class LeastSquares(private val terms: List<Term>) {
     enum class Term { CONSTANT, SPEED_SQUARED, INVERSE_SPEED, TEMPERATURE }
-
-    /** The kWh model's terms: the constant, speed², and — with three — the temperature. */
-    constructor(features: Int = 3) : this(KWH_TERMS.take(features)) {
-        require(features in 2..3) { "two or three features" }
-    }
 
     private val size = terms.size
     private val matrix = Array(size) { DoubleArray(size) }
@@ -66,7 +61,6 @@ internal class LeastSquares(private val terms: List<Term>) {
     }
 
     companion object {
-        private val KWH_TERMS = listOf(Term.CONSTANT, Term.SPEED_SQUARED, Term.TEMPERATURE)
         private const val MIN_PIVOT = 1e-9
 
         fun value(term: Term, speedKmh: Double, outsideTempCelsius: Double): Double = when (term) {

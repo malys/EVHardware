@@ -6,6 +6,19 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- `EnergyModelTrainer.windows`: the power fit's training kilometres, `[km/h, °C, kWh/100 km]`,
+  so a refusal can be replayed off the car.
+
+### Fixed
+
+- The power model no longer refuses when town driving makes its kilometres dearer than open-road
+  ones. It gains the charge model's `÷ speed` term (`EnergyModel.auxKwhPer100KmTimesKmh`, read 0
+  from models stored before it), and each optional term is tried in and out: a term that only
+  fits with a negative sign is left out instead of refusing the whole model. The car's
+  2026-11-01 fit had refused on `aero=-0,000289 thermal=-0,152`.
+
 ## [1.20.0] - 2026-10-31
 
 ### Added

@@ -59,6 +59,28 @@ class EnergyModelTest {
         assertEquals("firmware=unvalidated", trainer.describe(listOf(full), FirmwareInfo.Gen.SWI69))
     }
 
+    @Test fun `town kilometres costing more than open road ones land in the aux term, not a negative aero`() {
+        // Gross consumption with an aux of 300 kWh/100 km × km/h (3 kW): the 2026-11-01 car fit
+        // without that term read the slow kilometres' extra cost as aero=-0,000289 and refused.
+        val trip = syntheticTrip { speed, temp -> consumption(speed, temp) + 300.0 / speed }
+        val model = ready(trainer.fit(listOf(trip), evidence))
+
+        assertEquals(10.0, model.rollingKwhPer100Km, 1e-4)
+        assertEquals(0.0005, model.aeroKwhPer100KmPerSpeedSquared, 1e-8)
+        assertEquals(300.0, model.auxKwhPer100KmTimesKmh, 1e-2)
+        assertEquals(0.10, model.thermalKwhPer100KmPerDegree, 1e-5)
+        assertEquals(SYNTHETIC_WINDOWS, trainer.windows(listOf(storedTrip(trip.samples, swi68())), FirmwareInfo.Gen.SWI68).size)
+    }
+
+    @Test fun `a term that only fits with a negative sign is left out rather than believed`() {
+        // Colder days were the cheaper ones: no thermal term, instead of no model.
+        val trip = syntheticTrip { speed, temp -> 10.0 + 0.0005 * speed * speed - 0.1 * kotlin.math.abs(temp - 20.0) + 0.5 }
+        val model = ready(trainer.fit(listOf(trip), evidence))
+
+        assertEquals(0.0, model.thermalKwhPer100KmPerDegree, 0.0)
+        assertTrue(model.aeroKwhPer100KmPerSpeedSquared > 0.0)
+    }
+
     @Test fun `SWI68 trains on the pack pair rather than refusing`() {
         // The car this project runs on has no validated power conversion and will not get one
         // from a desk. Refusing to train left the speed comparison permanently empty; the model
@@ -172,7 +194,11 @@ class EnergyModelTest {
     }
 
     /** One steady kilometre per speed and temperature, each after a hole that ends a window. */
-    private fun syntheticTrip(): StoredTrip {
+    private fun swi68() = BatteryPowerEvidence(FirmwareInfo.Gen.SWI68, BatteryPowerEvidence.PACK_PAIR_DERIVED_V2)
+
+    private fun syntheticTrip(
+        consumption: (Double, Double) -> Double = ::consumption,
+    ): StoredTrip {
         var atMs = 0L
         val samples = buildList {
             repeat(2) { repetition ->
@@ -182,7 +208,7 @@ class EnergyModelTest {
                         val intervals = kotlin.math.ceil(3_600.0 / (5.0 * shiftedSpeed)).toInt()
                         // One interval spare, so float rounding cannot leave the window short.
                         repeat(intervals + 2) {
-                            add(sample(atMs, shiftedSpeed, temp))
+                            add(sample(atMs, shiftedSpeed, temp, consumption))
                             atMs += 5_000L
                         }
                         atMs += 600_000L
@@ -212,7 +238,12 @@ class EnergyModelTest {
         samples = samples,
     )
 
-    private fun sample(atMs: Long, speedKmh: Double, tempCelsius: Double): TripSample {
+    private fun sample(
+        atMs: Long,
+        speedKmh: Double,
+        tempCelsius: Double,
+        consumption: (Double, Double) -> Double = ::consumption,
+    ): TripSample {
         val powerKw = consumption(speedKmh, tempCelsius) * speedKmh / 100.0
         return TripSample(
             atMs = atMs,

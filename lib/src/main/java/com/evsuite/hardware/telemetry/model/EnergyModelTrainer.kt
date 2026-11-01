@@ -6,7 +6,6 @@ import com.evsuite.hardware.FirmwareInfo
 import com.evsuite.hardware.telemetry.StoredTrip
 import com.evsuite.hardware.telemetry.UnavailableReason
 import java.util.Locale
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.sqrt
 
@@ -57,21 +56,28 @@ class EnergyModelTrainer(
         return "used=$used/${trips.size} " + fitExplained(trips, evidence).second
     }
 
+    /**
+     * The fit's own training points, `[km/h, °C, kWh/100 km]`, so a refusal can be replayed off
+     * the car as [SocConsumptionFitter.segments] lets the charge model's be. Diagnostic only.
+     */
+    fun windows(trips: List<StoredTrip>, firmware: FirmwareInfo.Gen): List<DoubleArray> {
+        if (firmware == FirmwareInfo.Gen.UNKNOWN) return emptyList()
+        val evidence = CarPropertyEvidence.powerModelEvidence(firmware) ?: return emptyList()
+        val out = ArrayList<DoubleArray>()
+        forEachUsable(trips, evidence) { speed, temp, consumption -> out.add(doubleArrayOf(speed, temp, consumption)) }
+        return out
+    }
+
     /** The fit, and the line [describe] prints for it. */
     private fun fitExplained(
         trips: List<StoredTrip>,
         evidence: BatteryPowerEvidence,
     ): Pair<EnergyModelTrainingResult, String> {
-        // Both fits are accumulated in the one pass; the temperature span picks which to solve.
-        val equations = LeastSquares()
-        val narrowed = LeastSquares(2)
         var minSpeed = Double.POSITIVE_INFINITY
         var maxSpeed = Double.NEGATIVE_INFINITY
         var minTemp = Double.POSITIVE_INFINITY
         var maxTemp = Double.NEGATIVE_INFINITY
-        val count = forEachUsable(trips, evidence) { speed, temp, consumption ->
-            equations.add(speed, temp, consumption)
-            narrowed.add(speed, temp, consumption)
+        val count = forEachUsable(trips, evidence) { speed, temp, _ ->
             minSpeed = minOf(minSpeed, speed)
             maxSpeed = maxOf(maxSpeed, speed)
             minTemp = minOf(minTemp, temp)
@@ -85,34 +91,64 @@ class EnergyModelTrainer(
             return EnergyModelTrainingResult.Unavailable(UnavailableReason.INSUFFICIENT_SAMPLES) to gates
         }
 
-        // As in SocConsumptionFitter: one kind of weather is no evidence about weather, so two
-        // coefficients are fitted and the narrow envelope refuses the cold instead of guessing.
-        val features = if (maxTemp - minTemp >= MIN_TEMPERATURE_SPAN_CELSIUS) 3 else 2
-        val coefficients = (if (features == 3) equations else narrowed).solve()
-            ?: return EnergyModelTrainingResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED) to
-                "$gates features=$features fit=refused(singular)"
-        val rolling = coefficients[0]
-        val aero = coefficients[1]
-        val thermal = if (features == 3) coefficients[2] else 0.0
-        val solved = String.format(
-            Locale.ROOT, "%s features=%d rolling=%.2f aero=%.6f thermal=%.3f",
-            gates, features, rolling, aero, thermal,
+        // As in SocConsumptionFitter: one kind of weather is no evidence about weather, so the
+        // thermal term is not offered and the narrow envelope refuses the cold instead of guessing.
+        // Every coefficient is physical, so the auxiliary and thermal terms are each tried in and
+        // out and the least-error fit with no negative coefficient wins. Gross consumption counts
+        // the energy of pulling away and not the regeneration that returns it, so town kilometres
+        // cost more than open-road ones: without the ÷ speed term, the car's 2026-11-01 fit read
+        // that as a negative aero and refused.
+        val weather = maxTemp - minTemp >= MIN_TEMPERATURE_SPAN_CELSIUS
+        val optional = listOfNotNull(
+            LeastSquares.Term.INVERSE_SPEED,
+            LeastSquares.Term.TEMPERATURE.takeIf { weather },
         )
-        if (rolling <= 0.0 || aero < 0.0 || thermal < 0.0 ||
-            coefficients.any { !it.isFinite() }
-        ) {
-            return EnergyModelTrainingResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED) to
-                "$solved fit=refused(coefficients)"
+        val candidates = optional.indices.fold(listOf(emptyList<LeastSquares.Term>())) { sets, at ->
+            sets + sets.map { it + optional[at] }
+        }.sortedByDescending { it.size }
+        var best: Pair<DoubleArray, List<LeastSquares.Term>>? = null
+        var bestError = Double.POSITIVE_INFINITY
+        // Fullest first, so the refusal left is the base model's: the one a reader can act on.
+        var refusal = "singular"
+        for (extra in candidates) {
+            val terms = BASE_TERMS + extra
+            val equations = LeastSquares(terms)
+            forEachUsable(trips, evidence) { speed, temp, consumption -> equations.add(speed, temp, consumption) }
+            val coefficients = equations.solve()
+            val refused = when {
+                coefficients == null -> "singular"
+                coefficients.any { !it.isFinite() } -> "nonfinite"
+                coefficients[0] <= 0.0 -> "rolling"
+                else -> terms.indices.drop(1).firstOrNull { coefficients[it] < 0.0 }?.let { name(terms[it]) }
+            }
+            if (refused != null) {
+                refusal = refused
+                continue
+            }
+            var squaredError = 0.0
+            forEachUsable(trips, evidence) { speed, temp, consumption ->
+                val error = consumption - predict(terms, checkNotNull(coefficients), speed, temp)
+                squaredError += error * error
+            }
+            if (squaredError < bestError) {
+                bestError = squaredError
+                best = checkNotNull(coefficients) to terms
+            }
         }
+        val (coefficients, terms) = best ?: return EnergyModelTrainingResult.Unavailable(
+            UnavailableReason.MODEL_NOT_TRAINED,
+        ) to "$gates fit=refused($refusal)"
+        fun coefficient(term: LeastSquares.Term) = terms.indexOf(term).let { if (it < 0) 0.0 else coefficients[it] }
+        val rolling = coefficients[0]
+        val aero = coefficient(LeastSquares.Term.SPEED_SQUARED)
+        val aux = coefficient(LeastSquares.Term.INVERSE_SPEED)
+        val thermal = coefficient(LeastSquares.Term.TEMPERATURE)
+        val solved = String.format(
+            Locale.ROOT, "%s features=%d rolling=%.2f aero=%.6f aux=%.1f thermal=%.3f",
+            gates, terms.size, rolling, aero, aux, thermal,
+        )
 
-        var squaredError = 0.0
-        val residualCount = forEachUsable(trips, evidence) { speed, temp, consumption ->
-            val prediction = rolling + aero * speed * speed +
-                thermal * abs(temp - EnergyModel.COMFORT_TEMP_CELSIUS)
-            val error = consumption - prediction
-            squaredError += error * error
-        }
-        val rmse = sqrt(squaredError / residualCount)
+        val rmse = sqrt(bestError / count)
         val residual = String.format(Locale.ROOT, "rmse=%.2f/%.1f", rmse, maxResidualRmse)
         if (!rmse.isFinite() || rmse > maxResidualRmse) {
             return EnergyModelTrainingResult.Unavailable(UnavailableReason.MODEL_NOT_TRAINED) to
@@ -124,6 +160,7 @@ class EnergyModelTrainer(
             rollingKwhPer100Km = rolling,
             aeroKwhPer100KmPerSpeedSquared = aero,
             thermalKwhPer100KmPerDegree = thermal,
+            auxKwhPer100KmTimesKmh = aux,
             residualRmseKwhPer100Km = rmse,
             sampleCount = count,
             envelope = EnergyModelEnvelope(minSpeed, maxSpeed, minTemp, maxTemp),
@@ -207,6 +244,16 @@ class EnergyModelTrainer(
         return accepted
     }
 
+    private fun predict(terms: List<LeastSquares.Term>, coefficients: DoubleArray, speed: Double, temp: Double) =
+        terms.indices.sumOf { coefficients[it] * LeastSquares.value(terms[it], speed, temp) }
+
+    private fun name(term: LeastSquares.Term) = when (term) {
+        LeastSquares.Term.CONSTANT -> "rolling"
+        LeastSquares.Term.SPEED_SQUARED -> "aero"
+        LeastSquares.Term.INVERSE_SPEED -> "aux"
+        LeastSquares.Term.TEMPERATURE -> "thermal"
+    }
+
     private fun mean(a: Float?, b: Float?): Double? {
         val first = a?.toDouble()?.takeIf { it.isFinite() } ?: return null
         val second = b?.toDouble()?.takeIf { it.isFinite() } ?: return null
@@ -214,6 +261,7 @@ class EnergyModelTrainer(
     }
 
     companion object {
+        private val BASE_TERMS = listOf(LeastSquares.Term.CONSTANT, LeastSquares.Term.SPEED_SQUARED)
         /** Kilometre windows, not samples: a dozen, as SocConsumptionFitter asks segments. */
         const val MIN_TRAINING_SAMPLES = 12
         const val MAX_TRAINING_SAMPLES = 20_000
