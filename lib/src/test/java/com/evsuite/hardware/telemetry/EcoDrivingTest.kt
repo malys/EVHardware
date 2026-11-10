@@ -6,6 +6,7 @@ import com.evsuite.hardware.telemetry.model.EnergyModelEnvelope
 import com.evsuite.hardware.telemetry.model.SocConsumptionFitter
 import com.evsuite.hardware.telemetry.model.SocConsumptionModel
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -123,8 +124,32 @@ class EcoDrivingTest {
 
     @Test
     fun `a charge drop below the gauge's own step is refused`() {
-        val result = verdict(trip = trip(endSoc = 89f))
+        val result = verdict(trip = trip(endSoc = 90f))
         assertEquals(UnavailableReason.INSUFFICIENT_SAMPLES, result.band.reason)
+    }
+
+    @Test
+    fun `a drop under the fitter's floor is judged when the gauge's step cannot move it`() {
+        // 1 % over 50 km: a tenth of a percent is 0.2 per 100 km, inside the 0.49 margin.
+        val result = verdict(trip = trip(endSoc = 89f))
+        assertEquals(EcoBand.BETTER, result.band.value)
+    }
+
+    @Test
+    fun `one step of the gauge read as floats is still a drop`() {
+        // 75.6 - 75.5 in floats is 0.0999996, under the step it is.
+        val result = verdict(
+            trip = trip(startSoc = 75.6f, endSoc = 75.5f, distanceKm = 200.0, durationMs = 7_200_000L),
+        )
+        assertNotEquals(UnavailableReason.INSUFFICIENT_SAMPLES, result.band.reason)
+    }
+
+    @Test
+    fun `a drive the gauge's step could carry across the band is refused`() {
+        // 2 km at 100 km/h: one step is 5 per 100 km, ten times the 0.49 margin.
+        val result = verdict(trip = trip(endSoc = 89.6f, distanceKm = 2.0, durationMs = 72_000L))
+        assertEquals(UnavailableReason.INSUFFICIENT_SAMPLES, result.band.reason)
+        assertEquals(100.0, result.meanSpeedKmh!!, 1e-9)
     }
 
     @Test

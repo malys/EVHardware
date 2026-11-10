@@ -192,10 +192,11 @@ class EcoDrivingMonitor(
         ) {
             return refuse(UnavailableReason.INSUFFICIENT_SAMPLES, advice)
         }
-        // The gauge moves in whole percent. Below the fitter's own floor the quantisation is
-        // larger than the thing being measured.
+        // Not one step of the gauge: nothing was measured. A larger drop is judged below, against
+        // how much the gauge's step can move the rate on this distance. Half a step, because the
+        // gauge arrives as a float: 75.6 - 75.5 is 0.0999996.
         val drop = start - end
-        if (drop < SocConsumptionFitter.MIN_SOC_DROP_PERCENT) {
+        if (drop < PlanDrift.SOC_RESOLUTION_PERCENT / 2) {
             return refuse(UnavailableReason.INSUFFICIENT_SAMPLES, advice)
         }
 
@@ -215,6 +216,13 @@ class EcoDrivingMonitor(
         // residuals wide, so TYPICAL covered 95 % of drives and the verdict almost never said
         // anything else. One residual either side leaves about a third of drives outside it.
         val band = (expected.uncertainty ?: 0.0) * VERDICT_BAND_SHARE
+        // The gauge steps a tenth of a percent, so the rate carries one step over the distance.
+        // The fitter's 2 % floor made sense for a whole-percent gauge; on SWI68 it refused 19
+        // town drives out of 20 whose rounding was a tenth of the margin they were judged by.
+        // Refused only when that rounding could move the drive across the band on its own.
+        if (PlanDrift.SOC_RESOLUTION_PERCENT / distanceKm * PER_100_KM > band) {
+            return refuse(UnavailableReason.INSUFFICIENT_SAMPLES, advice, meanSpeedKmh)
+        }
         val verdict = when {
             observed < expectedValue - band -> EcoBand.BETTER
             observed > expectedValue + band -> EcoBand.WORSE

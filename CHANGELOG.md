@@ -23,6 +23,10 @@ All notable changes to this project are documented here. Format follows
   `COUNTER_MIN_SOC_DROP_PERCENT`) and the estimate three windows instead of six; the band is the
   median's, over √n. The car's 20 trips to 2026-11-01 held two discharges past 25 points, so the
   old gates left the screen on "0 / 6".
+- The eco verdict judges town drives. It refused any drive under the fitter's 2 % drop, a floor
+  made for a whole-percent gauge; it now refuses only a drop under one gauge step, or a drive
+  so short that one step (`PlanDrift.SOC_RESOLUTION_PERCENT`, 0.1) could carry the rate across
+  the verdict's own margin. The car's bundle of 2026-11-07 had 19 of 20 drives refused.
 
 ## [1.20.0] - 2026-10-31
 
