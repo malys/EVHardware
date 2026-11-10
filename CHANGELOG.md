@@ -27,6 +27,9 @@ All notable changes to this project are documented here. Format follows
   made for a whole-percent gauge; it now refuses only a drop under one gauge step, or a drive
   so short that one step (`PlanDrift.SOC_RESOLUTION_PERCENT`, 0.1) could carry the rate across
   the verdict's own margin. The car's bundle of 2026-11-07 had 19 of 20 drives refused.
+- Tyre pressures read on SWI68. The standard `TIRE_PRESSURE` is not published there, so
+  `getTirePressureKpa` falls back to the vendor int kPa at `0x21401553` + wheel (FL, FR, RL,
+  RR), the block MG4Dash reads on every generation; 0 and values outside 50..600 kPa stay null.
 
 ## [1.20.0] - 2026-10-31
 

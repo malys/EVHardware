@@ -404,6 +404,11 @@ object EVHardware {
     private const val PROP_ODOMETER = 0x11600204                     // km
     private const val PROP_CABIN_TEMP = 0x15600502                   // °C, zoned
     private const val PROP_TIRE_PRESSURE = 0x17600309                // kPa, per wheel
+    // Vendor int kPa, one id per wheel from FL: MG4Dash reads it on every generation. The block
+    // is the car's own: its voice service listens to the tyre states at 0x21401557 onwards.
+    private const val PROP_TPMS_PRESSURE_FL = 0x21401553
+    private const val MIN_TPMS_KPA = 50
+    private const val MAX_TPMS_KPA = 600
     private const val PROP_EV_BATTERY_PCT_SWI68 = 0x2160F404         // vendor float %
     private const val PROP_EV_RANGE_KM_SWI68 = 0x2140F41C            // vendor int km
     private const val PROP_BMS_PACK_VOLT_SWI68 = 0x2160F406          // vendor float V
@@ -522,9 +527,13 @@ object EVHardware {
         FRONT_LEFT(0x01), FRONT_RIGHT(0x02), REAR_LEFT(0x04), REAR_RIGHT(0x08)
     }
 
+    /** The standard property first; SWI68 does not publish it, so the vendor one after it. */
     fun getTirePressureKpa(wheel: Wheel): Float? = supportedTelemetryRead {
         getFloatPropertyCPM(PROP_TIRE_PRESSURE, wheel.area)
             ?.takeIf { it.isFinite() && it in 0f..1_000f }
+            ?: probeVendorInt(PROP_TPMS_PRESSURE_FL + wheel.ordinal)
+                // Zero is a sensor not yet heard from, not a flat tyre: the same bounds as MG4Dash.
+                ?.takeIf { it in MIN_TPMS_KPA..MAX_TPMS_KPA }?.toFloat()
     }
 
     /** SWI68-only fallback; other generations must use the vendor charging service. */
