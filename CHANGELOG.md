@@ -13,6 +13,8 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- `CrashLogger.read(context, maxAgeMs)`: a report older than the limit reads as none, so an old
+  crash stops heading every diagnostic bundle. The default is unbounded, as before.
 - The power model no longer refuses when town driving makes its kilometres dearer than open-road
   ones. It gains the charge model's `÷ speed` term (`EnergyModel.auxKwhPer100KmTimesKmh`, read 0
   from models stored before it), and each optional term is tried in and out: a term that only

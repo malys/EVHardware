@@ -69,8 +69,14 @@ object CrashLogger {
 
     fun hasReport(context: Context): Boolean = file(context).exists()
 
-    fun read(context: Context): String? =
-        file(context).takeIf { it.exists() }?.runCatching { readText() }?.getOrNull()
+    /**
+     * The stored report, or null when none exists or it is older than [maxAgeMs]. The file is
+     * kept until [clear] is called, so a crash long since fixed would otherwise head every
+     * diagnostic bundle for as long as the app lives.
+     */
+    fun read(context: Context, maxAgeMs: Long = Long.MAX_VALUE): String? =
+        file(context).takeIf { it.exists() && System.currentTimeMillis() - it.lastModified() <= maxAgeMs }
+            ?.runCatching { readText() }?.getOrNull()
 
     fun clear(context: Context) {
         runCatching { file(context).delete() }

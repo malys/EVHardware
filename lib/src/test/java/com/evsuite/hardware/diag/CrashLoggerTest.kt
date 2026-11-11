@@ -55,6 +55,19 @@ class CrashLoggerTest {
     }
 
     @Test
+    fun `a report older than the age limit is not read`() {
+        val context = context()
+        AppLogger.clear()
+        CrashLogger.write(context, "EVTest", Thread.currentThread(), RuntimeException("old"))
+        val file = java.io.File(context.filesDir, "last_crash.txt")
+        file.setLastModified(System.currentTimeMillis() - 10_000)
+
+        assertTrue(CrashLogger.read(context, maxAgeMs = 60_000) != null)
+        assertEquals(null, CrashLogger.read(context, maxAgeMs = 5_000))
+        assertTrue("an unbounded read still sees it", CrashLogger.read(context) != null)
+    }
+
+    @Test
     fun `read and clear track whether a report exists`() {
         val context = context()
         AppLogger.clear()
