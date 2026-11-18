@@ -63,6 +63,12 @@ object AppLogger {
     fun w(tag: String, msg: String) { add(tag, Level.WARN,  msg); Log.w(tag, msg) }
     fun e(tag: String, msg: String) { add(tag, Level.ERROR, msg); Log.e(tag, msg) }
 
+    /**
+     * Into the buffer only, not logcat: for an app that already has its own logger, so its
+     * lines reach the console and a crash report's "Recent log" without being printed twice.
+     */
+    fun record(tag: String, level: Level, msg: String) = add(tag, level, msg)
+
     fun clear() {
         synchronized(lock) {
             buffer.clear()
@@ -93,8 +99,11 @@ object AppLogger {
     // ---- Internal ----
 
     private fun add(tag: String, level: Level, msg: String) {
-        val entry = Entry(sdf.format(Date()), tag, level, msg)
+        val now = Date()
         synchronized(lock) {
+            // Formatted under the lock: SimpleDateFormat is not thread-safe, and every
+            // thread of the app logs through here.
+            val entry = Entry(sdf.format(now), tag, level, msg)
             // while, not if: the cap holds even under concurrent adds.
             while (buffer.size >= MAX_ENTRIES) buffer.removeFirst()
             buffer.addLast(entry)
