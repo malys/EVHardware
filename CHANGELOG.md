@@ -6,8 +6,12 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.21.0] - 2026-11-19
+
 ### Added
 
+- `AppLogger.record`: fills the in-app log buffer without writing to logcat, and the buffer's
+  timestamps are formatted thread-safely.
 - `EnergyModelTrainer.windows`: the power fit's training kilometres, `[km/h, °C, kWh/100 km]`,
   so a refusal can be replayed off the car.
 
