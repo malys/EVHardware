@@ -68,7 +68,8 @@ class FirmwareSupportTest {
         ActionType.SET_BLUETOOTH,
         ActionType.SET_WIFI,
         ActionType.SET_VARIABLE_FLAG,
-        ActionType.SET_VARIABLE_NUMBER
+        ActionType.SET_VARIABLE_NUMBER,
+        ActionType.SET_DRIVER
     )
 
     @Test

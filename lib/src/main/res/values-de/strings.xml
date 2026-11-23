@@ -204,6 +204,8 @@
     <string name="cond_variable_number">Variable (Zahl)</string>
     <string name="act_set_variable_flag">Variable setzen (wahr/falsch)</string>
     <string name="act_set_variable_number">Variable setzen (Zahl)</string>
+    <string name="act_set_driver">Fahrer festlegen</string>
+    <string name="act_set_driver_hint">Name des Fahrers, z. B. Alice</string>
     <string name="act_media_control">Mediensteuerung</string>
     <string name="media_play_pause">Wiedergabe / Pause</string>
     <string name="media_next">Nächster Titel</string>

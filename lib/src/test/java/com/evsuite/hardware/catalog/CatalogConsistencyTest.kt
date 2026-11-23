@@ -72,7 +72,8 @@ class CatalogConsistencyTest {
             ActionType.DELAY, ActionType.SEND_SMS,
             ActionType.ENABLE_RULE, ActionType.DISABLE_RULE, ActionType.MEDIA_CONTROL,
             ActionType.SET_BLUETOOTH, ActionType.SET_WIFI,
-            ActionType.SET_VARIABLE_FLAG, ActionType.SET_VARIABLE_NUMBER
+            ActionType.SET_VARIABLE_FLAG, ActionType.SET_VARIABLE_NUMBER,
+            ActionType.SET_DRIVER
         )
 
         ActionType.entries.filterNot { it in localOnly }.forEach { type ->
@@ -88,7 +89,8 @@ class CatalogConsistencyTest {
             ActionType.DELAY, ActionType.SEND_SMS,
             ActionType.ENABLE_RULE, ActionType.DISABLE_RULE, ActionType.MEDIA_CONTROL,
             ActionType.SET_BLUETOOTH, ActionType.SET_WIFI,
-            ActionType.SET_VARIABLE_FLAG, ActionType.SET_VARIABLE_NUMBER
+            ActionType.SET_VARIABLE_FLAG, ActionType.SET_VARIABLE_NUMBER,
+            ActionType.SET_DRIVER
         ).forEach { type ->
             assertTrue(
                 "${type.name} ne touche pas le véhicule et ne doit pas avoir de bridgeAction",

@@ -787,6 +787,19 @@ enum class ActionType(
         ValueSpec(ValueKind.VARIABLE_NUMBER), bridgeAction = null
     ),
     /**
+     * Names who is driving this ignition cycle, in `text` — typically from a rule on the
+     * driver's phone connecting on hands-free.
+     *
+     * Unlike a variable, this one is meant to leave the app: EVTasker publishes it to the
+     * suite's other apps (signature-protected), so a dashboard can file a trip under a person.
+     * Nothing is written to the vehicle, so no firmware annotation, no bridge action and no
+     * speed gate. Forgotten at every ignition: no rule this cycle means "unknown driver".
+     */
+    SET_DRIVER(
+        R.string.act_set_driver, ActionGroup.SYSTEM,
+        ValueSpec(ValueKind.TEXT, hintRes = R.string.act_set_driver_hint), bridgeAction = null
+    ),
+    /**
      * Play/pause, next or previous — sent to the source that is actually playing.
      *
      * Not a media key, which is the implementation this started as. The car publishes one

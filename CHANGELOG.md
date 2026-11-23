@@ -6,6 +6,13 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- `ActionType.SET_DRIVER`: names who is driving this ignition cycle (free text). Writes
+  nothing to the vehicle; EVTasker publishes it to the suite's other apps (CP-098).
+- `DriverContract`: authority, permission, columns, name normalisation and the trip-window
+  rule shared by EVTasker (publisher) and EVChargePilot (reader).
+
 ## [1.21.0] - 2026-11-19
 
 ### Added

@@ -250,6 +250,7 @@ A reading the car does not answer makes the rule **not evaluable**: it does not 
 | Disable a rule | `DISABLE_RULE` | one of your rules | — | any |
 | Set a variable (true/false) | `SET_VARIABLE_FLAG` | a variable name, true or false | — | any |
 | Set a variable (number) | `SET_VARIABLE_NUMBER` | a variable name and a number | — | any |
+| Set the driver | `SET_DRIVER` | free text | — | any |
 | Media control | `MEDIA_CONTROL` | Play / pause, Next track, Previous track | — | any |
 | Bluetooth | `SET_BLUETOOTH` | on / off | — | any |
 | Wi-Fi | `SET_WIFI` | on / off | — | any |
