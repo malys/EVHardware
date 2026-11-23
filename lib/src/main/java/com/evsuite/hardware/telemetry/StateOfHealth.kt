@@ -17,6 +17,14 @@ enum class SohEnergySource {
      * sign convention still unproven on any generation.
      */
     PACK_PAIR_INTEGRAL,
+
+    /**
+     * The same pack-pair power, but paired with the charge lost over the very same watched
+     * seconds ([BatteryLedgerEntry.observedEnergyKwh]), as MG4Link measures. A missed drive or a
+     * night parked adds nothing to either half, so no coverage check refuses the window, and a
+     * window may run across charges, which neither half counts.
+     */
+    OBSERVED_PAIR,
 }
 
 /**
@@ -96,7 +104,7 @@ class StateOfHealthEstimator(
         if (!usableCapacityKwhWhenNew.isFinite() || usableCapacityKwhWhenNew <= 0.0) {
             return StateOfHealthResult.Unavailable(UnavailableReason.INSUFFICIENT_SAMPLES)
         }
-        val all = windows(entries)
+        val all = windows(entries) + observedWindows(entries)
         val cold = all.count { it.isColderThan(minTempCelsius) }
         val usable = all.filterNot { it.isColderThan(minTempCelsius) }
         if (usable.isEmpty()) {
@@ -167,6 +175,36 @@ class StateOfHealthEstimator(
             previous = entry
         }
         measure(anchor, previous)?.let(result::add)
+        return result
+    }
+
+    /**
+     * Consecutive stretches of the observed pair, each closed once [minSocDropPercent] points of
+     * watched charge have been lost, newest last.
+     *
+     * Not bounded by charges: the pair counts no charging second, so a stretch that crosses one
+     * measures only the driving and the watched standing on either side of it.
+     */
+    internal fun observedWindows(entries: List<BatteryLedgerEntry>): List<SohWindow> {
+        val ordered = entries
+            .filter { it.observedEnergyKwh != null && it.observedSocDropPercent != null }
+            .sortedBy { it.atMs }
+        if (ordered.size < 2) return emptyList()
+        val result = ArrayList<SohWindow>()
+        var anchor = ordered.first()
+        for (index in 1 until ordered.size) {
+            val entry = ordered[index]
+            val drop = checkNotNull(entry.observedSocDropPercent) - checkNotNull(anchor.observedSocDropPercent)
+            if (drop < minSocDropPercent) continue
+            val net = checkNotNull(entry.observedEnergyKwh) - checkNotNull(anchor.observedEnergyKwh)
+            if (net > 0.0) {
+                result += SohWindow(
+                    anchor.atMs, entry.atMs, drop, net, SohEnergySource.OBSERVED_PAIR,
+                    meanTemp(anchor, entry), distanceOf(anchor, entry),
+                )
+            }
+            anchor = entry
+        }
         return result
     }
 
@@ -302,6 +340,8 @@ class StateOfHealthEstimator(
             // An integral of a float property has no step of its own; what it can be wrong about
             // is coverage, and the odometer guard is what refuses a window for that.
             SohEnergySource.PACK_PAIR_INTEGRAL -> 0.0
+            // Same integral; coverage cannot be wrong, since a missed second counts for neither half.
+            SohEnergySource.OBSERVED_PAIR -> 0.0
         }
 
         const val MIN_TREND_WINDOWS = 12
@@ -314,6 +354,9 @@ class StateOfHealthEstimator(
 
         private val SOURCE_PREFERENCE = listOf(
             SohEnergySource.VEHICLE_COUNTERS,
+            // Ahead of the charge-to-charge integral: same power, with the charge it is divided
+            // by taken from the same seconds instead of across the parked hours it never saw.
+            SohEnergySource.OBSERVED_PAIR,
             SohEnergySource.PACK_PAIR_INTEGRAL,
         )
 

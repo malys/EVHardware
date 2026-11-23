@@ -3,6 +3,7 @@ package com.evsuite.hardware.telemetry
 import com.google.gson.Gson
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.math.abs
 
 /**
  * One moment in the pack's life, including the ones a trip never sees.
@@ -37,6 +38,13 @@ data class BatteryLedgerEntry(
     val packEnergyKwh: Double? = null,
     /** Distance this app actually integrated, cumulative, beside [odometerKm] which is the car's. */
     val integratedDistanceKm: Double? = null,
+    /**
+     * Pack energy and charge lost, cumulative, over the very same watched seconds (MG4Link's
+     * measurement): an interval counts for both or for neither, so a drive the app missed, or a
+     * night parked, adds nothing to either half. Charging is left out of both.
+     */
+    val observedEnergyKwh: Double? = null,
+    val observedSocDropPercent: Double? = null,
     val chargingStatus: Int? = null,
     val chargePortConnected: Boolean? = null,
     val parked: Boolean? = null,
@@ -160,8 +168,11 @@ class BatteryLedgerRecorder(
     private var lastEntry: BatteryLedgerEntry? = null
     private var packEnergyKwh: Double = 0.0
     private var integratedDistanceKm: Double = 0.0
+    private var observedEnergyKwh: Double = 0.0
+    private var observedSocDropPercent: Double = 0.0
     private var hasPowerInterval = false
     private var hasSpeedInterval = false
+    private var hasObservedInterval = false
     private var seeded = false
 
     /** @return true when this sample earned an entry and it was written. */
@@ -187,6 +198,8 @@ class BatteryLedgerRecorder(
             vehicleRegeneratedKwh = snapshot.vehicleRegeneratedKwh,
             packEnergyKwh = packEnergyKwh.takeIf { hasPowerInterval },
             integratedDistanceKm = integratedDistanceKm.takeIf { hasSpeedInterval },
+            observedEnergyKwh = observedEnergyKwh.takeIf { hasObservedInterval },
+            observedSocDropPercent = observedSocDropPercent.takeIf { hasObservedInterval },
             chargingStatus = snapshot.chargingStatus,
             chargePortConnected = snapshot.chargePortConnected,
             parked = snapshot.parked,
@@ -205,6 +218,13 @@ class BatteryLedgerRecorder(
         integratedDistanceKm = previous.integratedDistanceKm ?: 0.0
         hasPowerInterval = previous.packEnergyKwh != null
         hasSpeedInterval = previous.integratedDistanceKm != null
+        // Both halves or neither: one without the other would pair energy and charge from
+        // different seconds, which is the very error this pair exists to avoid.
+        if (previous.observedEnergyKwh != null && previous.observedSocDropPercent != null) {
+            observedEnergyKwh = previous.observedEnergyKwh
+            observedSocDropPercent = previous.observedSocDropPercent
+            hasObservedInterval = true
+        }
     }
 
     /** Trapezoid over adjacent samples only, with the same five-second bound trips use. */
@@ -227,13 +247,42 @@ class BatteryLedgerRecorder(
             hasSpeedInterval = true
             integratedDistanceKm += (previousSpeed + speed) / 2.0 * hours
         }
+        observe(previous, snapshot, hours)
     }
+
+    /** One interval into the observed pair, or into neither half. */
+    private fun observe(previous: EnergySnapshot, snapshot: EnergySnapshot, hours: Double) {
+        val previousPower = previous.batteryPowerKw ?: return
+        val power = snapshot.batteryPowerKw ?: return
+        val previousSoc = previous.socPercent?.takeIf { it.isFinite() } ?: return
+        val soc = snapshot.socPercent?.takeIf { it.isFinite() } ?: return
+        val drop = (previousSoc - soc).toDouble()
+        // No pack moves this far in five seconds: a misread gauge, not a drive.
+        if (abs(drop) > MAX_OBSERVED_SOC_STEP_PERCENT) return
+        val energy = (previousPower + power) / 2.0 * hours
+        // Energy into the pack is regeneration only while the car is known to move. Standing
+        // still, or with nothing to say whether it moves, it is a charge, which neither half counts.
+        if (energy < 0.0 && !moving(previous, snapshot)) return
+        hasObservedInterval = true
+        observedEnergyKwh += energy
+        observedSocDropPercent += drop
+    }
+
+    private fun moving(previous: EnergySnapshot, snapshot: EnergySnapshot): Boolean =
+        previous.parked == false || snapshot.parked == false ||
+            maxOf(previous.speedKmh ?: 0f, snapshot.speedKmh ?: 0f) > MOVING_KMH
 
     companion object {
         /** One point of charge is the smallest step this car's gauge actually takes. */
         const val SOC_STEP_PERCENT = 1.0f
         const val QUIET_INTERVAL_MS = 15 * 60 * 1000L
         const val MAX_SAMPLE_GAP_MS = 5_000L
+
+        /** A gauge jump beyond this between adjacent samples is a misread, as MG4Link treats it. */
+        const val MAX_OBSERVED_SOC_STEP_PERCENT = 2.0
+
+        /** Faster than this, energy into the pack is regeneration and not a charge. */
+        const val MOVING_KMH = 1f
 
         /** 2025-01-01T00:00Z: no reading of this app can be older. Seen by MG4Control on the car. */
         const val MIN_PLAUSIBLE_CLOCK_MS = 1_735_689_600_000L

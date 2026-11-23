@@ -8,6 +8,13 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Battery health: `SohEnergySource.OBSERVED_PAIR`, MG4Link's measurement. The ledger now keeps
+  `observedEnergyKwh` and `observedSocDropPercent`, pack energy and charge lost over the very same
+  watched seconds (adjacent samples ≤ 5 s, charging left out, a gauge jump over 2 points refused).
+  A window closes once 15 watched points are lost, across charges if need be, with no odometer
+  coverage check, so a missed drive or a night parked no longer refuses or biases it. Preferred
+  over `PACK_PAIR_INTEGRAL`, after the car's own counters. On the car the estimate had produced
+  no window in 11 charges.
 - `ActionType.SET_DRIVER`: names who is driving this ignition cycle (free text). Writes
   nothing to the vehicle; EVTasker publishes it to the suite's other apps (CP-098).
 - `DriverContract`: authority, permission, columns, name normalisation and the trip-window

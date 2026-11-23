@@ -133,6 +133,67 @@ class BatteryLedgerTest {
         assertNotNull(store.read().single().socPercent)
     }
 
+    @Test fun `the observed pair takes energy and charge from the same watched seconds`() {
+        val store = BatteryLedgerStore(File(tempDirectory(), BatteryLedgerStore.FILE_NAME))
+        val recorder = BatteryLedgerRecorder(store)
+
+        recorder.observe(snapshot(atMs = 0L, soc = 80.0f, powerKw = 36f, speedKmh = 72f))
+        recorder.observe(snapshot(atMs = 1_000L, soc = 79.9f, powerKw = 36f, speedKmh = 72f))
+        // Unwatched: the charge fell four points while the app saw nothing. Neither half moves.
+        recorder.observe(snapshot(atMs = 60_000L, soc = 75.9f, powerKw = 36f, speedKmh = 72f))
+        // A point lost in one watched second earns the entry this test reads.
+        recorder.observe(snapshot(atMs = 61_000L, soc = 74.8f, powerKw = 36f, speedKmh = 72f))
+
+        val last = store.read().last()
+        assertEquals(0.02, last.observedEnergyKwh!!, 1e-9)
+        assertEquals(1.2, last.observedSocDropPercent!!, 1e-4)
+        // The charge-to-charge integral, by contrast, will be divided by all 5.2 points.
+        assertEquals(0.02, last.packEnergyKwh!!, 1e-9)
+    }
+
+    @Test fun `a charge counts for neither half and regeneration counts for both`() {
+        val store = BatteryLedgerStore(File(tempDirectory(), BatteryLedgerStore.FILE_NAME))
+        val recorder = BatteryLedgerRecorder(store)
+
+        // Standing still with energy going in: a charge.
+        recorder.observe(snapshot(atMs = 0L, soc = 50f, powerKw = -36f, speedKmh = 0f))
+        recorder.observe(snapshot(atMs = 1_000L, soc = 51f, powerKw = -36f, speedKmh = 0f))
+        assertNull(store.read().last().observedEnergyKwh)
+        // Moving with energy going in: regeneration, both halves go back.
+        recorder.observe(snapshot(atMs = 2_000L, soc = 51f, powerKw = -36f, speedKmh = 50f))
+        recorder.observe(snapshot(atMs = 3_000L, soc = 52f, powerKw = -36f, speedKmh = 50f))
+
+        // Two moving seconds: the one pulling away from standstill already counts as moving.
+        val last = store.read().last()
+        assertEquals(-0.02, last.observedEnergyKwh!!, 1e-9)
+        assertEquals(-1.0, last.observedSocDropPercent!!, 1e-4)
+    }
+
+    @Test fun `a gauge jump between two samples is a misread and counts for neither half`() {
+        val store = BatteryLedgerStore(File(tempDirectory(), BatteryLedgerStore.FILE_NAME))
+        val recorder = BatteryLedgerRecorder(store)
+
+        recorder.observe(snapshot(atMs = 0L, soc = 80f, powerKw = 36f, speedKmh = 72f))
+        recorder.observe(snapshot(atMs = 1_000L, soc = 70f, powerKw = 36f, speedKmh = 72f))
+
+        assertNull(store.read().last().observedSocDropPercent)
+    }
+
+    @Test fun `a restart continues the observed pair`() {
+        val target = File(tempDirectory(), BatteryLedgerStore.FILE_NAME)
+        val first = BatteryLedgerRecorder(BatteryLedgerStore(target))
+        first.observe(snapshot(atMs = 0L, soc = 80f, powerKw = 36f, speedKmh = 72f))
+        first.observe(snapshot(atMs = 1_000L, soc = 79f, powerKw = 36f, speedKmh = 72f))
+
+        val second = BatteryLedgerRecorder(BatteryLedgerStore(target))
+        second.observe(snapshot(atMs = 10_000L, soc = 78f, powerKw = 36f, speedKmh = 72f))
+        second.observe(snapshot(atMs = 11_000L, soc = 77f, powerKw = 36f, speedKmh = 72f))
+
+        val last = BatteryLedgerStore(target).read().last()
+        assertEquals(0.02, last.observedEnergyKwh!!, 1e-9)
+        assertEquals(2.0, last.observedSocDropPercent!!, 1e-4)
+    }
+
     private fun entry(atMs: Long, soc: Float) = BatteryLedgerEntry(atMs = atMs, socPercent = soc)
 
     private fun snapshot(

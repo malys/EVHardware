@@ -215,6 +215,49 @@ class StateOfHealthTest {
         return entries
     }
 
+    @Test fun `the observed pair recovers the capacity that parked hours and charges hide`() {
+        // Each day: a watched drive of 20 points at 60 kWh, then an unwatched night that loses
+        // 2 more points, and every third day a charge back up. Charge-to-charge, the parked
+        // points would be divided into the driving energy; the observed pair never sees them.
+        val entries = ArrayList<BatteryLedgerEntry>()
+        var soc = 90f
+        var energy = 0.0
+        var drop = 0.0
+        repeat(9) { index ->
+            entries += observedEntry(day(index), soc, energy, drop)
+            soc -= 20f
+            energy += 60.0 * 0.20
+            drop += 20.0
+            entries += observedEntry(day(index) + HOUR, soc, energy, drop)
+            soc -= 2f
+            if (index % 3 == 2) soc = 90f
+        }
+
+        val ready = StateOfHealthEstimator().estimate(entries, CAPACITY_WHEN_NEW)
+            as StateOfHealthResult.Ready
+
+        assertEquals(SohEnergySource.OBSERVED_PAIR, ready.estimate.source)
+        assertEquals(60.0, ready.estimate.usableCapacityKwh.value!!, 1e-6)
+        assertEquals(9, ready.estimate.windowCount)
+    }
+
+    @Test fun `an observed window closes only once enough watched charge is lost`() {
+        val entries = (0..10).map { observedEntry(day(it), 90f - it, it * 0.6, it.toDouble()) }
+
+        val windows = StateOfHealthEstimator().observedWindows(entries)
+
+        assertTrue(windows.isEmpty())
+    }
+
+    private fun observedEntry(atMs: Long, soc: Float, energyKwh: Double, dropPercent: Double) =
+        BatteryLedgerEntry(
+            atMs = atMs,
+            socPercent = soc,
+            outsideTempCelsius = 18f,
+            observedEnergyKwh = energyKwh,
+            observedSocDropPercent = dropPercent,
+        )
+
     private fun entry(
         atMs: Long,
         soc: Float,
