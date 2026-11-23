@@ -218,8 +218,9 @@ class EcoDrivingTest {
             repeat(24) { speed += 2.5f; monitor.add(atMs, speed); atMs += 1_000L }
             repeat(6) { speed -= 10f; monitor.add(atMs, speed); atMs += 1_000L }
         }
-        // 6 hard seconds in every 30: the trip review's `DrivingStyle` reads the same 20 %.
-        assertEquals(20.0, monitor.harshSharePercent()!!, 0.5)
+        // 6 hard seconds in every 30, but the two-second slope (CP-099) spans the launch's last
+        // second in each stop's first: 5 in 30.
+        assertEquals(16.7, monitor.harshSharePercent()!!, 0.5)
     }
 
     @Test

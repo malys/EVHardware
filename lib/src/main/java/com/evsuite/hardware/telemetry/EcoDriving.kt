@@ -177,6 +177,12 @@ class EcoDrivingMonitor(
         trip: EnergyTripSummary?,
         outsideTempCelsius: Float?,
         generation: FirmwareInfo.Gen = FirmwareInfo.getGeneration(),
+        /**
+         * CP-099: kWh per percent of gauge, from [kwhPerSocPercent] over the history. Given, a
+         * trip with a battery-power reading is judged on the energy it integrated at 1 Hz rather
+         * than on a gauge that steps a tenth of a percent every 14 s or so.
+         */
+        kwhPerSocPercent: Double? = null,
     ): EcoVerdict {
         val advice = advice(model, outsideTempCelsius)
         if (model == null) return refuse(UnavailableReason.MODEL_NOT_TRAINED, advice)
@@ -195,8 +201,16 @@ class EcoDrivingMonitor(
         // Not one step of the gauge: nothing was measured. A larger drop is judged below, against
         // how much the gauge's step can move the rate on this distance. Half a step, because the
         // gauge arrives as a float: 75.6 - 75.5 is 0.0999996.
-        val drop = start - end
-        if (drop < PlanDrift.SOC_RESOLUTION_PERCENT / 2) {
+        // CP-099: the integrated energy in gauge percent, when both are known; else the gauge.
+        val powerDrop = kwhPerSocPercent?.let { scale ->
+            val consumed = trip?.consumedKwh ?: return@let null
+            val regenerated = trip.regeneratedKwh ?: return@let null
+            if (trip.batteryPowerEvidence == null) return@let null
+            (consumed - regenerated) / scale
+        }
+        val drop = powerDrop ?: (start - end)
+        // A drive that netted energy back (a descent) has no consumption to judge either way.
+        if (drop <= 0.0 || (powerDrop == null && drop < PlanDrift.SOC_RESOLUTION_PERCENT / 2)) {
             return refuse(UnavailableReason.INSUFFICIENT_SAMPLES, advice)
         }
 
@@ -220,7 +234,7 @@ class EcoDrivingMonitor(
         // The fitter's 2 % floor made sense for a whole-percent gauge; on SWI68 it refused 19
         // town drives out of 20 whose rounding was a tenth of the margin they were judged by.
         // Refused only when that rounding could move the drive across the band on its own.
-        if (PlanDrift.SOC_RESOLUTION_PERCENT / distanceKm * PER_100_KM > band) {
+        if (powerDrop == null && PlanDrift.SOC_RESOLUTION_PERCENT / distanceKm * PER_100_KM > band) {
             return refuse(UnavailableReason.INSUFFICIENT_SAMPLES, advice, meanSpeedKmh)
         }
         val verdict = when {
@@ -292,7 +306,11 @@ class EcoDrivingMonitor(
     fun harshSharePercent(): Double? {
         var movingMs = 0L
         var harshMs = 0L
+        // CP-099: the trip's own rule, a slope over two seconds rather than one read's step.
+        val slope = SpeedSlope(maxGapMs = maxGapMs)
+        window.firstOrNull()?.let { slope.add(it.atMs, it.kmh) }
         window.zipWithNext { previous, current ->
+            val acceleration = slope.add(current.atMs, current.kmh)
             val deltaMs = current.atMs - previous.atMs
             // Beyond the gap this app allows itself to integrate over, the missing minutes are
             // unknown motion. Reading them as one enormous step would invent an acceleration
@@ -300,8 +318,7 @@ class EcoDrivingMonitor(
             if (deltaMs !in 1..maxGapMs) return@zipWithNext
             if (current.kmh <= 0.0 && previous.kmh <= 0.0) return@zipWithNext
             movingMs += deltaMs
-            val acceleration = (current.kmh - previous.kmh) / KMH_PER_MS2 / (deltaMs / 1000.0)
-            if (abs(acceleration) >= harshAccelerationMs2) harshMs += deltaMs
+            if (acceleration != null && abs(acceleration) >= harshAccelerationMs2) harshMs += deltaMs
         }
         if (movingMs < MIN_LEVER_WINDOW_MS) return null
         return harshMs.toDouble() / movingMs * PERCENT
@@ -335,6 +352,35 @@ class EcoDrivingMonitor(
          * arrival, and the bound that keeps the live window cheap has no purpose over a track
          * that is already on the disk.
          */
+        /**
+         * CP-099: kWh per gauge percent on this car, from its own trips: their integrated net
+         * energy over their gauge drop. The configured capacity is the specification's (61,7 kWh
+         * by default) while the car's 108 exported trips of 2026-10/11 said 55,4, so judging
+         * energy through it would have read every drive about 10 % better than it was. Null
+         * below [MIN_SCALE_DROP_PERCENT] of gauge, where its own steps would decide it.
+         */
+        fun kwhPerSocPercent(trips: List<EnergyTripSummary>): Double? {
+            var netKwh = 0.0
+            var dropPercent = 0.0
+            trips.forEach { trip ->
+                if (trip.batteryPowerEvidence == null) return@forEach
+                val consumed = trip.consumedKwh ?: return@forEach
+                val regenerated = trip.regeneratedKwh ?: return@forEach
+                val start = trip.startSocPercent ?: return@forEach
+                val end = trip.endSocPercent ?: return@forEach
+                netKwh += consumed - regenerated
+                dropPercent += start - end
+            }
+            if (dropPercent < MIN_SCALE_DROP_PERCENT || netKwh <= 0.0) return null
+            return (netKwh / dropPercent).takeIf { it in SCALE_RANGE_KWH }
+        }
+
+        /** Thirty percent of gauge: the tenth-of-a-percent steps are then a third of a percent of it. */
+        const val MIN_SCALE_DROP_PERCENT = 30.0
+
+        /** A 30 to 100 kWh pack; outside it the history, not the pack, is wrong. */
+        private val SCALE_RANGE_KWH = 0.3..1.0
+
         fun forReplay() = EcoDrivingMonitor(
             windowMs = Long.MAX_VALUE,
             maxSamples = Int.MAX_VALUE,
@@ -385,8 +431,5 @@ class EcoDrivingMonitor(
         private const val MILLIS_PER_HOUR = 3_600_000.0
         private const val PER_100_KM = 100.0
         private const val PERCENT = 100.0
-
-        /** 1 m/s² is 3.6 km/h per second. */
-        private const val KMH_PER_MS2 = 3.6
     }
 }

@@ -12,6 +12,21 @@ All notable changes to this project are documented here. Format follows
   nothing to the vehicle; EVTasker publishes it to the suite's other apps (CP-098).
 - `DriverContract`: authority, permission, columns, name normalisation and the trip-window
   rule shared by EVTasker (publisher) and EVChargePilot (reader).
+- `SpeedSlope`: acceleration over two seconds rather than one read, skipping reads that missed
+  the car's update (CP-099).
+- `EnergyTripSummary`: speed shed and gained (gentle and firm), fast distance and its excess
+  over 110 km/h, and braking energy demanded and recovered (CP-099). Null on older trips.
+- `EcoDrivingMonitor.kwhPerSocPercent`: kWh per gauge percent from the car's own trips, and a
+  `kwhPerSocPercent` argument to `verdict` that judges a trip on its integrated battery energy.
+
+### Changed
+
+- `EcoScore` has five parts (CP-099): anticipation and smoothness become the share of speed
+  shed or gained beyond 1,5 m/s² (older trips keep the hard-stop count), and two new parts,
+  speed (km/h over 110 from 95 km/h on) and regeneration (share of braking energy taken back).
+  Weights 0,25 / 0,15 / 0,30 / 0,15 / 0,15.
+- Hard accelerations and stops are counted on the two-second slope, in the trip and in the
+  steadiness lever alike. Counts are slightly lower than before on the same drive.
 
 ## [1.21.0] - 2026-11-19
 

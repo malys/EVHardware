@@ -109,7 +109,7 @@ class EnergyTelemetryTest {
 
     @Test fun `a hard stretch counts once, braking and accelerating apart, at the live rate`() {
         val trip = EnergyTripAccumulator(0L, 80f)
-        listOf(0f, 30f, 60f, 60f, 40f, 20f, 20f, 20f, 0f).forEachIndexed { second, speed ->
+        listOf(0f, 30f, 60f, 60.5f, 40f, 20f, 20.5f, 20.25f, 0f).forEachIndexed { second, speed ->
             trip.add(
                 snapshot(second * 1_000L, speed, 5f)
                     .copy(driveModeRaw = if (second < 6) 4 else 2, regenLevelRaw = 6)
@@ -120,7 +120,9 @@ class EnergyTelemetryTest {
         assertEquals(1, result.harshAccelerations)
         assertEquals(2, result.harshBrakings)
         assertEquals(8_000L, result.movingMs)
-        assertEquals(5_000L, result.harshMs)
+        // On the two-second slope (CP-099): seconds 2-6 and 8. The first has no slope yet. No
+        // speed repeats to the 1/64 km/h: on the car a repeated one is a read that missed its update.
+        assertEquals(6_000L, result.harshMs)
         assertEquals(4, result.driveModeRaw)
         assertEquals(6, result.regenLevelRaw)
     }

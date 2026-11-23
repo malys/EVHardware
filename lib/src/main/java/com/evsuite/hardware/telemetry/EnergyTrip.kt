@@ -46,6 +46,25 @@ data class EnergyTripSummary(
     /** The vendor drive mode and regen codes held for the longest share of the trip. */
     val driveModeRaw: Int? = null,
     val regenLevelRaw: Int? = null,
+    /**
+     * CP-099. Speed shed and gained over the trip, in km/h summed over every interval, and the
+     * part of each done beyond [EcoScore.FIRM_MS2] on a [SpeedSlope]. Null on trips recorded
+     * before they were counted: those keep the hard-stop count as their anticipation.
+     */
+    val slowedKmh: Double? = null,
+    val slowedFirmKmh: Double? = null,
+    val gainedKmh: Double? = null,
+    val gainedFirmKmh: Double? = null,
+    /** CP-099. Distance driven at or above [EcoScore.FAST_FROM_KMH], and its km/h over [EcoScore.CRUISE_KMH] × km. */
+    val fastKm: Double? = null,
+    val fastExcessKmhKm: Double? = null,
+    /**
+     * CP-099. While slowing: the kinetic energy the brakes had to take, once the road load had
+     * taken its share, and what the battery took back in the same seconds. Only where both
+     * speed and power were read, so the two cover the same intervals.
+     */
+    val brakingDemandKwh: Double? = null,
+    val brakingRecoveredKwh: Double? = null,
 ) {
     /**
      * The distance, only when the conversion behind it is the one believed correct today.
@@ -96,10 +115,22 @@ class EnergyTripAccumulator(
     private var harshSign = 0
     private val modeMs = HashMap<Int, Long>()
     private val regenMs = HashMap<Int, Long>()
+    private val slope = SpeedSlope()
+    private var slowedKmh = 0.0
+    private var slowedFirmKmh = 0.0
+    private var gainedKmh = 0.0
+    private var gainedFirmKmh = 0.0
+    private var fastKm = 0.0
+    private var fastExcessKmhKm = 0.0
+    private var brakingDemandKwh = 0.0
+    private var brakingRecoveredKwh = 0.0
+    private var hasBrakingInterval = false
 
     fun add(sample: EnergySnapshot) {
         track.add(sample)
         latestSocPercent = sample.socPercent ?: latestSocPercent
+        // Fed on every read, gaps included: the slope clears itself across one.
+        val slopeMs2 = slope.add(sample.timestampMs, sample.speedKmh?.toDouble())
         val previous = last
         last = sample
         if (previous == null) return
@@ -111,7 +142,7 @@ class EnergyTripAccumulator(
             hasSpeedInterval = true
             distanceKm += ((previous.speedKmh + sample.speedKmh) / 2.0) * hours
         }
-        countStyle(previous, sample, gapMs)
+        countStyle(previous, sample, gapMs, slopeMs2)
         if (previous.batteryPowerKw != null && sample.batteryPowerKw != null) {
             hasPowerInterval = true
             val intervalKwh =
@@ -125,7 +156,7 @@ class EnergyTripAccumulator(
      * One interval of driving style. A hard stretch counts once however many seconds it lasts:
      * a driver asked to brake less hard three times wants three to be the number, not eleven.
      */
-    private fun countStyle(previous: EnergySnapshot, sample: EnergySnapshot, gapMs: Long) {
+    private fun countStyle(previous: EnergySnapshot, sample: EnergySnapshot, gapMs: Long, slopeMs2: Double?) {
         sample.driveModeRaw?.let { modeMs.merge(it, gapMs, Long::plus) }
         sample.regenLevelRaw?.let { regenMs.merge(it, gapMs, Long::plus) }
         val from = previous.speedKmh ?: return
@@ -135,7 +166,9 @@ class EnergyTripAccumulator(
             return
         }
         movingMs += gapMs
-        val acceleration = (to - from) / KMH_PER_MS2 / (gapMs / 1000.0)
+        // CP-099: the slope over two seconds, not this one read's step; see [SpeedSlope].
+        // Until two seconds are read after a gap there is no slope, and nothing counts as hard.
+        val acceleration = slopeMs2 ?: 0.0
         val sign = when {
             acceleration >= EcoDrivingMonitor.HARSH_ACCELERATION_MS2 -> 1
             acceleration <= -EcoDrivingMonitor.HARSH_ACCELERATION_MS2 -> -1
@@ -145,6 +178,46 @@ class EnergyTripAccumulator(
         if (sign == 1 && harshSign != 1) harshAccelerations++
         if (sign == -1 && harshSign != -1) harshBrakings++
         harshSign = sign
+
+        val deltaKmh = (to - from).toDouble()
+        if (deltaKmh < 0.0) {
+            slowedKmh -= deltaKmh
+            if (acceleration <= -EcoScore.FIRM_MS2) slowedFirmKmh -= deltaKmh
+        } else {
+            gainedKmh += deltaKmh
+            if (acceleration >= EcoScore.FIRM_MS2) gainedFirmKmh += deltaKmh
+        }
+        val meanKmh = (from + to) / 2.0
+        if (meanKmh >= EcoScore.FAST_FROM_KMH) {
+            val km = meanKmh * gapMs / MS_PER_HOUR
+            fastKm += km
+            fastExcessKmhKm += (meanKmh - EcoScore.CRUISE_KMH).coerceAtLeast(0.0) * km
+        }
+        countBraking(from, to, gapMs, previous.batteryPowerKw, sample.batteryPowerKw)
+    }
+
+    /**
+     * What the brakes had to absorb while slowing, and what the battery took back of it.
+     *
+     * The kinetic energy shed, less what rolling and air resistance would have taken anyway:
+     * coasting to a stop puts all of it into the road and none into the brakes, and must not
+     * read as energy thrown away. The rest went to regeneration or to the friction brakes.
+     * The battery reading carries the climate and the 12 V load as well, which hide a little of
+     * the regeneration: the share is a lower bound, by a few hundred watts.
+     */
+    private fun countBraking(from: Float, to: Float, gapMs: Long, fromKw: Float?, toKw: Float?) {
+        if (to >= from || fromKw == null || toKw == null) return
+        hasBrakingInterval = true
+        val v1 = from / KMH_PER_MS2
+        val v2 = to / KMH_PER_MS2
+        val vMean = (v1 + v2) / 2.0
+        val seconds = gapMs / 1000.0
+        val kineticJ = 0.5 * RouteGrade.MASS_KG * (v1 * v1 - v2 * v2)
+        val roadLoadJ = (ROLLING_COEFFICIENT * RouteGrade.MASS_KG * RouteGrade.GRAVITY_M_PER_S2 * vMean +
+            0.5 * AIR_DENSITY_KG_M3 * DRAG_AREA_M2 * vMean * vMean * vMean) * seconds
+        brakingDemandKwh += (kineticJ - roadLoadJ).coerceAtLeast(0.0) / JOULES_PER_KWH
+        val meanKw = (fromKw + toKw) / 2.0
+        if (meanKw < 0.0) brakingRecoveredKwh += -meanKw * gapMs / MS_PER_HOUR
     }
 
     fun samples(): List<TripSample> = track.samples()
@@ -167,6 +240,14 @@ class EnergyTripAccumulator(
         harshBrakings = harshBrakings.takeIf { hasSpeedInterval },
         driveModeRaw = modeMs.maxByOrNull { it.value }?.key,
         regenLevelRaw = regenMs.maxByOrNull { it.value }?.key,
+        slowedKmh = slowedKmh.takeIf { hasSpeedInterval },
+        slowedFirmKmh = slowedFirmKmh.takeIf { hasSpeedInterval },
+        gainedKmh = gainedKmh.takeIf { hasSpeedInterval },
+        gainedFirmKmh = gainedFirmKmh.takeIf { hasSpeedInterval },
+        fastKm = fastKm.takeIf { hasSpeedInterval },
+        fastExcessKmhKm = fastExcessKmhKm.takeIf { hasSpeedInterval },
+        brakingDemandKwh = brakingDemandKwh.takeIf { hasBrakingInterval },
+        brakingRecoveredKwh = brakingRecoveredKwh.takeIf { hasBrakingInterval },
     )
 
     /**
@@ -184,6 +265,19 @@ class EnergyTripAccumulator(
 
         /** 1 m/s² is 3.6 km/h per second. */
         const val KMH_PER_MS2 = 3.6
+
+        const val MS_PER_HOUR = 3_600_000.0
+        const val JOULES_PER_KWH = 3_600_000.0
+
+        /**
+         * MG4 road load, from the specification rather than this car (see `AGENTS.md` on
+         * specification references): Cd 0,287 on about 2,33 m² of frontal area, and a rolling
+         * coefficient typical of low-resistance tyres. Calibration knobs: the power model's own
+         * aerodynamic fit is still refused on SWI68, and would replace them once it is ready.
+         */
+        const val DRAG_AREA_M2 = 0.67
+        const val ROLLING_COEFFICIENT = 0.010
+        const val AIR_DENSITY_KG_M3 = 1.2
     }
 }
 
