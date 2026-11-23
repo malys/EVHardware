@@ -96,6 +96,7 @@
 | DISABLE_RULE | — | — | — | — | — | — |
 | SET_VARIABLE_FLAG | — | — | — | — | — | — |
 | SET_VARIABLE_NUMBER | — | — | — | — | — | — |
+| SET_DRIVER | — | — | — | — | — | — |
 | MEDIA_CONTROL | — | — | — | — | — | — |
 | SET_BLUETOOTH | — | — | — | — | — | — |
 | SET_WIFI | — | — | — | — | — | — |
