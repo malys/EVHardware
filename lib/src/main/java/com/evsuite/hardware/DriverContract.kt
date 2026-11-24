@@ -28,11 +28,14 @@ object DriverContract {
     const val MAX_NAME_LENGTH = 24
 
     /**
-     * How long before a trip starts a driver set may still be accepted. The rule fires on
-     * the phone joining hands-free, which can happen while the car is still being readied;
-     * anything older is a leftover from a cycle the ignition clear did not reach.
+     * How long before a trip starts a driver set may still be accepted. The rule fires at
+     * ignition and the trip starts when the car first moves: on 2026-11-24 "Syl" was set at
+     * 13:45:21 and the drive began at 13:46:37, 76 s later, so the one-minute window filed it
+     * under no driver. EVTasker clears the driver at every ignition, so anything published is
+     * this cycle's; the bound only keeps a cycle the clear did not reach (no reboot between two
+     * drives) from naming the next one.
      */
-    const val ACCEPT_BEFORE_START_MS = 60_000L
+    const val ACCEPT_BEFORE_START_MS = 30 * 60_000L
 
     /** The name as stored and shown: trimmed, no control characters, 1..[MAX_NAME_LENGTH]; else null. */
     fun normalizeName(raw: String?): String? {

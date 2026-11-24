@@ -38,6 +38,9 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- `DriverContract.ACCEPT_BEFORE_START_MS` is 30 min, not 1 min: the driver is set at ignition and
+  the trip starts when the car moves, 76 s later on the car's 2026-11-24 drive, which was filed
+  under no driver.
 - `SocConsumptionFitter`: a history of town drives only (mean speeds under 80 km/h) no longer
   refuses the model when speed² fits slightly negative. Speed² is then the physical value
   (`PRIOR_AERO_PERCENT_PER_100_KM_PER_SPEED_SQUARED`, MG4 specification) and the other terms are
