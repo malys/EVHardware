@@ -185,7 +185,7 @@ class SocConsumptionFitter(
         val rmse = model.residualRmsePercentPer100Km
         return line + String.format(
             Locale.ROOT,
-            " fit=ready rmse=%.2f rolling=%.2f aero=%.6f aux=%.1f thermal=%.3f",
+            " fit=ready rmse=%.2f rolling=%.2f aero=%.6f${if (solved.aeroFixed) "(prior)" else ""} aux=%.1f thermal=%.3f",
             rmse,
             model.rollingPercentPer100Km,
             model.aeroPercentPer100KmPerSpeedSquared,
@@ -208,6 +208,8 @@ class SocConsumptionFitter(
         val model: SocConsumptionModel?,
         val refusal: String? = null,
         val windowRmse: Double? = null,
+        /** True when speed² is [PRIOR_AERO_PERCENT_PER_100_KM_PER_SPEED_SQUARED], not fitted. */
+        val aeroFixed: Boolean = false,
     )
 
     fun fit(
@@ -266,28 +268,52 @@ class SocConsumptionFitter(
         // Candidates run fullest first, so the one left here is the base model's: the refusal a
         // reader can act on ("aero" — speed looked free), not a degenerate richer fit's.
         var baseRefusal: String? = null
-        for (extra in candidates) {
-            val terms = base + extra
-            val equations = LeastSquares(terms)
-            for (segment in segments) {
-                equations.add(segment.meanSpeedKmh, segment.meanOutsideTempCelsius, segment.percentPer100Km)
+        var aeroFixed = false
+        // [fixedAero] null fits speed² with the rest; given, speed² is held at it and the others
+        // are fitted on what it leaves.
+        fun attempt(fixedAero: Double?) {
+            for (extra in candidates) {
+                val terms = base + extra
+                val fitted = if (fixedAero == null) terms else terms - LeastSquares.Term.SPEED_SQUARED
+                val equations = LeastSquares(fitted)
+                for (segment in segments) {
+                    val held = fixedAero?.let { it * segment.meanSpeedKmh * segment.meanSpeedKmh } ?: 0.0
+                    equations.add(segment.meanSpeedKmh, segment.meanOutsideTempCelsius, segment.percentPer100Km - held)
+                }
+                val solvedFitted = equations.solve()
+                val coefficients = if (fixedAero == null || solvedFitted == null) solvedFitted else
+                    terms.map { term ->
+                        if (term == LeastSquares.Term.SPEED_SQUARED) fixedAero else solvedFitted[fitted.indexOf(term)]
+                    }.toDoubleArray()
+                val refusal = when {
+                    coefficients == null -> "singular"
+                    coefficients.any { !it.isFinite() } -> "nonfinite"
+                    coefficients[0] <= 0.0 -> "rolling"
+                    else -> terms.indices.drop(1).firstOrNull { coefficients[it] < 0.0 }?.let { name(terms[it]) }
+                }
+                if (refusal != null) {
+                    if (fixedAero == null) baseRefusal = refusal
+                    continue
+                }
+                val error = squaredError(segments, terms, checkNotNull(coefficients))
+                if (error < bestError) {
+                    bestError = error
+                    best = coefficients to terms
+                }
             }
-            val coefficients = equations.solve()
-            val refusal = when {
-                coefficients == null -> "singular"
-                coefficients.any { !it.isFinite() } -> "nonfinite"
-                coefficients[0] <= 0.0 -> "rolling"
-                else -> terms.indices.drop(1).firstOrNull { coefficients[it] < 0.0 }?.let { name(terms[it]) }
-            }
-            if (refusal != null) {
-                baseRefusal = refusal
-                continue
-            }
-            val error = squaredError(segments, terms, checkNotNull(coefficients))
-            if (error < bestError) {
-                bestError = error
-                best = coefficients to terms
-            }
+        }
+        attempt(fixedAero = null)
+        // Town drives alone cannot tell speed² from the constant and the 1/speed term: between
+        // 10 and 50 km/h it is a few percent of the consumption, and the fit put it slightly
+        // under zero. On 2026-11-24 three more town trips, once the motorway ones had aged out
+        // of the history, turned a ready model into refused(aero), and with it every verdict
+        // and the score's efficiency. The physics then supplies it; the envelope still keeps
+        // the model to the speeds it saw. On that history the error was the same (10,75).
+        // Only where the air was never the main cost: a history that reached the motorway and
+        // still says faster is cheaper disagrees with itself, and stays refused by name.
+        if (best == null && baseRefusal == "aero" && maxSpeed < PRIOR_AERO_MAX_SPEED_KMH) {
+            attempt(fixedAero = PRIOR_AERO_PERCENT_PER_100_KM_PER_SPEED_SQUARED)
+            aeroFixed = best != null
         }
         val (coefficients, terms) = best ?: return Solved(null, baseRefusal)
         fun coefficient(term: LeastSquares.Term) = terms.indexOf(term).let { if (it < 0) 0.0 else coefficients[it] }
@@ -317,7 +343,7 @@ class SocConsumptionFitter(
             segmentCount = segments.size,
             envelope = EnergyModelEnvelope(minSpeed, maxSpeed, minTemp, maxTemp),
         )
-        return if (model.isValid()) Solved(model, windowRmse = window) else Solved(null, "invalid")
+        return if (model.isValid()) Solved(model, windowRmse = window, aeroFixed = aeroFixed) else Solved(null, "invalid")
     }
 
     /**
@@ -490,6 +516,17 @@ class SocConsumptionFitter(
         const val MAX_SEGMENTS = 5_000
         const val MAX_RESIDUAL_RMSE_PERCENT_PER_100_KM = 12.0
         const val MIN_SEGMENT_KM = 2.0
+
+        /**
+         * Speed² when the history cannot fit it, in gauge percent per 100 km per (km/h)²:
+         * ½ × 1,2 kg/m³ × 0,67 m² (MG4 Cd 0,287 on about 2,33 m², specification, not this car)
+         * through a 0,85 drivetrain, over the 61 kWh the 64 kWh pack spans on the gauge. A
+         * calibration knob, used only between the speeds the history saw.
+         */
+        const val PRIOR_AERO_PERCENT_PER_100_KM_PER_SPEED_SQUARED = 0.00166
+
+        /** Below this mean speed, drag is a minor share of the consumption and cannot be fitted. */
+        const val PRIOR_AERO_MAX_SPEED_KMH = 80.0
 
         /** The distance [windowRmse] judges a fit over: shorter than most drives, longer than a hill. */
         const val WINDOW_KM = 10.0

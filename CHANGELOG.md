@@ -35,6 +35,15 @@ All notable changes to this project are documented here. Format follows
 - Hard accelerations and stops are counted on the two-second slope, in the trip and in the
   steadiness lever alike. Counts are slightly lower than before on the same drive.
 
+
+### Fixed
+
+- `SocConsumptionFitter`: a history of town drives only (mean speeds under 80 km/h) no longer
+  refuses the model when speed² fits slightly negative. Speed² is then the physical value
+  (`PRIOR_AERO_PERCENT_PER_100_KM_PER_SPEED_SQUARED`, MG4 specification) and the other terms are
+  fitted on what it leaves; `describe` marks it `aero=…(prior)`. On the car's 2026-11-24 history
+  three more town trips had turned `fit=ready` into `fit=refused(aero)`, which took every eco
+  verdict and the score's efficiency with it.
 ## [1.21.0] - 2026-11-19
 
 ### Added

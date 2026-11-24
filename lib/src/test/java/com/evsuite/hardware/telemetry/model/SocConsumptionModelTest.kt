@@ -306,6 +306,31 @@ class SocConsumptionModelTest {
         assertTrue(SocConsumptionFitter().describe(history, generation).contains("fit=ready"))
     }
 
+    /**
+     * The car's 2026-11-24 history: town drives only, 10 to 50 km/h, once the motorway trips had
+     * aged out. Speed² fitted slightly negative there and the whole model was refused.
+     */
+    @Test
+    fun `town drives alone take speed squared from the physics instead of refusing`() {
+        val truth = { v: Double -> 20.0 + 200.0 / v - 0.0006 * v * v }
+        val history = listOf(15.0, 20.0, 30.0, 40.0, 50.0).mapIndexed { index, speed ->
+            trip(drive(speed, 20.0, truth(speed), startAtMs = index * 100_000_000L))
+        }
+
+        val result = SocConsumptionFitter().fit(history, generation)
+        assertTrue("$result", result is SocConsumptionFitResult.Ready)
+        val model = (result as SocConsumptionFitResult.Ready).model
+        assertEquals(
+            SocConsumptionFitter.PRIOR_AERO_PERCENT_PER_100_KM_PER_SPEED_SQUARED,
+            model.aeroPercentPer100KmPerSpeedSquared,
+            1e-12,
+        )
+        // Within a point and a half of a truth the fit could not have recovered: the car's own
+        // segments scatter by about ten points around any curve fitted through them.
+        assertEquals(truth(30.0), model.predict(30.0, 20.0).value!!, 1.5)
+        assertTrue(SocConsumptionFitter().describe(history, generation).contains("(prior)"))
+    }
+
     @Test
     fun `a term that only fits negative is left out, not believed`() {
         // Pure speed² data: the auxiliary term has nothing to explain and must not go negative.
