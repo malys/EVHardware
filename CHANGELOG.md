@@ -6,8 +6,15 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.22.0] - 2026-11-25
+
 ### Added
 
+- `ConditionType.TYRE_PRESSURE_LOWEST` (SWI68): the lowest of the four tyre pressures, in kPa.
+  `TirePressureSnapshot.lowestKpa` is null unless all four wheels answered, so a silent sensor
+  never reads as a healthy tyre (CR-050).
+- `ExteriorLights.PROP_HAZARD_LIGHTS_STATE` / `PROP_HAZARD_LIGHTS_SWITCH`: named in the light
+  probe so a parked capture can show whether the car publishes them. Not read into rules (CR-051).
 - Battery health: `SohEnergySource.OBSERVED_PAIR`, MG4Link's measurement. The ledger now keeps
   `observedEnergyKwh` and `observedSocDropPercent`, pack energy and charge lost over the very same
   watched seconds (adjacent samples ≤ 5 s, charging left out, a gauge jump over 2 points refused).
