@@ -66,6 +66,12 @@ data class StateOfHealthEstimate(
 sealed interface StateOfHealthResult {
     data class Ready(val estimate: StateOfHealthEstimate) : StateOfHealthResult
 
+    /**
+     * Fewer than [StateOfHealthEstimator.MIN_WINDOWS] windows from any one source: a figure to
+     * show, as MG4Link shows one from a single drive, but nothing to apply or calibrate from.
+     */
+    data class Provisional(val estimate: StateOfHealthEstimate) : StateOfHealthResult
+
     data class Unavailable(
         val reason: UnavailableReason,
         val windowsSeen: Int = 0,
@@ -114,13 +120,22 @@ class StateOfHealthEstimator(
         }
         // Preference, not popularity: a counter the car keeps outranks an integral this app
         // made, however many windows the integral managed to produce.
-        val chosen = SOURCE_PREFERENCE
-            .map { source -> usable.filter { it.source == source } }
-            .firstOrNull { it.size >= minWindows }
-            ?: return StateOfHealthResult.Unavailable(
-                UnavailableReason.INSUFFICIENT_SAMPLES, usable.size, cold,
-            )
+        val bySource = SOURCE_PREFERENCE.map { source -> usable.filter { it.source == source } }
+        bySource.firstOrNull { it.size >= minWindows }?.let {
+            return StateOfHealthResult.Ready(summarise(it, cold, usableCapacityKwhWhenNew))
+        }
+        // Sources are never pooled: each measures at its own node, so the provisional figure is
+        // the preferred source that has a window at all.
+        return StateOfHealthResult.Provisional(
+            summarise(bySource.first { it.isNotEmpty() }, cold, usableCapacityKwhWhenNew),
+        )
+    }
 
+    private fun summarise(
+        chosen: List<SohWindow>,
+        cold: Int,
+        usableCapacityKwhWhenNew: Double,
+    ): StateOfHealthEstimate {
         val capacities = chosen.map { it.usableCapacityKwh }.sorted()
         val capacity = median(capacities)
         val drops = chosen.map { it.socDropPercent }.sorted()
@@ -138,17 +153,15 @@ class StateOfHealthEstimator(
         val ordered = chosen.sortedBy { it.endedAtMs }
         val spanDays = (ordered.last().endedAtMs - ordered.first().startedAtMs) / MS_PER_DAY
         val distances = ordered.mapNotNull { it.distanceKm }
-        return StateOfHealthResult.Ready(
-            StateOfHealthEstimate(
-                usableCapacityKwh = Provenanced.estimated(capacity, band),
-                stateOfHealthPercent = Provenanced.estimated(health, healthBand),
-                source = chosen.first().source,
-                windowCount = chosen.size,
-                coldWindowsExcluded = cold,
-                spanDays = spanDays,
-                spanKm = distances.sum().takeIf { distances.isNotEmpty() },
-                trendPercentPoints = trend(ordered, usableCapacityKwhWhenNew, spanDays),
-            )
+        return StateOfHealthEstimate(
+            usableCapacityKwh = Provenanced.estimated(capacity, band),
+            stateOfHealthPercent = Provenanced.estimated(health, healthBand),
+            source = chosen.first().source,
+            windowCount = chosen.size,
+            coldWindowsExcluded = cold,
+            spanDays = spanDays,
+            spanKm = distances.sum().takeIf { distances.isNotEmpty() },
+            trendPercentPoints = trend(ordered, usableCapacityKwhWhenNew, spanDays),
         )
     }
 

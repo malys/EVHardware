@@ -25,13 +25,20 @@ class StateOfHealthTest {
         assertNotNull(ready.estimate.stateOfHealthPercent.uncertainty)
     }
 
-    @Test fun `two discharges refuse rather than estimate`() {
+    @Test fun `two discharges give a provisional figure, not a ready one`() {
         val result = StateOfHealthEstimator()
             .estimate(counterLedger(windows = 2, capacityKwh = 60.0), CAPACITY_WHEN_NEW)
 
-        val unavailable = result as StateOfHealthResult.Unavailable
-        assertEquals(UnavailableReason.INSUFFICIENT_SAMPLES, unavailable.reason)
-        assertEquals(2, unavailable.windowsSeen)
+        val provisional = result as StateOfHealthResult.Provisional
+        assertEquals(2, provisional.estimate.windowCount)
+        assertEquals(60.0 * 100.0 / CAPACITY_WHEN_NEW, provisional.estimate.stateOfHealthPercent.value!!, 0.5)
+    }
+
+    @Test fun `one discharge is enough for a provisional figure`() {
+        val result = StateOfHealthEstimator()
+            .estimate(counterLedger(windows = 1, capacityKwh = 60.0), CAPACITY_WHEN_NEW)
+
+        assertEquals(1, (result as StateOfHealthResult.Provisional).estimate.windowCount)
     }
 
     @Test fun `the band is never tighter than the counter's own whole kilowatt-hour`() {
