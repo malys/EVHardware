@@ -610,7 +610,7 @@ object EVHardware {
     )
 
     /**
-     * The six exterior-light properties (CR-046), read raw whatever [ExteriorLights.PROVEN] says:
+     * The eight exterior and hazard light properties (CR-046, CR-051), read raw whatever [ExteriorLights.PROVEN] says:
      * this is the evidence that fills it. EVTasker's Diagnostic shows and exports it — read once
      * with a light off and once with it on; a generation is proven when the state follows.
      */

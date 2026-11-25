@@ -265,6 +265,20 @@ enum class ConditionType(
         R.string.cond_odometer, ConditionGroup.DRIVING,
         number(0, 500_000, R.string.unit_km), SnapshotKeys.KEY_ODOMETER_KM, comparable = true
     ),
+    /**
+     * The lowest of the four tyre pressures, in kPa (CR-050).
+     *
+     * Read-only. SWI68 is the generation with a proven reading (the vendor pressure properties);
+     * the standard property is not proven elsewhere, so no other generation is claimed. The key
+     * is absent unless all four wheels answered — see `TirePressureSnapshot.lowestKpa` — so a
+     * rule never reads "fine" because one sensor had not been heard from. The threshold is the
+     * driver's: no figure is copied from a specification sheet.
+     */
+    @SupportedOn(SWI68)
+    TYRE_PRESSURE_LOWEST(
+        R.string.cond_tyre_pressure_lowest, ConditionGroup.DRIVING,
+        number(0, 1_000, R.string.unit_kpa), SnapshotKeys.KEY_TYRE_PRESSURE_LOWEST_KPA, comparable = true
+    ),
     @SupportedOn(SWI133, SWI132, SWI68, SWI69, SWI131, SWI165)
     ENERGY_SAVING(
         R.string.cond_energy_saving, ConditionGroup.DRIVING,

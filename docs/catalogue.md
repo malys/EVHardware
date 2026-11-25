@@ -49,6 +49,7 @@ Every condition a rule can test and every action it can run, straight out of `Co
 | Drive mode | `DRIVE_MODE` | Eco, Normal, Sport, Snow, Custom | SWI133, SWI68, SWI165, SWI69, SWI131, SWI132 |
 | Regeneration | `REGEN_LEVEL` | Low, Medium, High, Adaptive, Off, One pedal | SWI133, SWI68, SWI165, SWI69, SWI131, SWI132 |
 | Odometer | `ODOMETER` | 0…500000 km (=, <, >) | any |
+| Lowest tyre pressure | `TYRE_PRESSURE_LOWEST` | 0…1000 kPa (=, <, >) | SWI68 |
 | Energy saving | `ENERGY_SAVING` | on / off | SWI133, SWI68, SWI165, SWI69, SWI131, SWI132 |
 
 ### Energy

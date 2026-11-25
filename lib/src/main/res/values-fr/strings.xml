@@ -235,6 +235,7 @@
     <string name="act_set_bluetooth">Bluetooth</string>
     <string name="act_set_wifi">Wi-Fi</string>
     <string name="unit_km">km</string>
+    <string name="unit_kpa">kPa</string>
     <string name="cond_range">Autonomie restante</string>
     <string name="cond_window_driver">Ouverture vitre conducteur</string>
     <string name="cond_window_passenger">Ouverture vitre passager</string>
@@ -245,6 +246,7 @@
     <string name="act_window_rear_left">Vitre arrière gauche</string>
     <string name="act_window_rear_right">Vitre arrière droite</string>
     <string name="cond_odometer">Compteur kilométrique</string>
+    <string name="cond_tyre_pressure_lowest">Pression de pneu la plus basse</string>
     <string name="cond_weather">Météo</string>
     <string name="weather_clear">Ciel dégagé</string>
     <string name="weather_cloudy">Nuageux</string>

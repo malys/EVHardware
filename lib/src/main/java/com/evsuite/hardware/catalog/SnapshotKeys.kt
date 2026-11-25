@@ -133,6 +133,8 @@ object SnapshotKeys {
     // to the vehicle SDK, so nothing routes them per generation: they answer or they do not.
     /** Odometer in kilometres. */
     const val KEY_ODOMETER_KM      = "odometerKm"
+    /** Lowest of the four tyre pressures in kPa; absent unless all four were read (CR-050). */
+    const val KEY_TYRE_PRESSURE_LOWEST_KPA = "tyrePressureLowestKpa"
     /**
      * The sky where the car is, as one of [WeatherConditions]' states.
      *

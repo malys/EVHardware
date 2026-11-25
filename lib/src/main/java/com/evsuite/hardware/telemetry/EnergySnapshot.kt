@@ -66,6 +66,16 @@ data class TirePressureSnapshot(
     val hasData: Boolean
         get() = frontLeftKpa != null || frontRightKpa != null ||
             rearLeftKpa != null || rearRightKpa != null
+
+    /**
+     * The lowest of the four, or null unless every wheel answered. A missing wheel is not a
+     * healthy one: taking the minimum of three would let a rule call the car fine while the
+     * fourth sensor — maybe the flat tyre — had not been heard from.
+     */
+    val lowestKpa: Float?
+        get() = if (frontLeftKpa != null && frontRightKpa != null &&
+            rearLeftKpa != null && rearRightKpa != null
+        ) minOf(frontLeftKpa, frontRightKpa, rearLeftKpa, rearRightKpa) else null
 }
 
 data class ClimateSnapshot(

@@ -213,6 +213,7 @@
     <string name="act_set_bluetooth">Bluetooth</string>
     <string name="act_set_wifi">Wi-Fi</string>
     <string name="unit_km">km</string>
+    <string name="unit_kpa">kPa</string>
     <string name="cond_range">Autonomia residua</string>
     <string name="cond_window_driver">Apertura finestrino guidatore</string>
     <string name="cond_window_passenger">Apertura finestrino passeggero</string>
@@ -223,6 +224,7 @@
     <string name="act_window_rear_left">Finestrino posteriore sinistro</string>
     <string name="act_window_rear_right">Finestrino posteriore destro</string>
     <string name="cond_odometer">Contachilometri</string>
+    <string name="cond_tyre_pressure_lowest">Pressione pneumatico più bassa</string>
     <string name="cond_weather">Meteo</string>
     <string name="weather_clear">Sereno</string>
     <string name="weather_cloudy">Nuvoloso</string>

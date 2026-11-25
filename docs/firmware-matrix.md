@@ -32,6 +32,7 @@
 | SPEED | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | DRIVE_MODE | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | REGEN_LEVEL | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| TYRE_PRESSURE_LOWEST | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | ENERGY_SAVING | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | BATTERY_LEVEL | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | CHARGING | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |

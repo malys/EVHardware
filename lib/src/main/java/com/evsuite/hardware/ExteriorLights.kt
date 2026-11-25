@@ -20,6 +20,10 @@ object ExteriorLights {
     const val PROP_HEADLIGHTS_STATE = 0x11400E00
     const val PROP_HIGH_BEAM_LIGHTS_STATE = 0x11400E01
     const val PROP_FOG_LIGHTS_STATE = 0x11400E02
+    // Hazard lights (CR-051): the only indicator-related standard id on AAOS 9. No standard
+    // turn-signal property exists there, so left and right can only be found by the vendor probe.
+    const val PROP_HAZARD_LIGHTS_STATE = 0x11400E03
+    const val PROP_HAZARD_LIGHTS_SWITCH = 0x11400E13
     const val PROP_HEADLIGHTS_SWITCH = 0x11400E10
     const val PROP_HIGH_BEAM_LIGHTS_SWITCH = 0x11400E11
     const val PROP_FOG_LIGHTS_SWITCH = 0x11400E12
@@ -46,6 +50,8 @@ object ExteriorLights {
         PROP_HEADLIGHTS_SWITCH to "HEADLIGHTS_SWITCH",
         PROP_HIGH_BEAM_LIGHTS_SWITCH to "HIGH_BEAM_LIGHTS_SWITCH",
         PROP_FOG_LIGHTS_SWITCH to "FOG_LIGHTS_SWITCH",
+        PROP_HAZARD_LIGHTS_STATE to "HAZARD_LIGHTS_STATE",
+        PROP_HAZARD_LIGHTS_SWITCH to "HAZARD_LIGHTS_SWITCH",
     )
 
     /** Low beams: ON or AUTOMATIC. Never OFF. */
