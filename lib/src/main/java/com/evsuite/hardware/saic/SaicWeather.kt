@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Binder
 import android.os.IBinder
 import android.os.Parcel
+import android.os.SystemClock
 import com.evsuite.hardware.AppLogger
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -54,10 +55,13 @@ object SaicWeather {
      * How long a reading may hold the rule cycle.
      *
      * The query can reach the network, so it is not instant, and a rule evaluated at ignition
-     * would otherwise wait on a cold radio. Two seconds is longer than a warm answer and short
-     * enough that a cold one simply comes back unreadable.
+     * would otherwise wait on a cold radio. Two seconds left the 2026-11-26 car unanswered at
+     * boot and 8 min later with a fresh fix, while other ignitions answered: five seconds and
+     * one retry, so the worst case holds an ignition pass about ten seconds. A knob until the
+     * logged answer times say otherwise.
      */
-    private const val TIMEOUT_MS = 2_000L
+    private const val TIMEOUT_MS = 5_000L
+    private const val ATTEMPTS = 2
 
     private val service = SaicService.byComponent(PACKAGE, CLASS, "weather")
 
@@ -97,7 +101,23 @@ object SaicWeather {
         decode: (Parcel) -> T?,
         send: (IBinder, Binder) -> Boolean
     ): T? {
-        val target = binder() ?: return null
+        repeat(ATTEMPTS) { attempt ->
+            queryOnce(code, decode, send, attempt + 1)?.let { return it }
+        }
+        return null
+    }
+
+    /** One send and one bounded wait, logged either way: the bundle must say which half failed. */
+    private fun <T> queryOnce(
+        code: Int,
+        decode: (Parcel) -> T?,
+        send: (IBinder, Binder) -> Boolean,
+        attempt: Int
+    ): T? {
+        val target = binder() ?: run {
+            AppLogger.i(TAG, "weather#$code try $attempt: service not bound")
+            return null
+        }
         var answer: T? = null
         val answered = CountDownLatch(1)
 
@@ -116,8 +136,21 @@ object SaicWeather {
             override fun getInterfaceDescriptor(): String = CALLBACK_DESCRIPTOR
         }
 
-        if (!send(target, callback)) return null
-        return if (answered.await(TIMEOUT_MS, TimeUnit.MILLISECONDS)) answer else null
+        val startedAt = SystemClock.elapsedRealtime()
+        if (!send(target, callback)) {
+            AppLogger.i(TAG, "weather#$code try $attempt: send failed")
+            return null
+        }
+        val inTime = answered.await(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        val ms = SystemClock.elapsedRealtime() - startedAt
+        AppLogger.i(
+            TAG, "weather#$code try $attempt: " + when {
+                !inTime -> "no answer in $ms ms"
+                answer == null -> "empty answer after $ms ms"
+                else -> "answered in $ms ms"
+            }
+        )
+        return if (inTime) answer else null
     }
 
     /**
