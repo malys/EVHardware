@@ -6,6 +6,18 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.23.0] - 2026-11-27
+
+### Added
+
+- State of health gives a provisional figure from the first window of one source, instead of
+  nothing until three windows of that source exist.
+
+### Changed
+
+- `SaicWeather` waits 5 s instead of 2 s and retries once, and logs each try (`weather#N try K:`
+  not bound, send failed, no answer, empty answer, or answered in N ms).
+
 ## [1.22.0] - 2026-11-25
 
 ### Added
